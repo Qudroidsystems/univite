@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Facade;
-use Illuminate\Support\ServiceProvider;
 
 return [
 
@@ -126,56 +124,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-
-      /*
-    |--------------------------------------------------------------------------
-    | Autoloaded Service Providers
-    |--------------------------------------------------------------------------
-    |
-    | The service providers listed here will be automatically loaded on the
-    | request to your application. Feel free to add your own services to
-    | this array to grant expanded functionality to your applications.
-    |
-    */
-
-    'providers' => ServiceProvider::defaultProviders()->merge([
-        /*
-        * Package Service Providers...
-        */
-        Spatie\Permission\PermissionServiceProvider::class,
-        Maatwebsite\Excel\ExcelServiceProvider::class,
-        Barryvdh\DomPDF\ServiceProvider::class,
-        // Barryvdh\Snappy\ServiceProvider::class,
-
-        /*
-        * Application Service Providers...
-        */
-        App\Providers\AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
-        // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
-    ])->toArray(),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Class Aliases
-    |--------------------------------------------------------------------------
-    |
-    | This array of class aliases will be registered when this application
-    | is started. However, feel free to register as many as you wish as
-    | the aliases are "lazy" loaded so they don't hinder performance.
-    |
-    */
-
-    'aliases' => Facade::defaultAliases()->merge([
-        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
-        // 'PDF' => Barryvdh\Snappy\Facades\SnappyPdf::class, // Use Snappy OR DomPDF, not both
-        'PDF' => Barryvdh\DomPDF\Facade::class, // ✅ Using DomPDF
-    ])->toArray(),
-
-    // Add at the bottom of config/app.php
-    'student_email_domain' => env('STUDENT_EMAIL_DOMAIN', '@csskabba.ng'),
 
 ];
 

@@ -40,19 +40,15 @@ class PermissionMeta
 
     /** Exact-name overrides for permissions the generic rule can't phrase well. */
     protected const OVERRIDES = [
-        'dashboard'                 => ['View',   'Open the main administration dashboard.'],
-        'finance dashboard'         => ['View',   'See the finance analytics dashboard.'],
-        'academics dashboard'       => ['View',   'See the academics analytics dashboard.'],
-        'View management dashboard' => ['View',   'See the management overview dashboard.'],
-        'Add user-role'             => ['Assign', 'Add users to this role.'],
-        'Update user-role'          => ['Edit',   'Change the users assigned to this role.'],
-        'Remove user-role'          => ['Remove', 'Remove users from this role.'],
-        'Manage maintenance mode'   => ['Manage', 'Turn the portal\'s maintenance mode on or off.'],
-        'Manage feature flags'      => ['Manage', 'Switch portal modules on or off (module access).'],
-        'Release salary payments'   => ['Release','Release staff salary payments — the money is sent.'],
-        'Manage payment gateways'   => ['Manage', 'Configure the payment gateways (Paystack, OPay).'],
-        'Close accounting period'   => ['Close',  'Lock the accounting books up to a date.'],
-        'Post journal entries'      => ['Post',   'Post entries directly into the general ledger.'],
+        'dashboard'               => ['View',   'Open the main administration dashboard.'],
+        'Add user-role'           => ['Assign', 'Add users to this role.'],
+        'Update user-role'        => ['Edit',   'Change the users assigned to this role.'],
+        'Remove user-role'        => ['Remove', 'Remove users from this role.'],
+        'Set current session'     => ['Manage', 'Choose which academic session is the current one.'],
+        'Set current semester'    => ['Manage', 'Choose which semester is the current one (also switches the current session).'],
+        'View curriculum'         => ['View',   'See which courses each programme runs at each level and semester.'],
+        'Update curriculum'       => ['Manage', 'Add, move and remove courses in a programme\'s curriculum.'],
+        'Copy bills'              => ['Manage', 'Copy school bills from one session to another, optionally adjusting amounts.'],
     ];
 
     /** ['action' => chip word, 'label' => readable name, 'desc' => sentence] */

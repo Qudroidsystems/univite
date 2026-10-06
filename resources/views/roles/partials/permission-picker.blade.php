@@ -26,6 +26,7 @@
 .pm-group { border:1px solid var(--rol-border,#e2e8f0); border-radius:12px; margin-bottom:12px; overflow:hidden; }
 .pm-group-head { display:flex; align-items:center; gap:10px; padding:11px 14px; background:#f8fafc; border-bottom:1px solid var(--rol-border,#e9edf3); cursor:pointer; }
 .pm-group-head label { display:flex; align-items:center; gap:9px; font-weight:700; font-size:13.5px; color:#1e293b; cursor:pointer; margin:0; flex:1; }
+.pm-group-about { font-size:12px; color:#64748b; padding:8px 14px 0; line-height:1.45; }
 .pm-group-badge { font-size:11px; font-weight:700; color:#64748b; background:#fff; border:1px solid #e2e8f0; border-radius:20px; padding:2px 9px; }
 .pm-caret { color:#94a3b8; transition:transform .2s; }
 .pm-group.collapsed .pm-caret { transform:rotate(-90deg); }
@@ -71,8 +72,11 @@
                 </label>
                 <i class="bi bi-chevron-down pm-caret"></i>
             </div>
+            @if ($about = \App\Support\PermissionCatalog::about($groupName))
+                <div class="pm-group-about">{{ $about }}</div>
+            @endif
             <div class="pm-group-body">
-                @foreach ($perms->sortBy(fn ($p) => ($verbOrder[PermissionMeta::action($p->name)] ?? 9) . $p->name) as $p)
+                @foreach ($perms->sortBy(fn ($p) => sprintf('%04d', \App\Support\PermissionCatalog::find($p->name)['position'] ?? 1000) . ($verbOrder[PermissionMeta::action($p->name)] ?? 9) . $p->name) as $p)
                     @php $m = PermissionMeta::for($p->name); @endphp
                     <label class="pm-item" data-search="{{ Str::lower($p->name . ' ' . $m['desc']) }}">
                         <input type="checkbox" name="permission[]" value="{{ $p->id }}" class="pm-item-check" data-group="{{ $slug }}" @checked(in_array((int) $p->id, $checkedIds))>

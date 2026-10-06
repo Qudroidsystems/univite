@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-@php $canEdit = auth()->user()->can('Update curriculum'); @endphp
+@php $canEdit = auth()->user()->can('Edit programme curriculum'); @endphp
 
 <div class="main-content">
     <div class="page-content">

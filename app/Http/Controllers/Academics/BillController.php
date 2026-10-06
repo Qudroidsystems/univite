@@ -19,7 +19,7 @@ use Illuminate\Validation\Rule;
  */
 class BillController extends CrudController
 {
-    protected string $permission = 'bill';
+    protected string $permission = 'school bills';
     protected string $title = 'School Bills';
     protected string $singular = 'Bill';
     protected string $icon = 'ri-bill-line';
@@ -31,7 +31,7 @@ class BillController extends CrudController
     public function __construct()
     {
         parent::__construct();
-        $this->middleware('permission:Copy bills')->only('copy');
+        $this->middleware('permission:Copy school bills to another session')->only('copy');
     }
 
     protected function model(): string

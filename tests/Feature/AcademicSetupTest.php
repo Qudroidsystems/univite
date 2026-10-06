@@ -223,7 +223,7 @@ it('copies bills to a new session with a percentage change and never overwrites'
 
 it('enforces permissions on the setup pages', function () {
     $user = User::factory()->create();
-    $user->givePermissionTo(Permission::findByName('View faculty'));
+    $user->givePermissionTo(Permission::findByName('View faculties'));
 
     $this->actingAs($user)->get(route('academics.faculties.index'))->assertOk();
     $this->actingAs($user)->post(route('academics.faculties.store'), ['name' => 'X', 'code' => 'X'])->assertForbidden();
@@ -247,7 +247,7 @@ it('creates users with a generated password and protects Super Admin', function 
     expect(User::find($this->admin->id))->not->toBeNull();
 
     // A non-Super-Admin cannot hand out the Super Admin role
-    $jane->givePermissionTo(['View user', 'Create user', 'Update user']);
+    $jane->givePermissionTo(['View users', 'Add users', 'Edit users']);
     $this->actingAs($jane)->post(route('users.store'), ['name' => 'Eve', 'email' => 'eve@example.com', 'roles' => ['Super Admin']])
         ->assertSessionHasErrors('roles.0');
 });

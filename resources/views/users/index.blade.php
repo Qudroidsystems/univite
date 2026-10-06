@@ -2,9 +2,11 @@
 
 @section('content')
 @php
-    $canCreate = auth()->user()->can('Create user');
-    $canUpdate = auth()->user()->can('Update user');
-    $canDelete = auth()->user()->can('Delete user');
+    $canCreate = auth()->user()->can('Add users');
+    $canUpdate = auth()->user()->can('Edit users');
+    $canDelete = auth()->user()->can('Delete users');
+    $canReset  = auth()->user()->can('Reset user passwords');
+    $canToggle = auth()->user()->can('Disable or enable user accounts');
     $hasOld    = old('_form_mode') !== null;
     $oldRoles  = (array) old('roles', []);
 @endphp
@@ -80,14 +82,16 @@
                                             <button type="button" class="btn btn-sm btn-soft-primary btn-edit" title="Edit"
                                                     data-url="{{ route('users.update', $u) }}"
                                                     data-record="{{ json_encode(['name' => $u->name, 'email' => $u->email, 'phone_number' => $u->phone_number, 'roles' => $u->roles->pluck('name')]) }}"><i class="ri-pencil-line"></i></button>
+                                        @endif
+                                        @if ($canReset)
                                             <form method="POST" action="{{ route('users.reset-password', $u) }}" class="d-inline" onsubmit="return confirm('Generate a new temporary password for {{ addslashes($u->name) }}?')">
                                                 @csrf <button class="btn btn-sm btn-soft-warning" title="Reset password"><i class="ri-key-2-line"></i></button>
                                             </form>
-                                            @if (! $u->is(auth()->user()))
-                                                <form method="POST" action="{{ route('users.toggle-status', $u) }}" class="d-inline">
-                                                    @csrf <button class="btn btn-sm btn-soft-secondary" title="{{ $u->is_disabled ? 'Enable' : 'Disable' }}"><i class="{{ $u->is_disabled ? 'ri-user-follow-line' : 'ri-user-forbid-line' }}"></i></button>
-                                                </form>
-                                            @endif
+                                        @endif
+                                        @if ($canToggle && ! $u->is(auth()->user()))
+                                            <form method="POST" action="{{ route('users.toggle-status', $u) }}" class="d-inline">
+                                                @csrf <button class="btn btn-sm btn-soft-secondary" title="{{ $u->is_disabled ? 'Enable account' : 'Disable account' }}"><i class="{{ $u->is_disabled ? 'ri-user-follow-line' : 'ri-user-forbid-line' }}"></i></button>
+                                            </form>
                                         @endif
                                         @if ($canDelete && ! $u->is(auth()->user()))
                                             <form method="POST" action="{{ route('users.destroy', $u) }}" class="d-inline" onsubmit="return confirm('Delete {{ addslashes($u->name) }}? This cannot be undone.')">

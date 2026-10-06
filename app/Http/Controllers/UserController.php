@@ -14,10 +14,12 @@ class UserController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:View user')->only(['index', 'show']);
-        $this->middleware('permission:Create user')->only('store');
-        $this->middleware('permission:Update user')->only(['update', 'resetPassword', 'toggleStatus']);
-        $this->middleware('permission:Delete user')->only('destroy');
+        $this->middleware('permission:View users')->only(['index', 'show']);
+        $this->middleware('permission:Add users')->only('store');
+        $this->middleware('permission:Edit users')->only('update');
+        $this->middleware('permission:Reset user passwords')->only('resetPassword');
+        $this->middleware('permission:Disable or enable user accounts')->only('toggleStatus');
+        $this->middleware('permission:Delete users')->only('destroy');
     }
 
     public function index(Request $request): View

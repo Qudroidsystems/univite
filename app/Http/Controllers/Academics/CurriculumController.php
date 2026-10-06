@@ -19,8 +19,8 @@ class CurriculumController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:View curriculum')->only('index');
-        $this->middleware('permission:Update curriculum')->only(['store', 'update', 'destroy']);
+        $this->middleware('permission:View programme curriculum')->only('index');
+        $this->middleware('permission:Edit programme curriculum')->only(['store', 'update', 'destroy']);
     }
 
     public function index(Request $request): View

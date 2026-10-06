@@ -29,7 +29,7 @@
         <td class="datereg">{{ $user->created_at->format('Y-m-d') }}</td>
         <td>
             <ul class="d-flex gap-2 list-unstyled mb-0">
-                @can('Remove user-role')
+                @can('Remove users from roles')
                     <li>
                         <a class="dropdown-item remove-item-btn" href="javascript:void(0);"
                            data-bs-toggle="modal"

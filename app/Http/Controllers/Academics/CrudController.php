@@ -49,7 +49,7 @@ abstract class CrudController extends Controller
     {
         $this->middleware('permission:View ' . $this->permission)->only('index');
         $this->middleware('permission:Create ' . $this->permission)->only('store');
-        $this->middleware('permission:Update ' . $this->permission)->only('update');
+        $this->middleware('permission:Edit ' . $this->permission)->only('update');
         $this->middleware('permission:Delete ' . $this->permission)->only('destroy');
     }
 

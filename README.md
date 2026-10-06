@@ -15,7 +15,7 @@ been removed and the foundation kept: **login, users, roles and permissions** (S
 | Curriculum: courses per programme, level and semester, with credit-unit totals | Academic Setup → Curriculum | `View curriculum`, `Update curriculum` |
 | Bill items (tuition, hostel, library …) | School Bills → Bill Items | `… bill-item` |
 | School bills: amount per session + programme + level (+ fresh/returning), copy to a new session | School Bills → School Bills | `… bill`, `Copy bills` |
-| Users, roles, permissions | Users & Access | `… user`, `… role`, `… permission` |
+| Users, roles, permissions | Users & Access | `View/Add/Edit/Delete users`, `Reset user passwords`, `Disable or enable user accounts`, `… roles`, `Assign/Remove users …`, `… permissions` |
 
 Accounts are created by administrators — there is no public registration.
 
@@ -31,6 +31,9 @@ php artisan migrate --seed
 The seeder creates the permissions, the `Super Admin` and `Admin` roles and a first administrator
 (`ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`). **Change that password after first login.**
 Re-running `php artisan db:seed` is safe and picks up any new permissions.
+Every permission has a plain-English name and description (and each group an explanation) defined in
+`app/Support/PermissionCatalog.php`; these are shown in the role editor and the Permissions page.
+Re-seeding also renames old permissions and carries existing role/user assignments across.
 The `Super Admin` role passes every permission check automatically.
 
 ## Tests

@@ -4,22 +4,22 @@
 
     // [label, route name, permission, route pattern]
     $academic = [
-        ['Academic Sessions', 'academics.sessions.index',    'View session',    'academics.sessions.*'],
-        ['Semesters',         'academics.semesters.index',   'View semester',   'academics.semesters.*'],
-        ['Faculties',         'academics.faculties.index',   'View faculty',    'academics.faculties.*'],
-        ['Departments',       'academics.departments.index', 'View department', 'academics.departments.*'],
-        ['Programmes',        'academics.programmes.index',  'View programme',  'academics.programmes.*'],
-        ['Courses',           'academics.courses.index',     'View course',     'academics.courses.*'],
-        ['Curriculum',        'academics.curriculum.index',  'View curriculum', 'academics.curriculum.*'],
+        ['Academic Sessions', 'academics.sessions.index',    'View academic sessions',    'academics.sessions.*'],
+        ['Semesters',         'academics.semesters.index',   'View semesters',   'academics.semesters.*'],
+        ['Faculties',         'academics.faculties.index',   'View faculties',    'academics.faculties.*'],
+        ['Departments',       'academics.departments.index', 'View departments', 'academics.departments.*'],
+        ['Programmes',        'academics.programmes.index',  'View programmes',  'academics.programmes.*'],
+        ['Courses',           'academics.courses.index',     'View courses',     'academics.courses.*'],
+        ['Curriculum',        'academics.curriculum.index',  'View programme curriculum', 'academics.curriculum.*'],
     ];
     $bills = [
-        ['Bill Items',   'bills.items.index',     'View bill-item', 'bills.items.*'],
-        ['School Bills', 'bills.structure.index', 'View bill',      'bills.structure.*'],
+        ['Bill Items',   'bills.items.index',     'View bill items', 'bills.items.*'],
+        ['School Bills', 'bills.structure.index', 'View school bills',      'bills.structure.*'],
     ];
     $access = [
-        ['Users',       'users.index',       'View user',       'users.*'],
-        ['Roles',       'roles.index',       'View role',       'roles.*'],
-        ['Permissions', 'permissions.index', 'View permission', 'permissions.*'],
+        ['Users',       'users.index',       'View users',       'users.*'],
+        ['Roles',       'roles.index',       'View roles',       'roles.*'],
+        ['Permissions', 'permissions.index', 'View permissions', 'permissions.*'],
     ];
 
     $groups = [
@@ -45,7 +45,7 @@
             <ul class="navbar-nav" id="navbar-nav">
                 <li class="menu-title"><span>Menu</span></li>
 
-                @can('dashboard')
+                @can('View dashboard')
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $on('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                             <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>

@@ -27,7 +27,7 @@
                             </p>
                         @else
                             <p class="mb-0 text-muted">No current session yet.
-                                @can('View session') <a href="{{ route('academics.sessions.index') }}">Create one to get started</a>. @endcan
+                                @can('View academic sessions') <a href="{{ route('academics.sessions.index') }}">Create one to get started</a>. @endcan
                             </p>
                         @endif
                     </div>
@@ -59,14 +59,14 @@
                 <div class="card-body">
                     @php
                         $steps = [
-                            ['Create an academic session and its semesters', \App\Models\AcademicSession::count() > 0, 'academics.sessions.index', 'View session'],
-                            ['Add faculties', \App\Models\Faculty::count() > 0, 'academics.faculties.index', 'View faculty'],
-                            ['Add departments', \App\Models\Department::count() > 0, 'academics.departments.index', 'View department'],
-                            ['Add programmes', \App\Models\Programme::count() > 0, 'academics.programmes.index', 'View programme'],
-                            ['Add courses with credit units', \App\Models\Course::count() > 0, 'academics.courses.index', 'View course'],
-                            ['Build each programme\'s curriculum', \App\Models\ProgrammeCourse::count() > 0, 'academics.curriculum.index', 'View curriculum'],
-                            ['Create bill items (tuition, hostel …)', \App\Models\BillItem::count() > 0, 'bills.items.index', 'View bill-item'],
-                            ['Set school bills per programme and level', \App\Models\Bill::count() > 0, 'bills.structure.index', 'View bill'],
+                            ['Create an academic session and its semesters', \App\Models\AcademicSession::count() > 0, 'academics.sessions.index', 'View academic sessions'],
+                            ['Add faculties', \App\Models\Faculty::count() > 0, 'academics.faculties.index', 'View faculties'],
+                            ['Add departments', \App\Models\Department::count() > 0, 'academics.departments.index', 'View departments'],
+                            ['Add programmes', \App\Models\Programme::count() > 0, 'academics.programmes.index', 'View programmes'],
+                            ['Add courses with credit units', \App\Models\Course::count() > 0, 'academics.courses.index', 'View courses'],
+                            ['Build each programme\'s curriculum', \App\Models\ProgrammeCourse::count() > 0, 'academics.curriculum.index', 'View programme curriculum'],
+                            ['Create bill items (tuition, hostel …)', \App\Models\BillItem::count() > 0, 'bills.items.index', 'View bill items'],
+                            ['Set school bills per programme and level', \App\Models\Bill::count() > 0, 'bills.structure.index', 'View school bills'],
                         ];
                     @endphp
                     <ul class="list-unstyled mb-0">

@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class DepartmentController extends CrudController
 {
-    protected string $permission = 'department';
+    protected string $permission = 'departments';
     protected string $title = 'Departments';
     protected string $singular = 'Department';
     protected string $icon = 'ri-organization-chart';

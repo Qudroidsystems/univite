@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class SessionController extends CrudController
 {
-    protected string $permission = 'session';
+    protected string $permission = 'academic sessions';
     protected string $title = 'Academic Sessions';
     protected string $singular = 'Session';
     protected string $icon = 'ri-calendar-event-line';
@@ -24,7 +24,7 @@ class SessionController extends CrudController
     public function __construct()
     {
         parent::__construct();
-        $this->middleware('permission:Set current session')->only('makeCurrent');
+        $this->middleware('permission:Set the current academic session')->only('makeCurrent');
     }
 
     protected function model(): string
@@ -72,7 +72,7 @@ class SessionController extends CrudController
     protected function rowActions(): array
     {
         return [
-            ['Make current', 'academics.sessions.make-current', 'Set current session', 'ri-checkbox-circle-line', fn ($r) => ! $r->is_current],
+            ['Make current', 'academics.sessions.make-current', 'Set the current academic session', 'ri-checkbox-circle-line', fn ($r) => ! $r->is_current],
         ];
     }
 

@@ -3,7 +3,7 @@
 @section('content')
 @php
     $canCreate = auth()->user()->can('Create ' . $permission);
-    $canUpdate = auth()->user()->can('Update ' . $permission);
+    $canUpdate = auth()->user()->can('Edit ' . $permission);
     $canDelete = auth()->user()->can('Delete ' . $permission);
     $hasOld    = old('_form_mode') !== null;
     $colspan   = count($columns) + 1;

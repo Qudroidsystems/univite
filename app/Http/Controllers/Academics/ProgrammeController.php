@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class ProgrammeController extends CrudController
 {
-    protected string $permission = 'programme';
+    protected string $permission = 'programmes';
     protected string $title = 'Programmes';
     protected string $singular = 'Programme';
     protected string $icon = 'ri-graduation-cap-line';

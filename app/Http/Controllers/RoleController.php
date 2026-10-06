@@ -18,11 +18,12 @@ class RoleController extends Controller
 {
     function __construct()
     {
-        $this->middleware('permission:View role|Create role|Update role|Delete role|Add user-role|Update user-role|Remove user-role', ['only' => ['index', 'store']]);
-        $this->middleware('permission:Create role', ['only' => ['create', 'store']]);
-        $this->middleware('permission:Update role', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:Delete role', ['only' => ['destroy', 'removeuserRole']]);
-        $this->middleware('permission:Update user-role', ['only' => ['adduser', 'updateuserrole']]);
+        $this->middleware('permission:View roles|Create roles|Edit roles|Delete roles|Assign users to roles|Remove users from roles')->only(['index', 'show', 'getRoleUsers']);
+        $this->middleware('permission:Create roles')->only(['create', 'store']);
+        $this->middleware('permission:Edit roles')->only(['edit', 'update']);
+        $this->middleware('permission:Delete roles')->only(['destroy', 'delete']);
+        $this->middleware('permission:Assign users to roles')->only(['adduser', 'updateuserrole']);
+        $this->middleware('permission:Remove users from roles')->only(['removeuserrole', 'bulkRemoveUsers']);
     }
 
     public function index(Request $request): View

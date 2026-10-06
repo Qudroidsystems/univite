@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class SemesterController extends CrudController
 {
-    protected string $permission = 'semester';
+    protected string $permission = 'semesters';
     protected string $title = 'Semesters';
     protected string $singular = 'Semester';
     protected string $icon = 'ri-calendar-2-line';
@@ -24,7 +24,7 @@ class SemesterController extends CrudController
     public function __construct()
     {
         parent::__construct();
-        $this->middleware('permission:Set current semester')->only('makeCurrent');
+        $this->middleware('permission:Set the current semester')->only('makeCurrent');
     }
 
     protected function model(): string
@@ -87,7 +87,7 @@ class SemesterController extends CrudController
     protected function rowActions(): array
     {
         return [
-            ['Make current', 'academics.semesters.make-current', 'Set current semester', 'ri-checkbox-circle-line', fn ($r) => ! $r->is_current],
+            ['Make current', 'academics.semesters.make-current', 'Set the current semester', 'ri-checkbox-circle-line', fn ($r) => ! $r->is_current],
         ];
     }
 

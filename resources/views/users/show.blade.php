@@ -45,7 +45,7 @@
                                     <a href="{{ route('roles.show', $role->id) }}" class="{{ $role->badge ?: 'badge bg-secondary' }} fs-12">{{ $role->name }}</a>
                                     <div class="mt-2 d-flex flex-wrap gap-1">
                                         @foreach ($role->permissions->sortBy('name') as $permission)
-                                            <span class="badge bg-light text-body border fw-normal">{{ $permission->name }}</span>
+                                            <span class="badge bg-light text-body border fw-normal" title="{{ \App\Support\PermissionMeta::for($permission->name)['desc'] }}">{{ $permission->name }}</span>
                                         @endforeach
                                     </div>
                                 </div>

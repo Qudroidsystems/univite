@@ -286,7 +286,7 @@ body{font-family:var(--rol-font);}
             <a href="{{ route('roles.index') }}" class="rol-btn rol-btn-back">
                 <i class="bi bi-arrow-left"></i> Back to Roles
             </a>
-            @can('Update user-role')
+            @can('Assign users to roles')
             <button type="button" class="rol-btn rol-btn-success" data-bs-toggle="modal" data-bs-target="#addUserModalgrid">
                 <i class="bi bi-person-plus-fill"></i> Add Users
             </button>
@@ -325,7 +325,7 @@ body{font-family:var(--rol-font);}
                     @forelse($rolePermissions as $rm)
                     <div class="perm-list-item">
                         <i class="bi bi-check-circle-fill"></i>
-                        <span>{{ $rm->name }}</span>
+                        <span>{{ $rm->name }}<small class="d-block text-muted" style="font-size:11px;font-weight:400;line-height:1.35">{{ \App\Support\PermissionMeta::for($rm->name)['desc'] }}</small></span>
                     </div>
                     @empty
                     <p style="font-size:13px;color:var(--rol-muted);text-align:center;padding:20px 0;">No permissions assigned</p>
@@ -346,7 +346,7 @@ body{font-family:var(--rol-font);}
                             {{ $userRoleCount }}
                         </span>
                     </h5>
-                    @can('Remove user-role')
+                    @can('Remove users from roles')
                     <button type="button" class="rol-btn rol-btn-danger" id="bulkRemoveBtn"
                             style="display:none;padding:7px 14px;font-size:12.5px;">
                         <i class="bi bi-person-x-fill"></i> Remove Selected
@@ -365,7 +365,7 @@ body{font-family:var(--rol-font);}
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Joined</th>
-                                    @can('Remove user-role')
+                                    @can('Remove users from roles')
                                     <th width="80">Action</th>
                                     @endcan
                                 </tr>
@@ -391,7 +391,7 @@ body{font-family:var(--rol-font);}
                                     <td style="font-size:12px;color:var(--rol-muted);">
                                         {{ \Carbon\Carbon::parse($u->created_at)->format('d M Y') }}
                                     </td>
-                                    @can('Remove user-role')
+                                    @can('Remove users from roles')
                                     <td>
                                         <button type="button" class="remove-user-btn"
                                                 data-user-id="{{ $u->id }}"

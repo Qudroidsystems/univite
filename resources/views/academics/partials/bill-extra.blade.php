@@ -24,7 +24,7 @@
     </div>
 @endif
 
-@can('Copy bills')
+@can('Copy school bills to another session')
     <div class="mb-3">
         <button type="button" class="btn btn-soft-secondary" data-bs-toggle="modal" data-bs-target="#copy-bills-modal">
             <i class="ri-file-copy-line me-1"></i>Copy bills from another session

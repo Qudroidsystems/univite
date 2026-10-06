@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 
 class BillItemController extends CrudController
 {
-    protected string $permission = 'bill-item';
+    protected string $permission = 'bill items';
     protected string $title = 'Bill Items';
     protected string $singular = 'Bill item';
     protected string $icon = 'ri-price-tag-3-line';

@@ -19,6 +19,9 @@ class UserTableSeeder extends Seeder
         $superAdmin = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web'], ['badge' => 'badge bg-success']);
         $admin      = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web'], ['badge' => 'badge bg-primary']);
 
+        // Students get this role when they are admitted; it carries no staff permissions.
+        Role::firstOrCreate(['name' => 'Student', 'guard_name' => 'web'], ['badge' => 'badge bg-info']);
+
         $allPermissions = Permission::pluck('name')->all();
         $superAdmin->syncPermissions($allPermissions);
         $admin->syncPermissions($allPermissions);

@@ -2,9 +2,9 @@
 
 @section('content')
 @php
-    $canCreate = auth()->user()->can('Create ' . $permission);
-    $canUpdate = auth()->user()->can('Edit ' . $permission);
-    $canDelete = auth()->user()->can('Delete ' . $permission);
+    $canCreate = in_array('create', $actions) && auth()->user()->can('Create ' . $permission);
+    $canUpdate = in_array('edit', $actions) && auth()->user()->can('Edit ' . $permission);
+    $canDelete = in_array('delete', $actions) && auth()->user()->can('Delete ' . $permission);
     $hasOld    = old('_form_mode') !== null;
     $colspan   = count($columns) + 1;
 @endphp
@@ -131,7 +131,7 @@
 @if ($canCreate || $canUpdate)
 <div class="modal fade" id="crud-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form method="POST" action="{{ route($routeBase . '.store') }}" class="modal-content" id="crud-form" autocomplete="off">
+        <form method="POST" action="{{ $canCreate ? route($routeBase . '.store') : '#' }}" class="modal-content" id="crud-form" autocomplete="off">
             @csrf
             <input type="hidden" name="_method" value="POST" id="crud-method">
             <input type="hidden" name="_form_mode" value="{{ old('_form_mode', 'create') }}" id="crud-mode">
@@ -208,7 +208,7 @@
     const form    = document.getElementById('crud-form');
     const modal   = new bootstrap.Modal(modalEl);
     const updateUrl = @json(route($routeBase . '.update', '__ID__'));
-    const storeUrl  = @json(route($routeBase . '.store'));
+    const storeUrl  = @json($canCreate ? route($routeBase . '.store') : '#');
     const singular  = @json($singular);
 
     function setMode(mode, id) {

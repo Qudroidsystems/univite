@@ -12,6 +12,11 @@
         ['Courses',           'academics.courses.index',     'View courses',     'academics.courses.*'],
         ['Curriculum',        'academics.curriculum.index',  'View programme curriculum', 'academics.curriculum.*'],
     ];
+    $students = [
+        ['Applicants',           'applicants.index',        'View applicants',           'applicants.*'],
+        ['Students',             'students.index',          'View students',             'students.index', 'students.show'],
+        ['Matric Number Format', 'students.settings',       'View matric number format', 'students.settings*'],
+    ];
     $bills = [
         ['Bill Items',   'bills.items.index',     'View bill items', 'bills.items.*'],
         ['School Bills', 'bills.structure.index', 'View school bills',      'bills.structure.*'],
@@ -24,6 +29,7 @@
 
     $groups = [
         ['id' => 'sidebarAcademic', 'label' => 'Academic Setup', 'icon' => 'ri-graduation-cap-line', 'items' => $academic],
+        ['id' => 'sidebarStudents', 'label' => 'Admissions & Students', 'icon' => 'ri-user-star-line', 'items' => $students],
         ['id' => 'sidebarBills',    'label' => 'School Bills',   'icon' => 'ri-bill-line',           'items' => $bills],
         ['id' => 'sidebarAccess',   'label' => 'Users & Access', 'icon' => 'ri-shield-user-line',    'items' => $access],
     ];
@@ -56,7 +62,7 @@
                 @foreach ($groups as $g)
                     @php
                         $visible = collect($g['items'])->filter(fn ($i) => $u->can($i[2]));
-                        $open = $visible->contains(fn ($i) => $on($i[3]));
+                        $open = $visible->contains(fn ($i) => $on(...array_slice($i, 3)));
                     @endphp
                     @if ($visible->isNotEmpty())
                         <li class="nav-item">
@@ -67,7 +73,7 @@
                                 <ul class="nav nav-sm flex-column">
                                     @foreach ($visible as $i)
                                         <li class="nav-item">
-                                            <a href="{{ route($i[1]) }}" class="nav-link {{ $on($i[3]) ? 'active' : '' }}">{{ $i[0] }}</a>
+                                            <a href="{{ route($i[1]) }}" class="nav-link {{ $on(...array_slice($i, 3)) ? 'active' : '' }}">{{ $i[0] }}</a>
                                         </li>
                                     @endforeach
                                 </ul>

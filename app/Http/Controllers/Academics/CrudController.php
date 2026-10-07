@@ -27,6 +27,8 @@ abstract class CrudController extends Controller
     protected string $routeBase;    // "academics.sessions"
     protected string $intro = '';
     protected array $searchable = [];
+    /** Which of create / edit / delete this page offers (each also needs its permission). */
+    protected array $actions = ['create', 'edit', 'delete'];
     protected int $perPage = 20;
     /** Optional partial rendered above the table. */
     protected ?string $extraView = null;
@@ -48,9 +50,9 @@ abstract class CrudController extends Controller
     public function __construct()
     {
         $this->middleware('permission:View ' . $this->permission)->only('index');
-        $this->middleware('permission:Create ' . $this->permission)->only('store');
-        $this->middleware('permission:Edit ' . $this->permission)->only('update');
-        $this->middleware('permission:Delete ' . $this->permission)->only('destroy');
+        in_array('create', $this->actions) && $this->middleware('permission:Create ' . $this->permission)->only('store');
+        in_array('edit', $this->actions) && $this->middleware('permission:Edit ' . $this->permission)->only('update');
+        in_array('delete', $this->actions) && $this->middleware('permission:Delete ' . $this->permission)->only('destroy');
     }
 
     /** Extra GET filters: [column, label, options[value => label]] */
@@ -115,6 +117,7 @@ abstract class CrudController extends Controller
             'icon'       => $this->icon,
             'intro'      => $this->intro,
             'permission' => $this->permission,
+            'actions'    => $this->actions,
             'routeBase'  => $this->routeBase,
             'fields'     => $fields,
             'columns'    => $this->columns(),

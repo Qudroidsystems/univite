@@ -131,7 +131,11 @@ class UserController extends Controller
             return back()->with('error', 'The last Super Admin cannot be deleted.');
         }
 
-        $user->delete();
+        try {
+            $user->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return back()->with('error', 'This user is linked to other records (for example a student profile) and cannot be deleted. Disable the account instead.');
+        }
 
         return back()->with('success', 'User deleted.');
     }

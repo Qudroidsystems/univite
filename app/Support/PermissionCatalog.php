@@ -149,6 +149,36 @@ class PermissionCatalog
                     ['Delete school bills', 'Delete', 'Permanently delete a bill amount.'],
                 ],
             ],
+
+            'Applicants' => [
+                'about' => 'People who have applied but are not students yet. Admitting an applicant creates their student record, matric number and login.',
+                'permissions' => [
+                    ['View applicants', 'View', 'See the list of applicants with their programme, entry level and admission status, and search or filter it.'],
+                    ['Create applicants', 'Create', 'Record a new applicant with their personal details, guardian, programme and entry session.'],
+                    ['Edit applicants', 'Edit', 'Correct an applicant\'s details. Not possible once the applicant has been admitted.'],
+                    ['Admit applicants', 'Manage', 'Admit an applicant as a student. This generates a matric number, creates a login account with a temporary password, and cannot be undone. Also lets you admit a previously rejected applicant.'],
+                    ['Reject applicants', 'Manage', 'Mark a pending application as rejected. The record is kept and the person can still be admitted later.'],
+                    ['Delete applicants', 'Delete', 'Permanently delete an applicant who has not been admitted.'],
+                ],
+            ],
+
+            'Students' => [
+                'about' => 'People who have been admitted and hold a matric number.',
+                'permissions' => [
+                    ['View students', 'View', 'See the list of students and open a student\'s full profile: personal details, programme, level, guardian and status.'],
+                    ['Edit students', 'Edit', 'Correct a student\'s personal details, guardian, login email and current level, and upload their passport photo.'],
+                    ['Change student status', 'Manage', 'Mark a student active, deferred, suspended, withdrawn or graduated. Suspended and withdrawn students are blocked from signing in.'],
+                    ['Reset student passwords', 'Manage', 'Generate a new temporary password for a student. The old password stops working at once.'],
+                ],
+            ],
+
+            'Matric number format' => [
+                'about' => 'The pattern used to generate matric numbers, for example 2025/BSC-CSC/0001.',
+                'permissions' => [
+                    ['View matric number format', 'View', 'See the current matric number pattern and an example of the next number.'],
+                    ['Set the matric number format', 'Set', 'Change the pattern used for students admitted from now on. Existing matric numbers never change.'],
+                ],
+            ],
         ];
     }
 

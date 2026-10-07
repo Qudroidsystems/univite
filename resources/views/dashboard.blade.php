@@ -65,6 +65,7 @@
                             ['Add programmes', \App\Models\Programme::count() > 0, 'academics.programmes.index', 'View programmes'],
                             ['Add courses with credit units', \App\Models\Course::count() > 0, 'academics.courses.index', 'View courses'],
                             ['Build each programme\'s curriculum', \App\Models\ProgrammeCourse::count() > 0, 'academics.curriculum.index', 'View programme curriculum'],
+                            ['Record applicants and admit them as students', \App\Models\Student::count() > 0, 'applicants.index', 'View applicants'],
                             ['Create bill items (tuition, hostel …)', \App\Models\BillItem::count() > 0, 'bills.items.index', 'View bill items'],
                             ['Set school bills per programme and level', \App\Models\Bill::count() > 0, 'bills.structure.index', 'View school bills'],
                         ];

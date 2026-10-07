@@ -60,7 +60,7 @@ it('renders every setup page for a super admin', function (string $route) {
     'dashboard', 'users.index', 'roles.index', 'permissions.index',
     'academics.sessions.index', 'academics.semesters.index', 'academics.faculties.index',
     'academics.departments.index', 'academics.programmes.index', 'academics.courses.index',
-    'academics.curriculum.index', 'bills.items.index', 'bills.structure.index',
+    'academics.curriculum.index', 'applicants.index', 'students.index', 'students.settings', 'bills.items.index', 'bills.structure.index',
 ]);
 
 it('renders role and user detail pages', function () {

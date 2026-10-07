@@ -24,7 +24,7 @@ it('seeds every permission with a group and a real description', function () {
 it('uses clear names: no technical slugs, and every name starts with a verb', function () {
     foreach (array_keys(PermissionCatalog::all()) as $name) {
         expect($name)->not->toMatch('/[-_]/')
-            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy) /');
+            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change) /');
     }
 });
 
@@ -63,7 +63,7 @@ it('keeps every permission checked in code in the catalog (no typos, nothing und
             }
             // Permission names written as plain strings (row actions, sidebar rows) -- not UI labels in other views
             if (str_starts_with($file->getPathname(), app_path()) || $file->getFilename() === 'sidebar.blade.php') {
-                preg_match_all("/'((?:View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy) [a-z]+(?: [a-z]+)*)'/", $source, $m3);
+                preg_match_all("/'((?:View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change) [a-z]+(?: [a-z]+)*)'/", $source, $m3);
                 foreach ($m3[1] as $name) {
                     $used[$name] = $file->getFilename();
                 }
@@ -74,7 +74,15 @@ it('keeps every permission checked in code in the catalog (no typos, nothing und
     // Resource controllers build "View {noun}" from a $permission property
     foreach (glob(app_path('Http/Controllers/Academics/*Controller.php')) as $file) {
         if (preg_match("/\\\$permission = '([^']+)'/", file_get_contents($file), $m)) {
-            foreach (['View', 'Create', 'Edit', 'Delete'] as $verb) {
+            $source = file_get_contents($file);
+            $verbs = ['View' => true, 'Create' => true, 'Edit' => true, 'Delete' => true];
+            if (preg_match("/\\\$actions = \\[([^\\]]*)\\]/", $source, $a)) {
+                preg_match_all("/'(\\w+)'/", $a[1], $names);
+                $verbs = ['View' => true] + array_filter([
+                    'Create' => in_array('create', $names[1]), 'Edit' => in_array('edit', $names[1]), 'Delete' => in_array('delete', $names[1]),
+                ]);
+            }
+            foreach (array_keys($verbs) as $verb) {
                 $used["$verb {$m[1]}"] = basename($file);
             }
         }

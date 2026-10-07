@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\Academics\ApplicantController;
 use App\Http\Controllers\Academics\BillController;
+use App\Http\Controllers\Academics\MatricSettingsController;
+use App\Http\Controllers\Academics\StudentController;
 use App\Http\Controllers\Academics\BillItemController;
 use App\Http\Controllers\Academics\CourseController;
 use App\Http\Controllers\Academics\CurriculumController;
@@ -68,6 +71,18 @@ Route::middleware('auth')->group(function () {
         Route::put('curriculum/{entry}', [CurriculumController::class, 'update'])->name('curriculum.update');
         Route::delete('curriculum/{entry}', [CurriculumController::class, 'destroy'])->name('curriculum.destroy');
     });
+
+    // ---- Admissions & students ----
+    Route::post('applicants/{applicant}/admit', [ApplicantController::class, 'admit'])->name('applicants.admit');
+    Route::post('applicants/{applicant}/reject', [ApplicantController::class, 'reject'])->name('applicants.reject');
+    Route::resource('applicants', ApplicantController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    Route::get('students/matric-format', [MatricSettingsController::class, 'edit'])->name('students.settings');
+    Route::put('students/matric-format', [MatricSettingsController::class, 'update'])->name('students.settings.update');
+    Route::post('students/{student}/photo', [StudentController::class, 'photo'])->name('students.photo');
+    Route::post('students/{student}/status', [StudentController::class, 'status'])->name('students.status');
+    Route::post('students/{student}/reset-password', [StudentController::class, 'resetPassword'])->name('students.reset-password');
+    Route::resource('students', StudentController::class)->only(['index', 'show', 'update']);
 
     // ---- School bills ----
     Route::prefix('bills')->name('bills.')->group(function () {

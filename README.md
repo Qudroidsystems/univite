@@ -15,6 +15,9 @@ been removed and the foundation kept: **login, users, roles and permissions** (S
 | Curriculum: courses per programme, level and semester, with credit-unit totals | Academic Setup → Curriculum | `View curriculum`, `Update curriculum` |
 | Bill items (tuition, hostel, library …) | School Bills → Bill Items | `… bill-item` |
 | School bills: amount per session + programme + level (+ fresh/returning), copy to a new session | School Bills → School Bills | `… bill`, `Copy bills` |
+| Applicants: bio-data, guardian, programme, entry mode/level/session; admit or reject | Admissions & Students → Applicants | `View/Create/Edit/Delete applicants`, `Admit applicants`, `Reject applicants` |
+| Students: created by admitting an applicant (matric number + login generated); profile, passport photo, status, password reset | Admissions & Students → Students | `View students`, `Edit students`, `Change student status`, `Reset student passwords` |
+| Matric number format, e.g. `{YEAR}/{PROGRAMME_CODE}/{SEQ:4}` | Admissions & Students → Matric Number Format | `View matric number format`, `Set the matric number format` |
 | Users, roles, permissions | Users & Access | `View/Add/Edit/Delete users`, `Reset user passwords`, `Disable or enable user accounts`, `… roles`, `Assign/Remove users …`, `… permissions` |
 
 Accounts are created by administrators — there is no public registration.
@@ -26,6 +29,7 @@ composer install
 cp .env.example .env        # then set DB_* and ADMIN_* in .env
 php artisan key:generate
 php artisan migrate --seed
+php artisan storage:link    # needed once so student passport photos can be displayed
 ```
 
 The seeder creates the permissions, the `Super Admin` and `Admin` roles and a first administrator

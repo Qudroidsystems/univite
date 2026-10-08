@@ -103,7 +103,8 @@ use Spatie\Permission\Models\Role;
                                                         <div class="d-flex align-items-center">
                                                             <div>
                                                                 <h6 class="mb-0"><a href="" class="text-reset products">{{ $permission->name }}</a></h6>
-                                                                <p>{{ $permission->title }}</p>
+                                                                <span class="badge bg-light text-body border fw-normal">{{ $permission->title ?: 'Custom' }}</span>
+                                                                <p class="text-muted fs-12 mb-0 mt-1" style="white-space:normal;max-width:620px">{{ \App\Support\PermissionMeta::for($permission->name)['desc'] }}</p>
                                                             </div>
                                                             
                                                         </div>

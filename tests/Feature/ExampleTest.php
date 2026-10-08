@@ -1,7 +1,9 @@
 <?php
 
-test('the application returns a successful response', function () {
-    $response = $this->get('/');
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-    $response->assertStatus(200);
+uses(RefreshDatabase::class);
+
+test('guests see the public landing page with the apply and sign-in doors', function () {
+    $this->get('/')->assertOk()->assertSee('Apply for admission')->assertSee('Continue my application')->assertSee(route('login'));
 });

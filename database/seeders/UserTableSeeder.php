@@ -2,61 +2,40 @@
 
 namespace Database\Seeders;
 
-use App\Models\BioModel;
-use Hash;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash as FacadesHash;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class UserTableSeeder extends Seeder
 {
-
-    use HasRoles;
     /**
-     * Run the database seeds.
-     *
-     * @return void
+     * Creates the Super Admin / Admin roles and the first administrator.
+     * Safe to re-run: nothing is duplicated and an existing password is never reset.
+     * Set ADMIN_NAME / ADMIN_EMAIL / ADMIN_PASSWORD in .env to customise.
      */
-    public function run()
+    public function run(): void
     {
-        // Safe to run again: the admin user and roles are only created if missing,
-        // and an existing password is never reset.
-        $user = User::where('email', 'eliabsiji@gmail.com')->first();
-        if (!$user) {
-            $user = User::create([
-                'name' => 'Ilemobayo Eliab',
-                'email' => 'eliabsiji@gmail.com',
-                'avatar' => 'unnamed.png',
-                'password' => FacadesHash::make('12345678'),
-            ]);
+        $superAdmin = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'web'], ['badge' => 'badge bg-success']);
+        $admin      = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web'], ['badge' => 'badge bg-primary']);
+
+        // Students get this role when they are admitted; it carries no staff permissions.
+        Role::firstOrCreate(['name' => 'Student', 'guard_name' => 'web'], ['badge' => 'badge bg-info']);
+
+        $allPermissions = Permission::pluck('name')->all();
+        $superAdmin->syncPermissions($allPermissions);
+        $admin->syncPermissions($allPermissions);
+
+        $user = User::firstOrCreate(
+            ['email' => env('ADMIN_EMAIL', 'eliabsiji@gmail.com')],
+            [
+                'name'     => env('ADMIN_NAME', 'System Administrator'),
+                'password' => env('ADMIN_PASSWORD', '12345678'),
+            ]
+        );
+
+        if (! $user->hasRole($superAdmin->name)) {
+            $user->assignRole($superAdmin);
         }
-
-        if (!BioModel::where('user_id', $user->id)->exists()) {
-            BioModel::create(['user_id' => $user->id,
-                              'firstname' => 'ilemobayo',
-                              'lastname' => 'Eliab',
-                              'othernames' => 'siji',
-                              'phone' => '98385523567',
-                              'address' => 'ondo',
-                              'gender' => 'male',
-                              'maritalstatus' => 'Single',
-                              'nationality' => 'nigerian',
-                              'dob' => '12-12-12']);
-        }
-
-        $role = Role::where('name', 'Super Admin')->where('guard_name', 'web')->first()
-            ?? Role::create(['name' => 'Super Admin', 'badge' => 'badge bg-success']);
-        $role2 = Role::where('name', 'Admin')->where('guard_name', 'web')->first()
-            ?? Role::create(['name' => 'Admin', 'badge' => 'badge bg-primary']);
-
-        $permissions = Permission::pluck('id', 'id')->all();
-        $role->syncPermissions($permissions);
-        $role2->syncPermissions($permissions);
-        if (!$user->hasRole($role->name)) $user->assignRole($role);
-        if (!$user->hasRole($role2->name)) $user->assignRole($role2);
     }
 }

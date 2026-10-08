@@ -3,11 +3,10 @@
 namespace App\Support;
 
 /**
- * Turns a raw permission name (e.g. "View student", "Manage payroll settings")
- * into a friendly action chip + a plain-English description, so the role editor
- * can explain what each permission actually allows. Works for every permission
- * with no database changes; specific names can be given an exact description in
- * the OVERRIDES map below.
+ * Gives the role editor an action chip + plain-English description for any
+ * permission. Names in PermissionCatalog use the catalog's own wording; custom
+ * permissions use the description stored in the database, and otherwise a
+ * sentence guessed from the leading verb.
  */
 class PermissionMeta
 {
@@ -38,32 +37,18 @@ class PermissionMeta
         'Assign'   => ['Assign',  'Assign {x}.'],
     ];
 
-    /** Exact-name overrides for permissions the generic rule can't phrase well. */
-    protected const OVERRIDES = [
-        'dashboard'                 => ['View',   'Open the main administration dashboard.'],
-        'finance dashboard'         => ['View',   'See the finance analytics dashboard.'],
-        'academics dashboard'       => ['View',   'See the academics analytics dashboard.'],
-        'View management dashboard' => ['View',   'See the management overview dashboard.'],
-        'Add user-role'             => ['Assign', 'Add users to this role.'],
-        'Update user-role'          => ['Edit',   'Change the users assigned to this role.'],
-        'Remove user-role'          => ['Remove', 'Remove users from this role.'],
-        'Manage maintenance mode'   => ['Manage', 'Turn the portal\'s maintenance mode on or off.'],
-        'Manage feature flags'      => ['Manage', 'Switch portal modules on or off (module access).'],
-        'Release salary payments'   => ['Release','Release staff salary payments — the money is sent.'],
-        'Manage payment gateways'   => ['Manage', 'Configure the payment gateways (Paystack, OPay).'],
-        'Close accounting period'   => ['Close',  'Lock the accounting books up to a date.'],
-        'Post journal entries'      => ['Post',   'Post entries directly into the general ledger.'],
-    ];
-
     /** ['action' => chip word, 'label' => readable name, 'desc' => sentence] */
     public static function for(string $name): array
     {
         $label = ucfirst(trim($name));
 
-        if (isset(self::OVERRIDES[$name])) {
-            [$action, $desc] = self::OVERRIDES[$name];
-            return ['action' => $action, 'label' => $label, 'desc' => $desc];
+        // Built-in permissions carry a hand-written action and description.
+        if ($known = \App\Support\PermissionCatalog::find($name)) {
+            return ['action' => $known['action'], 'label' => $label, 'desc' => $known['description']];
         }
+
+        // Custom permissions: a stored description wins, otherwise guess from the verb.
+        $stored = \Spatie\Permission\Models\Permission::where('name', $name)->value('description');
 
         $parts = explode(' ', trim($name), 2);
         $verb = ucfirst(strtolower($parts[0]));
@@ -71,10 +56,10 @@ class PermissionMeta
 
         if (isset(self::VERBS[$verb]) && $rest !== '') {
             [$chip, $tpl] = self::VERBS[$verb];
-            return ['action' => $chip, 'label' => $label, 'desc' => str_replace('{x}', $rest, $tpl)];
+            return ['action' => $chip, 'label' => $label, 'desc' => $stored ?: str_replace('{x}', $rest, $tpl)];
         }
 
-        return ['action' => 'Access', 'label' => $label, 'desc' => 'Grants the “' . $label . '” permission.'];
+        return ['action' => 'Access', 'label' => $label, 'desc' => $stored ?: 'Custom permission “' . $label . '”. No description has been written for it.'];
     }
 
     public static function action(string $name): string
@@ -95,7 +80,7 @@ class PermissionMeta
             'View' => 'pm-chip-view', 'Preview' => 'pm-chip-view',
             'Create' => 'pm-chip-create', 'Add' => 'pm-chip-create',
             'Edit' => 'pm-chip-edit', 'Assign' => 'pm-chip-edit',
-            'Manage' => 'pm-chip-manage',
+            'Manage' => 'pm-chip-manage', 'Set' => 'pm-chip-manage',
             'Delete' => 'pm-chip-delete', 'Remove' => 'pm-chip-delete', 'Close' => 'pm-chip-delete',
             'Approve' => 'pm-chip-approve', 'Submit' => 'pm-chip-approve', 'Post' => 'pm-chip-approve',
             'Release' => 'pm-chip-money', 'Pay' => 'pm-chip-money',

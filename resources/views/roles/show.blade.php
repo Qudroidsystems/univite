@@ -286,7 +286,7 @@ body{font-family:var(--rol-font);}
             <a href="{{ route('roles.index') }}" class="rol-btn rol-btn-back">
                 <i class="bi bi-arrow-left"></i> Back to Roles
             </a>
-            @can('Update user-role')
+            @can('Assign users to roles')
             <button type="button" class="rol-btn rol-btn-success" data-bs-toggle="modal" data-bs-target="#addUserModalgrid">
                 <i class="bi bi-person-plus-fill"></i> Add Users
             </button>
@@ -325,7 +325,7 @@ body{font-family:var(--rol-font);}
                     @forelse($rolePermissions as $rm)
                     <div class="perm-list-item">
                         <i class="bi bi-check-circle-fill"></i>
-                        <span>{{ $rm->name }}</span>
+                        <span>{{ $rm->name }}<small class="d-block text-muted" style="font-size:11px;font-weight:400;line-height:1.35">{{ \App\Support\PermissionMeta::for($rm->name)['desc'] }}</small></span>
                     </div>
                     @empty
                     <p style="font-size:13px;color:var(--rol-muted);text-align:center;padding:20px 0;">No permissions assigned</p>
@@ -346,7 +346,7 @@ body{font-family:var(--rol-font);}
                             {{ $userRoleCount }}
                         </span>
                     </h5>
-                    @can('Remove user-role')
+                    @can('Remove users from roles')
                     <button type="button" class="rol-btn rol-btn-danger" id="bulkRemoveBtn"
                             style="display:none;padding:7px 14px;font-size:12.5px;">
                         <i class="bi bi-person-x-fill"></i> Remove Selected
@@ -365,7 +365,7 @@ body{font-family:var(--rol-font);}
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Joined</th>
-                                    @can('Remove user-role')
+                                    @can('Remove users from roles')
                                     <th width="80">Action</th>
                                     @endcan
                                 </tr>
@@ -391,7 +391,7 @@ body{font-family:var(--rol-font);}
                                     <td style="font-size:12px;color:var(--rol-muted);">
                                         {{ \Carbon\Carbon::parse($u->created_at)->format('d M Y') }}
                                     </td>
-                                    @can('Remove user-role')
+                                    @can('Remove users from roles')
                                     <td>
                                         <button type="button" class="remove-user-btn"
                                                 data-user-id="{{ $u->id }}"
@@ -473,18 +473,6 @@ body{font-family:var(--rol-font);}
                     <input type="hidden" name="roleid" value="{{ $role->id }}">
                     <div class="modal-body">
 
-                        {{-- Tabs --}}
-                        <div class="rol-nav-tabs" role="tablist">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#staff-tab" type="button">
-                                <i class="fas fa-user-tie"></i> Staff
-                                <span style="background:var(--rol-accent);color:#fff;border-radius:12px;padding:1px 8px;font-size:10px;" id="staff-count">0</span>
-                            </button>
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#student-tab" type="button">
-                                <i class="fas fa-user-graduate"></i> Students
-                                <span style="background:var(--rol-success);color:#fff;border-radius:12px;padding:1px 8px;font-size:10px;" id="student-count">0</span>
-                            </button>
-                        </div>
-
                         <div class="rol-info-banner">
                             <i class="bi bi-info-circle-fill me-1"></i>
                             Selected: <strong id="selected-count">0</strong> user(s).
@@ -495,7 +483,7 @@ body{font-family:var(--rol-font);}
                             {{-- STAFF --}}
                             <div class="tab-pane fade show active" id="staff-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span style="font-size:12px;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;">Staff Members</span>
+                                    <span style="font-size:12px;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;">Users</span>
                                     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--rol-accent);">
                                         <input type="checkbox" class="rol-checkbox" id="select-all-staff">
                                         Select All
@@ -506,15 +494,7 @@ body{font-family:var(--rol-font);}
                                         $allUsersNotInRole = \App\Models\User::whereDoesntHave('roles', function ($q) use ($role) {
                                             $q->where('name', $role->name);
                                         })->get();
-                                        $staffUsers = $allUsersNotInRole->filter(function ($user) {
-                                            if ($user->staffemploymentDetails) return true;
-                                            if ($user->staffPicture) return true;
-                                            if (!$user->student_id) return true;
-                                            return false;
-                                        })->reject(function ($user) {
-                                            if ($user->student) return true;
-                                            return false;
-                                        })->sortBy('name');
+                                        $staffUsers = $allUsersNotInRole->sortBy('name');
                                     @endphp
                                     @forelse($staffUsers as $staff)
                                     @php $sInit = strtoupper(substr($staff->name,0,1)); @endphp
@@ -532,49 +512,7 @@ body{font-family:var(--rol-font);}
                                         </div>
                                     </div>
                                     @empty
-                                    <div class="col-12"><div class="rol-info-banner">No staff members available.</div></div>
-                                    @endforelse
-                                </div>
-                            </div>
-
-                            {{-- STUDENTS --}}
-                            <div class="tab-pane fade" id="student-tab">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span style="font-size:12px;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;">Students</span>
-                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--rol-accent);">
-                                        <input type="checkbox" class="rol-checkbox" id="select-all-students">
-                                        Select All
-                                    </label>
-                                </div>
-                                <div class="row g-2" id="student-list-container">
-                                    @php
-                                        $studentUsers = $allUsersNotInRole->filter(function ($user) {
-                                            return $user->student_id || $user->student;
-                                        })->sortBy('name');
-                                    @endphp
-                                    @forelse($studentUsers as $studentUser)
-                                    @php $stInit = strtoupper(substr($studentUser->name,0,1)); @endphp
-                                    <div class="col-xl-4 col-lg-6">
-                                        <div class="user-card-sel" data-user-id="{{ $studentUser->id }}">
-                                            <div class="usr-avatar-sm" style="background:linear-gradient(135deg,#10b981,#059669);">{{ $stInit }}</div>
-                                            <div class="ucs-info">
-                                                <div class="ucs-name">{{ $studentUser->name }}</div>
-                                                <div class="ucs-meta">
-                                                    @if($studentUser->student?->admissionNo)
-                                                        {{ $studentUser->student->admissionNo }}
-                                                    @else
-                                                        {{ $studentUser->email }}
-                                                    @endif
-                                                </div>
-                                            </div>
-                                            <div class="ucs-check">
-                                                <input type="checkbox" value="{{ $studentUser->id }}" name="users[]"
-                                                       class="student-checkbox user-checkbox" id="student-{{ $studentUser->id }}">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @empty
-                                    <div class="col-12"><div class="rol-info-banner">No students available.</div></div>
+                                    <div class="col-12"><div class="rol-info-banner">No users available.</div></div>
                                     @endforelse
                                 </div>
                             </div>
@@ -783,11 +721,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function initAddUserModal() {
         const staffCbs   = document.querySelectorAll('#addUserModalgrid .staff-checkbox');
-        const studentCbs = document.querySelectorAll('#addUserModalgrid .student-checkbox');
+        const studentCbs = [];
         const allCbs     = document.querySelectorAll('#addUserModalgrid .user-checkbox');
 
-        document.getElementById('staff-count').textContent   = staffCbs.length;
-        document.getElementById('student-count').textContent = studentCbs.length;
+        
 
         function updateCount() {
             const n = document.querySelectorAll('#addUserModalgrid .user-checkbox:checked').length;

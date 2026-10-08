@@ -277,27 +277,27 @@ body{font-family:var(--rol-font);}
                 <div class="rol-card-top">
                     <div class="d-flex align-items-start justify-content-between">
                         <div class="rol-card-icon"><i class="bi {{ $icon }}"></i></div>
-                        @canany(['Update user-role','Remove user-role'])
+                        @canany(['Assign users to roles','Remove users from roles'])
                         <div class="dropdown rol-dropdown">
                             <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                @can('Update user-role')
+                                @can('Assign users to roles')
                                 <li>
                                     <a class="dropdown-item" href="{{ route('roles.adduser', $role->id) }}">
                                         <i class="bi bi-person-plus-fill text-primary"></i> Add User
                                     </a>
                                 </li>
                                 @endcan
-                                @can('View role')
+                                @can('View roles')
                                 <li>
                                     <a class="dropdown-item" href="{{ route('roles.show', $role->id) }}">
                                         <i class="bi bi-eye-fill text-success"></i> View Details
                                     </a>
                                 </li>
                                 @endcan
-                                @can('Remove user-role')
+                                @can('Remove users from roles')
                                 <li><hr class="dropdown-divider my-1"></li>
                                 <li>
                                     <form method="POST" action="{{ route('roles.destroy', $role->id) }}"
@@ -330,7 +330,7 @@ body{font-family:var(--rol-font);}
                         <span style="font-size:12px;color:var(--rol-muted);">No permissions assigned</span>
                     @endforelse
                     @if($role->permissions->count() > 4)
-                        @can('View role')
+                        @can('View roles')
                         <br><a href="{{ route('roles.show', $role->id) }}" class="rol-perm-more mt-1 d-inline-block">
                             +{{ $role->permissions->count() - 4 }} more →
                         </a>
@@ -343,7 +343,7 @@ body{font-family:var(--rol-font);}
                     <span class="rol-users-badge">
                         <i class="bi bi-people-fill"></i> {{ $roles_num }} user{{ $roles_num !== 1 ? 's' : '' }}
                     </span>
-                    @can('View role')
+                    @can('View roles')
                     <a href="{{ route('roles.show', $role->id) }}" class="rol-view-link">
                         View <i class="bi bi-arrow-right"></i>
                     </a>

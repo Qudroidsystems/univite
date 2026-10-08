@@ -121,6 +121,16 @@ class PermissionCatalog
                 ],
             ],
 
+            'Custom fields' => [
+                'about' => 'Extra questions added to the applicant, student and staff forms: text, numbers, dates, choices, yes/no and file uploads.',
+                'permissions' => [
+                    ['View custom fields', 'View', 'See the extra form fields that have been added and where they appear.'],
+                    ['Create custom fields', 'Create', 'Add a new question to the applicant, student or staff form.'],
+                    ['Edit custom fields', 'Edit', 'Change a custom field: its label, choices, whether it is required, or hide it.'],
+                    ['Delete custom fields', 'Delete', 'Delete a custom field. Every answer and uploaded file for it is deleted too.'],
+                ],
+            ],
+
             'Student statuses' => [
                 'about' => 'The states a student can be in (Active, Deferred, Suspended ...). Each status controls whether the student can sign in, register for courses, pay fees and counts as enrolled.',
                 'permissions' => [
@@ -228,6 +238,38 @@ class PermissionCatalog
                     ['Change student status', 'Manage', 'Mark a student active, deferred, suspended, withdrawn or graduated. Suspended and withdrawn students are blocked from signing in.'],
                     ['Verify new students', 'Manage', 'Confirm, after checking the original documents in person, that a newly admitted student has been physically verified. Can also be undone. Only possible once the student has accepted the offer, paid the acceptance fee and finished their biodata and uploads.'],
                     ['Reset student passwords', 'Manage', 'Generate a new temporary password for a student. The old password stops working at once.'],
+                ],
+            ],
+
+            'Clearance' => [
+                'about' => 'After verification, a new student must clear every required item (fees, documents, medical, department ...) before a matric number is issued.',
+                'permissions' => [
+                    ['View clearance', 'View', 'See which students are being cleared, each student\'s checklist, and print a clearance slip once they are cleared.'],
+                    ['Clear students', 'Manage', 'Mark a manual clearance item cleared or rejected for a student, with a reason when rejecting. You can only sign items that belong to your own office (see Clearance items), unless you also hold "Clear students for any office".'],
+                    ['Clear students for any office', 'Manage', 'Sign off a manual clearance item that belongs to any office, not just your own. Give this to the registrar or a clearance supervisor.'],
+                ],
+            ],
+
+            'Clearance items' => [
+                'about' => 'The checklist this university requires before a matric number: automatic checks (offer accepted, fees paid ...) and manual sign-offs by an office.',
+                'permissions' => [
+                    ['View clearance items', 'View', 'See the clearance checklist: each item, whether it is automatic or signed by an office, and whether it is required.'],
+                    ['Create clearance items', 'Create', 'Add an item to the checklist, such as a library or hostel clearance, and say which office signs it.'],
+                    ['Edit clearance items', 'Edit', 'Rename an item, change its office, make it required or optional, or switch it on or off. Switching an item off stops it blocking students.'],
+                    ['Delete clearance items', 'Delete', 'Delete a clearance item. Students\' past decisions on it are removed too. Switching it off instead keeps the history.'],
+                ],
+            ],
+
+            'Matric numbers' => [
+                'about' => 'Matric numbers are issued after a student is fully cleared. These permissions cover handing them out, setting special ones, bringing in numbers made elsewhere, and taking them back.',
+                'permissions' => [
+                    ['View matric numbers', 'View', 'See which cleared students are waiting for a matric number, who already has one, and which numbers were cancelled.'],
+                    ['Generate matric numbers', 'Generate', 'Issue matric numbers to cleared students in a batch, using the saved matric number format. Numbers are handed out alphabetically by surname.'],
+                    ['Assign special matric numbers', 'Assign', 'Type in a matric number by hand for one cleared student, for example a reserved or special number. It must not already be in use.'],
+                    ['Import external matric numbers', 'Import', 'Upload a file of matric numbers made outside the portal and apply them to the matching cleared students.'],
+                    ['Cancel matric numbers', 'Cancel', 'Withdraw a student\'s matric number with a reason. The number is kept on record and is never issued to anyone else.'],
+                    ['Restore cancelled matric numbers', 'Restore', 'Give a cancelled matric number back to the student it was withdrawn from.'],
+                    ['Undo matric number batches', 'Undo', 'Take back every number a generated or imported batch handed out so they can be issued again. Students whose number changed since are left alone.'],
                 ],
             ],
 

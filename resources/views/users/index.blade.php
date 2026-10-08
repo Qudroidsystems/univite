@@ -81,7 +81,7 @@
                                         @if ($canUpdate)
                                             <button type="button" class="btn btn-sm btn-soft-primary btn-edit" title="Edit"
                                                     data-url="{{ route('users.update', $u) }}"
-                                                    data-record="{{ json_encode(['name' => $u->name, 'email' => $u->email, 'phone_number' => $u->phone_number, 'roles' => $u->roles->pluck('name')]) }}"><i class="ri-pencil-line"></i></button>
+                                                    data-record="{{ json_encode(['name' => $u->name, 'email' => $u->email, 'phone_number' => $u->phone_number, 'roles' => $u->roles->pluck('name'), 'custom' => \App\Support\CustomFields::recordData('staff', $u)]) }}"><i class="ri-pencil-line"></i></button>
                                         @endif
                                         @if ($canReset)
                                             <form method="POST" action="{{ route('users.reset-password', $u) }}" class="d-inline" onsubmit="return confirm('Generate a new temporary password for {{ addslashes($u->name) }}?')">
@@ -115,7 +115,7 @@
 @if ($canCreate || $canUpdate)
 <div class="modal fade" id="user-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form method="POST" action="{{ route('users.store') }}" class="modal-content" id="user-form" autocomplete="off">
+        <form method="POST" action="{{ route('users.store') }}" class="modal-content" id="user-form" autocomplete="off" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="_method" value="POST" id="user-method">
             <input type="hidden" name="_form_mode" value="{{ old('_form_mode', 'create') }}" id="user-mode">
@@ -166,6 +166,7 @@
                         </div>
                         @error('roles.*') <div class="text-danger fs-12 mt-1">{{ $message }}</div> @enderror
                     </div>
+                    @include('partials.custom-field-inputs', ['cfTarget' => 'staff', 'cfSubject' => null])
                 </div>
             </div>
             <div class="modal-footer">
@@ -197,6 +198,12 @@
     function reset() {
         form.querySelectorAll('input[type=text],input[type=email],input[type=password]').forEach(el => { el.value = ''; el.classList.remove('is-invalid'); });
         form.querySelectorAll('.role-box').forEach(el => el.checked = false);
+        form.querySelectorAll('[name^="cf_"]').forEach(el => {
+            if (el.type === 'hidden') return;
+            if (el.type === 'checkbox') el.checked = false; else el.value = '';
+            el.classList.remove('is-invalid');
+        });
+        form.querySelectorAll('[data-file-for]').forEach(el => { el.textContent = ''; el.classList.add('d-none'); });
     }
 
     document.getElementById('btn-add')?.addEventListener('click', () => { reset(); setMode('create'); modal.show(); });
@@ -208,6 +215,16 @@
         form.querySelector('[name=email]').value = rec.email || '';
         form.querySelector('[name=phone_number]').value = rec.phone_number || '';
         form.querySelectorAll('.role-box').forEach(el => el.checked = (rec.roles || []).includes(el.value));
+        Object.entries(rec.custom || {}).forEach(([key, val]) => {
+            if (key.endsWith('__file')) {
+                const note = form.querySelector('[data-file-for="' + key.slice(0, -6) + '"]');
+                if (note && val) { note.textContent = 'Current file: ' + val + ' (choose a new file to replace it)'; note.classList.remove('d-none'); }
+                return;
+            }
+            const input = form.querySelector('[name="' + key + '"]:not([type=hidden]):not([type=file])');
+            if (!input) return;
+            if (input.type === 'checkbox') input.checked = !!val; else input.value = val ?? '';
+        });
         modal.show();
     }));
 

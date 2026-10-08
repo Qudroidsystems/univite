@@ -55,6 +55,8 @@
                         </ul>
                     </div>
 
+                    @include('partials.custom-field-display', ['cfTarget' => 'applicant', 'cfSubject' => $applicant])
+
                     <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">Results</h6></div>
                         <div class="table-responsive"><table class="table table-sm align-middle mb-0">
@@ -78,7 +80,7 @@
                         </div></div>
                     @endif
                     @if ($applicant->student)
-                        <div class="card"><div class="card-body">Admitted as <a href="{{ route('students.show', $applicant->student->id) }}" class="fw-semibold">{{ $applicant->student->matric_number }}</a></div></div>
+                        <div class="card"><div class="card-body">Admitted as <a href="{{ route('students.show', $applicant->student->id) }}" class="fw-semibold">{{ $applicant->student->matric_label }}</a></div></div>
                     @endif
 
                     <div class="card">

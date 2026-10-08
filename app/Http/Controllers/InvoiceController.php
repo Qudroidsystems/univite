@@ -66,16 +66,17 @@ class InvoiceController extends Controller
             'academic_session_id' => ['required', 'exists:academic_sessions,id'],
             'programme_id'        => ['nullable', 'exists:programmes,id'],
             'level'               => ['nullable', 'integer', 'min:100', 'max:800'],
+            'semester_type_id'    => ['nullable', 'exists:semester_types,id'],
         ]);
 
-        $r = $this->invoices->generateBulk(AcademicSession::findOrFail($data['academic_session_id']), $data['programme_id'] ?? null, $data['level'] ?? null, auth()->id());
+        $r = $this->invoices->generateBulk(AcademicSession::findOrFail($data['academic_session_id']), $data['programme_id'] ?? null, $data['level'] ?? null, auth()->id(), $data['semester_type_id'] ?? null);
 
         $message = "{$r['created']} invoice(s) created.";
         if ($r['existing']) {
             $message .= " {$r['existing']} student(s) already had one.";
         }
         if ($r['no_bills']) {
-            $message .= " {$r['no_bills']} student(s) skipped because no school bills are set for their programme and level in that session.";
+            $message .= " {$r['no_bills']} student(s) skipped because no school bills match them (programme, level, nationality, fresh or returning) in that session.";
         }
 
         return back()->with($r['created'] || $r['existing'] ? 'success' : 'error', $r['created'] || $r['existing'] ? $message : ($r['no_bills'] ? $message : 'There are no active students to invoice.'));

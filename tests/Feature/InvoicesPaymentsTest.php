@@ -22,6 +22,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(DatabaseSeeder::class);
+    \App\Models\Setting::put('matric.issue_at', 'admission'); // these tests cover the issue-at-admission option; clearance has its own tests
     $this->admin = User::where('email', env('ADMIN_EMAIL', 'eliabsiji@gmail.com'))->firstOrFail();
 
     $faculty = Faculty::create(['name' => 'Faculty of Science', 'code' => 'SCI']);
@@ -101,7 +102,7 @@ it('generates invoices in bulk from the admin page and reports what happened', f
     expect(Invoice::count())->toBe(2);
 
     $this->post(route('invoices.generate'), ['academic_session_id' => $this->s2026->id])
-        ->assertSessionHas('error', fn ($m) => str_contains($m, 'no school bills are set'));
+        ->assertSessionHas('error', fn ($m) => str_contains($m, 'no school bills match'));
 
     $this->post(route('invoices.generate'), [])->assertSessionHasErrors('academic_session_id');
 });

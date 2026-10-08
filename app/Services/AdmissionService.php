@@ -47,14 +47,15 @@ class AdmissionService
         $batch ??= $applicant->admission_batch;
 
         return DB::transaction(function () use ($applicant, $batch) {
-            $matric = $this->matric->next($applicant->programme, $applicant->session);
+            // By default the matric number comes later, after clearance. Until then the application number is the login name.
+            $matric = MatricNumberGenerator::issueAt() === 'admission' ? $this->matric->next($applicant->programme, $applicant->session) : null;
             $chosen = $applicant->getAttributes()['password'] ?? null;   // already hashed
             $plain  = $chosen ? null : Str::password(10, symbols: false);
 
             $user = User::create([
                 'name'                => trim($applicant->first_name . ' ' . $applicant->last_name),
                 'email'               => $applicant->email,
-                'username'            => $matric,
+                'username'            => $matric ?? $applicant->application_no,
                 'phone_number'        => $applicant->phone_number,
                 'gender'              => $applicant->gender,
                 'date_of_birth'       => $applicant->date_of_birth,
@@ -87,6 +88,8 @@ class AdmissionService
                 Storage::disk('public')->put($photo, Storage::disk('local')->get($passport->path));
                 $student->update(['photo' => $photo]);
             }
+
+            app(ClearanceService::class)->refresh($student);
 
             $applicant->update(['status' => 'admitted', 'decided_at' => now(), 'admission_batch' => $batch ?? $applicant->admission_batch]);
 

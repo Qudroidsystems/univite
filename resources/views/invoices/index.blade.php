@@ -97,6 +97,9 @@
                     <div class="col-5"><label class="form-label">Level (optional)</label>
                         <select name="level" class="form-select"><option value="">All levels</option>@foreach (\App\Support\Levels::options() as $v => $l)<option value="{{ $v }}">{{ $l }}</option>@endforeach</select></div>
                 </div>
+                <div class="mt-3"><label class="form-label">Bill for (optional)</label>
+                    <select name="semester_type_id" class="form-select"><option value="">The whole session (session fees)</option>@foreach (\App\Models\SemesterType::options() as $v => $n)<option value="{{ $v }}">{{ $n }} fees only</option>@endforeach</select>
+                    <div class="form-text">Choose a semester to invoice the fees you set for that semester alone.</div></div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Generate</button></div>
         </form>

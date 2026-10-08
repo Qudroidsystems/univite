@@ -24,6 +24,7 @@ class ApplicantController extends CrudController
     use HasProfileFields;
 
     protected string $permission = 'applicants';
+    protected ?string $customTarget = 'applicant';
     protected string $title = 'Applicants';
     protected string $singular = 'Applicant';
     protected string $icon = 'ri-user-add-line';
@@ -115,7 +116,7 @@ class ApplicantController extends CrudController
             ['Programme', fn ($r) => new HtmlString(e($r->programme->name) . '<div class="text-muted fs-12">' . e(\App\Models\EntryMode::label($r->entry_mode)) . ' · ' . $r->entry_level . 'L · ' . e($r->session->name) . '</div>')],
             ['Status', function ($r) {
                 $cls = ['draft' => 'bg-secondary-subtle text-secondary', 'pending' => 'bg-warning-subtle text-warning', 'admitted' => 'bg-success-subtle text-success', 'rejected' => 'bg-danger-subtle text-danger'][$r->status];
-                $extra = $r->student ? '<div class="text-muted fs-12 mt-1">' . e($r->student->matric_number) . '</div>' : '';
+                $extra = $r->student ? '<div class="text-muted fs-12 mt-1">' . e($r->student->matric_label) . '</div>' : '';
 
                 return new HtmlString('<span class="badge ' . $cls . '">' . e(Applicant::STATUSES[$r->status]) . '</span>' . $extra);
             }],
@@ -172,7 +173,7 @@ class ApplicantController extends CrudController
             return back()->with('error', $e->getMessage());
         }
 
-        $response = back()->with('success', "{$student->full_name} has been admitted. Matric number: {$student->matric_number}." . ($password ? '' : ' They sign in with the password they chose when applying.'));
+        $response = back()->with('success', "{$student->full_name} has been admitted." . ($student->matric_number ? " Matric number: {$student->matric_number}." : ' Their matric number is issued after clearance.') . ($password ? '' : ' They sign in with the password they chose when applying.'));
 
         return $password ? $response->with('generated_password', ['email' => $student->user->email, 'password' => $password]) : $response;
     }

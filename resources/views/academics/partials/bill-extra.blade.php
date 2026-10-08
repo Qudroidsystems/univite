@@ -1,19 +1,17 @@
 {{-- Totals for the bills currently shown + "copy bills" tool --}}
 @if ($summary->isNotEmpty())
     <div class="card">
-        <div class="card-header"><h6 class="card-title mb-0"><i class="ri-calculator-line me-1"></i>Total per programme and level (active bills in this view)</h6></div>
+        <div class="card-header"><h6 class="card-title mb-0"><i class="ri-calculator-line me-1"></i>Total per group of students (active compulsory bills in this view)</h6></div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th>Session</th><th>Programme</th><th>Level</th><th>Applies to</th><th class="text-end">Items</th><th class="text-end">Total</th></tr>
+                    <tr><th>Session</th><th>Applies to</th><th class="text-end">Items</th><th class="text-end">Total</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($summary as $s)
                         <tr>
                             <td>{{ $s['session'] }}</td>
-                            <td>{{ $s['programme'] }}</td>
-                            <td>{{ $s['level'] }}L</td>
-                            <td>{{ $s['type'] }}</td>
+                            <td>{{ $s['target'] }}</td>
                             <td class="text-end">{{ $s['items'] }}</td>
                             <td class="text-end fw-semibold">₦{{ number_format($s['total'], 2) }}</td>
                         </tr>

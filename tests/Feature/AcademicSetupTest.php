@@ -193,7 +193,7 @@ it('sets school bills per programme, level and session and blocks duplicates', f
     $this->actingAs($this->admin)->post(route('bills.structure.store'), $payload)->assertSessionHasNoErrors();
     expect((float) Bill::first()->amount)->toBe(150000.0);
 
-    $this->post(route('bills.structure.store'), $payload)->assertSessionHasErrors('student_type');
+    $this->post(route('bills.structure.store'), $payload)->assertSessionHasErrors('bill_item_id');
     $this->post(route('bills.structure.store'), array_merge($payload, ['level' => 500]))->assertSessionHasErrors('level');
     $this->post(route('bills.structure.store'), array_merge($payload, ['level' => 200, 'amount' => -5]))->assertSessionHasErrors('amount');
 

@@ -68,8 +68,13 @@ class StudentOnboardingController extends Controller
             $rules[$field] = array_merge(['required'], array_values(array_diff($rules[$field], ['nullable'])));
         }
 
-        $student->update($request->validate($rules));
+        $custom = \App\Support\CustomFields::rules('student', $student, true, true);
+        $data = $request->validate($rules + $custom, [], \App\Support\CustomFields::attributeNames('student', true));
+
+        $student->update(array_diff_key($data, $custom));
+        \App\Support\CustomFields::save('student', $student, $request, true);
         $student->user->update(['phone_number' => $student->phone_number, 'gender' => $student->gender, 'date_of_birth' => $student->date_of_birth]);
+        $this->onboarding->refreshClearance($student);
 
         return back()->with('success', 'Your biodata has been saved.');
     }

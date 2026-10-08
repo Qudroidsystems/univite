@@ -15,13 +15,17 @@
         ['Semester Types',    'academics.semester-types.index',   'View semester types',   'academics.semester-types.*'],
         ['Student Statuses',  'academics.student-statuses.index', 'View student statuses', 'academics.student-statuses.*'],
         ['Entry Modes',       'academics.entry-modes.index',      'View entry modes',      'academics.entry-modes.*'],
+        ['Clearance Items',   'academics.clearance-items.index',  'View clearance items',  'academics.clearance-items.*'],
+        ['Custom Form Fields','academics.custom-fields.index',   'View custom fields',    'academics.custom-fields.*'],
         ['Reference Lists',   'academics.lists.index',            'View reference lists',  'academics.lists.*'],
     ];
     $students = [
         ['Applicants',           'applicants.index',        'View applicants',           'applicants.index', 'applicants.show'],
         ['New Student Verification', 'verification.index',  'View students',             'verification.*'],
+        ['Clearance',            'clearance.index',         'View clearance',            'clearance.*'],
         ['Application Settings', 'applicants.settings',     'View application settings', 'applicants.settings*'],
         ['Students',             'students.index',          'View students',             'students.index', 'students.show'],
+        ['Matric Numbers',       'matric.index',            'View matric numbers',       'matric.*'],
         ['Matric Number Format', 'students.settings',       'View matric number format', 'students.settings*'],
     ];
     $bills = [

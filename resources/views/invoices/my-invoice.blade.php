@@ -25,6 +25,23 @@
                     </table>
                 </div>
                 @if ($invoice->outstanding > 0)
+                    @php $plan = $invoice->installment_plan ?: []; $state = $invoice->windowState(); @endphp
+                    @if (count($plan) > 1)
+                        <div class="card-footer">
+                            <div class="fw-semibold mb-1">Pay in {{ count($plan) }} instalments</div>
+                            @php $running = 0; @endphp
+                            @foreach ($plan as $i => $part)
+                                @php $running += (float) $part; $done = (float) $invoice->amount_paid + 0.001 >= $running; @endphp
+                                <div class="d-flex justify-content-between"><span>Instalment {{ $i + 1 }} @if ($done)<span class="badge bg-success-subtle text-success">Paid</span>@endif</span><span>₦{{ number_format((float) $part, 2) }}</span></div>
+                            @endforeach
+                            <div class="mt-2 text-muted">Pay at least ₦{{ number_format($invoice->minimumPayment(), 2) }} now to stay on schedule.</div>
+                        </div>
+                    @endif
+                    @if ($state !== 'open')
+                        <div class="card-footer text-warning">{{ $state === 'not_yet' ? 'Payment opens on ' . $invoice->opens_at->format('j M Y, g:i A') . '.' : 'The payment window closed on ' . $invoice->closes_at->format('j M Y, g:i A') . '. Please contact the bursary.' }}</div>
+                    @elseif ($invoice->closes_at)
+                        <div class="card-footer text-muted">Payment closes on {{ $invoice->closes_at->format('j M Y, g:i A') }}.</div>
+                    @endif
                     <div class="card-footer text-muted">To pay, use the payment details given by the bursary and quote <strong>{{ $invoice->reference }}</strong>. Once the bursary records your payment it appears below with a receipt.</div>
                 @endif
             </div>

@@ -163,7 +163,11 @@ class ApplicationPortalController extends Controller
             $rules['jamb_score'] = ['required', 'integer', 'between:' . ApplicationSettings::minUtmeScore() . ',400'];
         }
 
-        $applicant->update($request->validate($rules));
+        $custom = \App\Support\CustomFields::rules('applicant', $applicant, true, true);
+        $data = $request->validate($rules + $custom, [], \App\Support\CustomFields::attributeNames('applicant', true));
+
+        $applicant->update(array_diff_key($data, $custom));
+        \App\Support\CustomFields::save('applicant', $applicant, $request, true);
 
         return back()->with('success', 'Your details have been saved.');
     }
@@ -259,6 +263,14 @@ class ApplicationPortalController extends Controller
         abort_if($applicant->status === 'draft', 403, 'Submit your application to get a screening slip.');
 
         return view('apply.slip', ['applicant' => $applicant]);
+    }
+
+    public function customFile(Request $request, \App\Models\CustomFieldValue $value)
+    {
+        $applicant = $request->attributes->get('applicant');
+        abort_unless($value->file_path && $value->subject_type === Applicant::class && $value->subject_id === $applicant->id, 404);
+
+        return response()->file(\Illuminate\Support\Facades\Storage::disk('local')->path($value->file_path), ['Content-Disposition' => 'inline; filename="' . addslashes($value->original_name ?? 'file') . '"']);
     }
 
     private function editable(Request $request): Applicant

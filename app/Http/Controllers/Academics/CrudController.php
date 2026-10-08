@@ -32,6 +32,8 @@ abstract class CrudController extends Controller
     protected int $perPage = 20;
     /** Optional partial rendered above the table. */
     protected ?string $extraView = null;
+    /** Set to applicant | student | staff to append the admin-defined custom fields to this page's form. */
+    protected ?string $customTarget = null;
 
     abstract protected function model(): string;
 
@@ -112,9 +114,28 @@ abstract class CrudController extends Controller
     {
     }
 
+    /** The page's own fields plus any custom fields an administrator has added for it. */
+    protected function allFields(): array
+    {
+        return array_merge($this->fields(), \App\Support\CustomFields::formFields($this->customTarget));
+    }
+
+    /** Validate with the page rules plus custom-field rules; returns only the page's own data. */
+    private function validated(Request $request, ?Model $record): array
+    {
+        $custom = \App\Support\CustomFields::rules($this->customTarget, $record, enforceRequired: $record === null);
+        $data = $request->validate(
+            $this->rules($request, $record) + $custom,
+            [],
+            \App\Support\CustomFields::attributeNames($this->customTarget)
+        );
+
+        return array_diff_key($data, $custom);
+    }
+
     public function index(Request $request): View
     {
-        $fields = $this->fields();
+        $fields = $this->allFields();
 
         return view('academics.crud', array_merge([
             'pagetitle'  => $this->title,
@@ -138,11 +159,12 @@ abstract class CrudController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate($this->rules($request, null));
+        $data = $this->validated($request, null);
         $data = $this->prepare($this->normalise($data, $request), $request, null);
 
         $modelClass = $this->model();
         $record = $modelClass::create($data);
+        \App\Support\CustomFields::save($this->customTarget, $record, $request);
         $this->saved($record, $request, true);
 
         return back()->with('success', "{$this->singular} created successfully.");
@@ -153,10 +175,11 @@ abstract class CrudController extends Controller
         $modelClass = $this->model();
         $record = $modelClass::findOrFail($id);
 
-        $data = $request->validate($this->rules($request, $record));
+        $data = $this->validated($request, $record);
         $data = $this->prepare($this->normalise($data, $request), $request, $record);
 
         $record->update($data);
+        \App\Support\CustomFields::save($this->customTarget, $record, $request);
         $this->saved($record, $request, false);
 
         return back()->with('success', "{$this->singular} updated successfully.");
@@ -195,17 +218,17 @@ abstract class CrudController extends Controller
         return $data;
     }
 
-    private function recordData(Model $row, array $fields): array
+    protected function recordData(Model $row, array $fields): array
     {
-        $out = ['id' => $row->getKey()];
+        $out = ['id' => $row->getKey()] + \App\Support\CustomFields::recordData($this->customTarget, $row);
         foreach ($fields as $field) {
-            if (! empty($field['transient'])) {
+            if (! empty($field['transient']) || ! empty($field['custom'])) {
                 continue;
             }
             $name = $field['name'];
             $value = $row->{$name} ?? null;
             if ($value instanceof \DateTimeInterface) {
-                $value = $value->format('Y-m-d');
+                $value = $value->format(($field['type'] ?? '') === 'datetime-local' ? 'Y-m-d\TH:i' : 'Y-m-d');
             }
             $out[$name] = $value;
         }

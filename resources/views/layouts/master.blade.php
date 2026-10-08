@@ -6,6 +6,11 @@
     <title>{{ $pagetitle ?? 'Portal' }} | {{ config('app.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="uv-layout" content="master">
+    <meta name="uv-ajax" content="{{ Route::is('roles.*') || Route::is('permissions.*') ? 'off' : 'on' }}">
+    <meta name="uv-ping" content="{{ route('ping', [], false) }}">
+    <link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com/">
@@ -49,6 +54,7 @@
                 </div>
 
                 <div class="d-flex align-items-center">
+                    <span id="uv-net" class="uv-net uv-net--unknown" role="status" aria-live="polite" title="Checking connection…"><i></i><i></i><i></i><i></i><span class="uv-net-label d-none d-md-inline">…</span></span>
                     @php($authUser = auth()->user())
                     <div class="dropdown ms-sm-3 header-item topbar-user">
                         <button type="button" class="btn shadow-none" data-bs-toggle="dropdown" aria-expanded="false">
@@ -62,7 +68,7 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end">
                             <h6 class="dropdown-header">{{ $authUser->email }}</h6>
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" data-no-ajax>
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger"><i class="mdi mdi-logout me-2"></i>Logout</button>
                             </form>
@@ -78,7 +84,9 @@
     <div class="vertical-overlay"></div>
 
     {{-- ========== PAGE ========== --}}
+    <div id="ajax-root">
     @yield('content')
+    </div>
 
     <footer class="footer">
         <div class="container-fluid">
@@ -98,6 +106,10 @@
 
 @if (Route::is('roles.*'))       @include('layouts.pages-assets.js.role-list-js') @endif
 @if (Route::is('permissions.*')) @include('layouts.pages-assets.js.permissions-list-js') @endif
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
+<div id="uv-page-scripts">
 @stack('scripts')
+</div>
 </body>
 </html>

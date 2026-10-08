@@ -19,38 +19,34 @@ class InvoiceService
      *
      * @return Invoice|null null when no bills are set for them (nothing to invoice)
      */
-    public function generateForStudent(Student $student, AcademicSession $session, ?int $createdBy = null): ?Invoice
+    public function generateForStudent(Student $student, AcademicSession $session, ?int $createdBy = null, ?int $semesterTypeId = null): ?Invoice
     {
-        $existing = $this->sessionInvoice($student, $session);
+        $existing = $this->sessionInvoice($student, $session, $semesterTypeId);
         if ($existing) {
             return $existing;
         }
 
-        $type = $student->academic_session_id === $session->id ? 'fresh' : 'returning';
-
-        $bills = Bill::with('item')
-            ->where('academic_session_id', $session->id)
-            ->where('programme_id', $student->programme_id)
-            ->where('level', $student->current_level)
-            ->where('is_active', true)
-            ->whereIn('student_type', ['all', $type])
-            ->whereHas('item', fn ($q) => $q->where('is_active', true))
-            // the acceptance fee is billed separately, when the student accepts the offer
-            ->when(ApplicationSettings::acceptanceItemId(), fn ($q, $id) => $q->where('bill_item_id', '!=', $id))
-            ->get()
-            ->sortBy(fn ($b) => $b->item->name);
+        $matcher = new BillMatcher();
+        $bills = $matcher->forStudent($student, $session, $semesterTypeId);
 
         if ($bills->isEmpty()) {
             return null;
         }
 
-        return DB::transaction(function () use ($student, $session, $bills, $createdBy) {
+        $semester = $semesterTypeId ? \App\Models\SemesterType::find($semesterTypeId) : null;
+        [$opens, $closes] = $matcher->window($bills);
+
+        return DB::transaction(function () use ($student, $session, $bills, $createdBy, $matcher, $semester, $opens, $closes) {
             $invoice = Invoice::create([
+                'semester_type_id'    => $semester?->id,
+                'installment_plan'    => $matcher->plan($bills),
+                'opens_at'            => $opens,
+                'closes_at'           => $closes,
                 'payable_type'        => Student::class,
                 'payable_id'          => $student->id,
                 'kind'                => 'fees',
                 'academic_session_id' => $session->id,
-                'title'               => "{$session->name} school fees ({$student->current_level} Level)",
+                'title'               => "{$session->name}" . ($semester ? " {$semester->name}" : '') . " school fees (" . \App\Support\Levels::label((int) $student->current_level, $student->programme->studyCategory) . ')',
                 'total'               => round($bills->sum(fn ($b) => (float) $b->amount), 2),
                 'amount_paid'         => 0,
                 'status'              => 'unpaid',
@@ -71,7 +67,7 @@ class InvoiceService
      *
      * @return array{created: int, existing: int, no_bills: int}
      */
-    public function generateBulk(AcademicSession $session, ?int $programmeId = null, ?int $level = null, ?int $createdBy = null): array
+    public function generateBulk(AcademicSession $session, ?int $programmeId = null, ?int $level = null, ?int $createdBy = null, ?int $semesterTypeId = null): array
     {
         $result = ['created' => 0, 'existing' => 0, 'no_bills' => 0];
 
@@ -79,10 +75,10 @@ class InvoiceService
             ->when($programmeId, fn ($q) => $q->where('programme_id', $programmeId))
             ->when($level, fn ($q) => $q->where('current_level', $level))
             ->orderBy('id')
-            ->each(function (Student $student) use ($session, $createdBy, &$result) {
-                if ($this->sessionInvoice($student, $session)) {
+            ->each(function (Student $student) use ($session, $createdBy, $semesterTypeId, &$result) {
+                if ($this->sessionInvoice($student, $session, $semesterTypeId)) {
                     $result['existing']++;
-                } elseif ($this->generateForStudent($student, $session, $createdBy)) {
+                } elseif ($this->generateForStudent($student, $session, $createdBy, $semesterTypeId)) {
                     $result['created']++;
                 } else {
                     $result['no_bills']++;
@@ -93,10 +89,11 @@ class InvoiceService
     }
 
     /** A student's live (not cancelled) invoice for a session, if any. */
-    public function sessionInvoice(Student $student, AcademicSession $session): ?Invoice
+    public function sessionInvoice(Student $student, AcademicSession $session, ?int $semesterTypeId = null): ?Invoice
     {
         return Invoice::where('payable_type', Student::class)->where('payable_id', $student->id)
-            ->where('kind', 'fees')->where('academic_session_id', $session->id)->where('status', '!=', 'cancelled')->first();
+            ->where('kind', 'fees')->where('academic_session_id', $session->id)->where('semester_type_id', $semesterTypeId)
+            ->where('status', '!=', 'cancelled')->first();
     }
 
     /**
@@ -112,9 +109,7 @@ class InvoiceService
             return $existing;
         }
 
-        $bills = Bill::with('item')->where('bill_item_id', $itemId)->where('programme_id', $student->programme_id)
-            ->where('academic_session_id', $student->academic_session_id)->where('level', $student->entry_level)
-            ->where('is_active', true)->whereIn('student_type', ['all', 'fresh'])->get();
+        $bills = (new BillMatcher())->forStudent($student, $student->entrySession, null, true, $itemId, (int) $student->entry_level);
 
         if ($bills->isEmpty()) {
             return null;
@@ -209,5 +204,10 @@ class InvoiceService
             'amount_paid' => $paid,
             'status'      => $paid <= 0 ? 'unpaid' : ($paid + 0.001 >= (float) $invoice->total ? 'paid' : 'partial'),
         ]);
+
+        // Paying fees can complete a student's clearance.
+        if ($invoice->payable_type === Student::class && ($student = Student::find($invoice->payable_id))) {
+            app(ClearanceService::class)->refresh($student);
+        }
     }
 }

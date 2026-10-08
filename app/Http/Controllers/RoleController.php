@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\BadgeModel;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,11 +18,12 @@ class RoleController extends Controller
 {
     function __construct()
     {
-        $this->middleware('permission:View role|Create role|Update role|Delete role|Add user-role|Update user-role|Remove user-role', ['only' => ['index', 'store']]);
-        $this->middleware('permission:Create role', ['only' => ['create', 'store']]);
-        $this->middleware('permission:Update role', ['only' => ['edit', 'update']]);
-        $this->middleware('permission:Delete role', ['only' => ['destroy', 'removeuserRole']]);
-        $this->middleware('permission:Update user-role', ['only' => ['adduser', 'updateuserrole']]);
+        $this->middleware('permission:View roles|Create roles|Edit roles|Delete roles|Assign users to roles|Remove users from roles')->only(['index', 'show', 'getRoleUsers']);
+        $this->middleware('permission:Create roles')->only(['create', 'store']);
+        $this->middleware('permission:Edit roles')->only(['edit', 'update']);
+        $this->middleware('permission:Delete roles')->only(['destroy', 'delete']);
+        $this->middleware('permission:Assign users to roles')->only(['adduser', 'updateuserrole']);
+        $this->middleware('permission:Remove users from roles')->only(['removeuserrole', 'bulkRemoveUsers']);
     }
 
     public function index(Request $request): View
@@ -203,9 +203,7 @@ class RoleController extends Controller
     }
 
     /**
-     * Assign role(s) to users.
-     * When the student role is assigned, auto-populate users.student_id
-     * from studentRegistration (matched by email, then by name).
+     * Assign a role to the selected users.
      */
     public function updateuserrole(Request $request): RedirectResponse
     {
@@ -220,74 +218,14 @@ class RoleController extends Controller
         $role    = Role::findOrFail($request->input('roleid'));
         $userIds = $request->input('users');
 
-        $isStudentRole = strtolower($role->name) === 'student';
-
         foreach ($userIds as $userId) {
             $user = User::findOrFail($userId);
             $user->assignRole($role->name);
-
-            // When assigning the student role, link the user to studentRegistration
-            if ($isStudentRole && is_null($user->student_id)) {
-                $this->linkUserToStudentRecord($user);
-            }
         }
 
         return redirect()->route('roles.show', $role->id)
             ->with('success', 'Users added to role successfully')
             ->with('pagetitle', $pagetitle);
-    }
-
-    /**
-     * Try to find the matching studentRegistration row for a user and
-     * write its id into users.student_id.
-     *
-     * Matching priority:
-     *   1. Email match (most reliable)
-     *   2. Full name match  (CONCAT firstname + ' ' + lastname)
-     */
-    private function linkUserToStudentRecord(User $user): void
-    {
-        try {
-            $studentReg = null;
-
-            // 1 — try email match first
-            if (!empty($user->email)) {
-                $studentReg = DB::table('studentRegistration')
-                    ->where('email', $user->email)
-                    ->select('id')
-                    ->first();
-            }
-
-            // 2 — fall back to full-name match
-            if (!$studentReg && !empty($user->name)) {
-                $studentReg = DB::table('studentRegistration')
-                    ->whereRaw("TRIM(CONCAT(firstname, ' ', lastname)) = ?", [trim($user->name)])
-                    ->select('id')
-                    ->first();
-            }
-
-            if ($studentReg) {
-                $user->update(['student_id' => $studentReg->id]);
-
-                Log::info('Linked user to studentRegistration', [
-                    'user_id'        => $user->id,
-                    'user_name'      => $user->name,
-                    'student_reg_id' => $studentReg->id,
-                ]);
-            } else {
-                Log::warning('Could not find matching studentRegistration for user', [
-                    'user_id'   => $user->id,
-                    'user_name' => $user->name,
-                    'email'     => $user->email,
-                ]);
-            }
-        } catch (\Exception $e) {
-            // Non-fatal — role was still assigned, just log the failure
-            Log::error('Error linking user to studentRegistration', [
-                'user_id' => $user->id,
-                'error'   => $e->getMessage(),
-            ]);
-        }
     }
 
     /**
@@ -396,7 +334,6 @@ class RoleController extends Controller
             $page    = $request->get('page', 1);
 
             $usersWithRole = $role->users()
-                ->with(['student.currentClass.class', 'staffemploymentDetails'])
                 ->orderBy('name')
                 ->paginate($perPage, ['*'], 'page', $page);
 

@@ -1,0 +1,36 @@
+@extends('layouts.master')
+
+@section('content')
+@php $student = $payment->invoice->payable; @endphp
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid" style="max-width:720px">
+            <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+                <h4 class="mb-0">Payment receipt</h4>
+                <button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h4 class="mb-0">{{ config('app.name') }}</h4>
+                        <div class="text-muted">Official payment receipt</div>
+                    </div>
+                    <table class="table table-sm">
+                        <tr><th style="width:35%">Receipt no.</th><td>{{ $payment->reference }}</td></tr>
+                        <tr><th>Date</th><td>{{ ($payment->paid_at ?? $payment->created_at)->format('d M Y, H:i') }}</td></tr>
+                        <tr><th>Student</th><td>{{ $student?->full_name }}</td></tr>
+                        <tr><th>{{ $student instanceof \App\Models\Student ? 'Matric number' : 'Application number' }}</th><td>{{ $student?->identifier }}</td></tr>
+                        <tr><th>Programme</th><td>{{ $student?->programme?->name }}</td></tr>
+                        <tr><th>Invoice</th><td>{{ $payment->invoice->reference }} — {{ $payment->invoice->title }}</td></tr>
+                        <tr><th>Method</th><td>{{ $payment->gateway === 'manual' ? (\App\Models\Payment::CHANNELS[$payment->channel] ?? 'Offline') : ucfirst($payment->gateway) }}</td></tr>
+                        @if ($payment->gateway_reference)<tr><th>Teller / receipt no.</th><td>{{ $payment->gateway_reference }}</td></tr>@endif
+                        <tr><th>Amount paid</th><td class="fs-5 fw-semibold">₦{{ number_format((float) $payment->amount, 2) }}</td></tr>
+                        <tr><th>Invoice balance</th><td>₦{{ number_format($payment->invoice->outstanding, 2) }}</td></tr>
+                        @if ($payment->recorder)<tr><th>Received by</th><td>{{ $payment->recorder->name }}</td></tr>@endif
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

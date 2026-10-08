@@ -57,9 +57,9 @@ class StudentController extends CrudController
     {
         return [
             ['programme_id', 'Programme', Programme::orderBy('name')->pluck('name', 'id')->all()],
-            ['current_level', 'Level', CourseController::LEVELS],
+            ['current_level', 'Level', \App\Support\Levels::options()],
             ['academic_session_id', 'Entry session', AcademicSession::orderByDesc('name')->pluck('name', 'id')->all()],
-            ['status', 'Status', Student::STATUSES],
+            ['status', 'Status', \App\Models\StudentStatus::options()],
         ];
     }
 
@@ -84,7 +84,7 @@ class StudentController extends CrudController
 
         $account = [
             ['name' => 'email', 'label' => 'Email (login)', 'type' => 'email', 'required' => true, 'col' => 8],
-            ['name' => 'current_level', 'label' => 'Current level', 'type' => 'select', 'options' => CourseController::LEVELS, 'required' => true, 'col' => 4],
+            ['name' => 'current_level', 'label' => 'Current level', 'type' => 'select', 'options' => \App\Support\Levels::options(), 'required' => true, 'col' => 4],
         ];
 
         return array_merge($bio, $account, $details, $guardian);
@@ -97,7 +97,7 @@ class StudentController extends CrudController
             ['Student', fn ($r) => new HtmlString('<span class="fw-medium">' . e($r->full_name) . '</span><div class="text-muted fs-12">' . e($r->user?->email) . '</div>')],
             ['Programme', fn ($r) => new HtmlString(e($r->programme->name) . '<div class="text-muted fs-12">Entered ' . e($r->entrySession->name) . '</div>')],
             ['Level', fn ($r) => $r->current_level . 'L'],
-            ['Status', fn ($r) => new HtmlString('<span class="badge ' . Student::STATUS_BADGES[$r->status] . '">' . e(Student::STATUSES[$r->status]) . '</span>')],
+            ['Status', fn ($r) => new HtmlString('<span class="badge ' . \App\Models\StudentStatus::badgeClass($r->status) . '">' . e(\App\Models\StudentStatus::label($r->status)) . '</span>')],
         ];
     }
 
@@ -147,13 +147,13 @@ class StudentController extends CrudController
     public function status(Request $request, $id): RedirectResponse
     {
         $student = Student::with('user')->findOrFail($id);
-        $data = $request->validate(['status' => ['required', Rule::in(array_keys(Student::STATUSES))]]);
+        $data = $request->validate(['status' => ['required', Rule::in(array_keys(\App\Models\StudentStatus::options()))]]);
 
         $student->update(['status' => $data['status']]);
-        // Suspended and withdrawn students cannot sign in; everyone else can.
-        $student->user->update(['is_disabled' => in_array($data['status'], ['suspended', 'withdrawn'], true)]);
+        // Whether a status lets the student sign in is a switch on the status itself.
+        $student->user->update(['is_disabled' => ! in_array($data['status'], \App\Models\StudentStatus::codesWhere('can_login'), true)]);
 
-        return back()->with('success', "Status changed to " . Student::STATUSES[$data['status']] . '.');
+        return back()->with('success', 'Status changed to ' . \App\Models\StudentStatus::label($data['status']) . '.');
     }
 
     public function resetPassword($id): RedirectResponse

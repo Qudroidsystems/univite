@@ -57,7 +57,7 @@ class BillController extends CrudController
 
     protected function levelOptions(): array
     {
-        return CourseController::LEVELS;
+        return \App\Support\Levels::options();
     }
 
     protected function filters(): array

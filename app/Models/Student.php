@@ -8,31 +8,23 @@ use Illuminate\Support\Facades\Storage;
 
 class Student extends Model
 {
-    public const STATUSES = [
-        'active'    => 'Active',
-        'deferred'  => 'Deferred',
-        'suspended' => 'Suspended',
-        'withdrawn' => 'Withdrawn',
-        'graduated' => 'Graduated',
-    ];
-
-    public const STATUS_BADGES = [
-        'active' => 'bg-success-subtle text-success', 'deferred' => 'bg-info-subtle text-info',
-        'suspended' => 'bg-warning-subtle text-warning', 'withdrawn' => 'bg-secondary-subtle text-secondary',
-        'graduated' => 'bg-primary-subtle text-primary',
-    ];
-
     protected $fillable = [
-        'user_id', 'applicant_id', 'matric_number',
+        'user_id', 'applicant_id', 'matric_number', 'admission_batch',
+        'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note',
         'programme_id', 'academic_session_id', 'entry_mode', 'entry_level', 'current_level', 'status', 'photo',
         ...Applicant::PROFILE_FIELDS,
     ];
 
-    protected $casts = ['date_of_birth' => 'date'];
+    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function verifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function applicant(): BelongsTo
@@ -50,10 +42,20 @@ class Student extends Model
         return $this->belongsTo(AcademicSession::class, 'academic_session_id');
     }
 
+    public function invoices(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Invoice::class, 'payable');
+    }
+
     /** The login email lives on the user account. */
     public function getEmailAttribute(): ?string
     {
         return $this->user?->email;
+    }
+
+    public function getIdentifierAttribute(): ?string
+    {
+        return $this->matric_number;
     }
 
     public function getFullNameAttribute(): string

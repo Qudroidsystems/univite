@@ -59,7 +59,7 @@
                 </div>
 
                 @foreach ($grid as $level => $semesters)
-                    <h5 class="mt-4 mb-2">{{ $level }} Level</h5>
+                    <h5 class="mt-4 mb-2">{{ $programme->levelLabel((int) $level) }}</h5>
                     <div class="row">
                         @foreach ($semesters as $order => $sem)
                             @php
@@ -133,13 +133,13 @@
                         <div class="col-md-4">
                             <label class="form-label">Level <span class="text-danger">*</span></label>
                             <select name="level" class="form-select" required>
-                                @foreach ($programme->levels() as $l) <option value="{{ $l }}" @selected((string) old('level') === (string) $l)>{{ $l }} Level</option> @endforeach
+                                @foreach ($programme->levels() as $l) <option value="{{ $l }}" @selected((string) old('level') === (string) $l)>{{ $programme->levelLabel((int) $l) }}</option> @endforeach
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Semester <span class="text-danger">*</span></label>
                             <select name="semester_order" class="form-select" required>
-                                @foreach (\App\Models\ProgrammeCourse::SEMESTERS as $o => $l) <option value="{{ $o }}" @selected((string) old('semester_order') === (string) $o)>{{ $l }}</option> @endforeach
+                                @foreach (\App\Models\SemesterType::options() as $o => $l) <option value="{{ $o }}" @selected((string) old('semester_order') === (string) $o)>{{ $l }}</option> @endforeach
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -185,13 +185,13 @@
                     <div class="mb-3">
                         <label class="form-label">Level</label>
                         <select name="level" id="move-level" class="form-select">
-                            @foreach ($programme->levels() as $l) <option value="{{ $l }}">{{ $l }} Level</option> @endforeach
+                            @foreach ($programme->levels() as $l) <option value="{{ $l }}">{{ $programme->levelLabel((int) $l) }}</option> @endforeach
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Semester</label>
                         <select name="semester_order" id="move-semester" class="form-select">
-                            @foreach (\App\Models\ProgrammeCourse::SEMESTERS as $o => $l) <option value="{{ $o }}">{{ $l }}</option> @endforeach
+                            @foreach (\App\Models\SemesterType::options() as $o => $l) <option value="{{ $o }}">{{ $l }}</option> @endforeach
                         </select>
                     </div>
                     <div>

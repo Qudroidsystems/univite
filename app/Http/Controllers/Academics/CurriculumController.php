@@ -38,7 +38,7 @@ class CurriculumController extends Controller
                 ->sortBy(fn ($e) => $e->course->code);
 
             foreach ($programme->levels() as $level) {
-                foreach (ProgrammeCourse::SEMESTERS as $order => $label) {
+                foreach (\App\Models\SemesterType::options() as $order => $label) {
                     $rows = $entries->where('level', $level)->where('semester_order', $order)->values();
                     $grid[$level][$order] = [
                         'label'   => $label,
@@ -63,7 +63,7 @@ class CurriculumController extends Controller
             'programme'     => $programme,
             'grid'          => $grid,
             'courseOptions' => $courseOptions,
-            'statuses'      => ProgrammeCourse::STATUSES,
+            'statuses'      => \App\Support\Lookups::options('course_status'),
         ]);
     }
 
@@ -74,8 +74,8 @@ class CurriculumController extends Controller
             'course_ids'     => ['required', 'array', 'min:1'],
             'course_ids.*'   => ['exists:courses,id'],
             'level'          => ['required', 'integer'],
-            'semester_order' => ['required', Rule::in(array_keys(ProgrammeCourse::SEMESTERS))],
-            'status'         => ['required', Rule::in(array_keys(ProgrammeCourse::STATUSES))],
+            'semester_order' => ['required', Rule::in(array_keys(\App\Models\SemesterType::options()))],
+            'status'         => ['required', Rule::in(array_keys(\App\Support\Lookups::options('course_status')))],
         ]);
 
         $programme = Programme::findOrFail($data['programme_id']);
@@ -102,8 +102,8 @@ class CurriculumController extends Controller
 
         $data = $request->validate([
             'level'          => ['required', Rule::in($entry->programme->levels())],
-            'semester_order' => ['required', Rule::in(array_keys(ProgrammeCourse::SEMESTERS))],
-            'status'         => ['required', Rule::in(array_keys(ProgrammeCourse::STATUSES))],
+            'semester_order' => ['required', Rule::in(array_keys(\App\Models\SemesterType::options()))],
+            'status'         => ['required', Rule::in(array_keys(\App\Support\Lookups::options('course_status')))],
         ]);
 
         $entry->update($data);

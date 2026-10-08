@@ -2,17 +2,14 @@
 
 namespace App\Http\Controllers\Concerns;
 
+use Illuminate\Validation\Rule;
+
 /** Personal, origin and guardian fields shared by the applicant and student forms. */
 trait HasProfileFields
 {
     protected function states(): array
     {
-        $states = ['Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta',
-            'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi',
-            'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto',
-            'Taraba', 'Yobe', 'Zamfara'];
-
-        return ['Not applicable (non-Nigerian)' => 'Not applicable (non-Nigerian)'] + array_combine($states, $states);
+        return \App\Support\Lookups::options('state');
     }
 
     protected function profileRules(): array
@@ -22,7 +19,7 @@ trait HasProfileFields
             'last_name'             => ['required', 'string', 'max:100'],
             'other_names'           => ['nullable', 'string', 'max:100'],
             'phone_number'          => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]{6,20}$/'],
-            'gender'                => ['nullable', 'in:male,female,other'],
+            'gender'                => ['nullable', Rule::in(array_keys(\App\Support\Lookups::options('gender')))],
             'date_of_birth'         => ['nullable', 'date', 'after:1930-01-01', 'before:today'],
             'state_of_origin'       => ['nullable', 'string', 'max:100'],
             'lga'                   => ['nullable', 'string', 'max:100'],
@@ -46,7 +43,7 @@ trait HasProfileFields
 
         $details = [
             ['name' => 'phone_number', 'label' => 'Phone number', 'type' => 'text', 'col' => 4],
-            ['name' => 'gender', 'label' => 'Gender', 'type' => 'select', 'options' => ['male' => 'Male', 'female' => 'Female', 'other' => 'Other'], 'col' => 4],
+            ['name' => 'gender', 'label' => 'Gender', 'type' => 'select', 'options' => \App\Support\Lookups::options('gender'), 'col' => 4],
             ['name' => 'date_of_birth', 'label' => 'Date of birth', 'type' => 'date', 'col' => 4],
             ['name' => 'nationality', 'label' => 'Nationality', 'type' => 'text', 'col' => 4, 'default' => 'Nigerian'],
             ['name' => 'state_of_origin', 'label' => 'State of origin', 'type' => 'select', 'options' => $this->states(), 'col' => 4],

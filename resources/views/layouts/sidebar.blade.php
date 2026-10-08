@@ -11,15 +11,25 @@
         ['Programmes',        'academics.programmes.index',  'View programmes',  'academics.programmes.*'],
         ['Courses',           'academics.courses.index',     'View courses',     'academics.courses.*'],
         ['Curriculum',        'academics.curriculum.index',  'View programme curriculum', 'academics.curriculum.*'],
+        ['Study Categories',  'academics.study-categories.index', 'View study categories', 'academics.study-categories.*'],
+        ['Semester Types',    'academics.semester-types.index',   'View semester types',   'academics.semester-types.*'],
+        ['Student Statuses',  'academics.student-statuses.index', 'View student statuses', 'academics.student-statuses.*'],
+        ['Entry Modes',       'academics.entry-modes.index',      'View entry modes',      'academics.entry-modes.*'],
+        ['Reference Lists',   'academics.lists.index',            'View reference lists',  'academics.lists.*'],
     ];
     $students = [
-        ['Applicants',           'applicants.index',        'View applicants',           'applicants.*'],
+        ['Applicants',           'applicants.index',        'View applicants',           'applicants.index', 'applicants.show'],
+        ['New Student Verification', 'verification.index',  'View students',             'verification.*'],
+        ['Application Settings', 'applicants.settings',     'View application settings', 'applicants.settings*'],
         ['Students',             'students.index',          'View students',             'students.index', 'students.show'],
         ['Matric Number Format', 'students.settings',       'View matric number format', 'students.settings*'],
     ];
     $bills = [
         ['Bill Items',   'bills.items.index',     'View bill items', 'bills.items.*'],
         ['School Bills', 'bills.structure.index', 'View school bills',      'bills.structure.*'],
+    ];
+    $fees = [
+        ['Invoices & Payments', 'invoices.index', 'View invoices', 'invoices.*'],
     ];
     $access = [
         ['Users',       'users.index',       'View users',       'users.*'],
@@ -31,6 +41,7 @@
         ['id' => 'sidebarAcademic', 'label' => 'Academic Setup', 'icon' => 'ri-graduation-cap-line', 'items' => $academic],
         ['id' => 'sidebarStudents', 'label' => 'Admissions & Students', 'icon' => 'ri-user-star-line', 'items' => $students],
         ['id' => 'sidebarBills',    'label' => 'School Bills',   'icon' => 'ri-bill-line',           'items' => $bills],
+        ['id' => 'sidebarFees',     'label' => 'Fees & Payments', 'icon' => 'ri-wallet-3-line', 'items' => $fees],
         ['id' => 'sidebarAccess',   'label' => 'Users & Access', 'icon' => 'ri-shield-user-line',    'items' => $access],
     ];
 @endphp
@@ -58,6 +69,21 @@
                         </a>
                     </li>
                 @endcan
+
+                @if ($u->student?->needs_onboarding)
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.onboarding*') ? 'active' : '' }}" href="{{ route('my.onboarding') }}">
+                            <i class="ri-flag-line"></i> <span>Getting Started</span>
+                        </a>
+                    </li>
+                @endif
+                @if ($u->student)
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.*') ? 'active' : '' }}" href="{{ route('my.fees') }}">
+                            <i class="ri-wallet-3-line"></i> <span>My Fees</span>
+                        </a>
+                    </li>
+                @endif
 
                 @foreach ($groups as $g)
                     @php

@@ -8,16 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Programme extends Model
 {
-    public const DEGREE_TYPES = [
-        'ND' => 'National Diploma (ND)', 'HND' => 'Higher National Diploma (HND)',
-        'NCE' => 'NCE', 'B.Sc' => 'B.Sc', 'B.A' => 'B.A', 'B.Eng' => 'B.Eng', 'B.Tech' => 'B.Tech',
-        'LL.B' => 'LL.B', 'MBBS' => 'MBBS', 'B.Ed' => 'B.Ed', 'B.Agric' => 'B.Agric',
-        'PGD' => 'Postgraduate Diploma', 'M.Sc' => 'M.Sc', 'M.A' => 'M.A', 'M.Eng' => 'M.Eng',
-        'MBA' => 'MBA', 'M.Phil' => 'M.Phil', 'PhD' => 'PhD',
-    ];
-
     protected $fillable = [
-        'department_id', 'name', 'code', 'degree_type', 'duration_years',
+        'department_id', 'study_category_id', 'name', 'code', 'degree_type', 'duration_years',
         'min_credit_load', 'max_credit_load', 'is_active',
     ];
 
@@ -28,6 +20,11 @@ class Programme extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function studyCategory(): BelongsTo
+    {
+        return $this->belongsTo(StudyCategory::class);
+    }
+
     public function curriculum(): HasMany
     {
         return $this->hasMany(ProgrammeCourse::class);
@@ -36,6 +33,12 @@ class Programme extends Model
     public function bills(): HasMany
     {
         return $this->hasMany(Bill::class);
+    }
+
+    /** Written form of a level for this programme, e.g. "200 Level" or "Part 2". */
+    public function levelLabel(int $level): string
+    {
+        return \App\Support\Levels::label($level, $this->studyCategory);
     }
 
     /** Levels this programme runs: 100 .. duration_years * 100. */

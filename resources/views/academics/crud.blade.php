@@ -219,7 +219,9 @@
         document.getElementById('crud-id').value     = id || '';
         document.getElementById('crud-title').textContent = (editing ? 'Edit ' : 'Add ') + singular;
         form.querySelectorAll('[data-only]').forEach(el => {
-            el.style.display = el.dataset.only === (editing ? 'edit' : 'create') ? '' : 'none';
+            const show = el.dataset.only === (editing ? 'edit' : 'create');
+            el.style.display = show ? '' : 'none';
+            el.querySelectorAll('input, select, textarea').forEach(i => { i.disabled = ! show; });
         });
     }
 

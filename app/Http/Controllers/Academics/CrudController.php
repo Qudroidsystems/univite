@@ -101,6 +101,12 @@ abstract class CrudController extends Controller
         return $data;
     }
 
+    /** Return a reason to refuse deleting this record, or null to allow it. */
+    protected function blockDelete(Model $record): ?string
+    {
+        return null;
+    }
+
     /** Runs after create/update succeeded. */
     protected function saved(Model $record, Request $request, bool $created): void
     {
@@ -160,6 +166,10 @@ abstract class CrudController extends Controller
     {
         $modelClass = $this->model();
         $record = $modelClass::findOrFail($id);
+
+        if ($reason = $this->blockDelete($record)) {
+            return back()->with('error', $reason);
+        }
 
         try {
             $record->delete();

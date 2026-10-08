@@ -55,7 +55,7 @@ class SessionController extends CrudController
             ['name' => 'start_date', 'label' => 'Start date', 'type' => 'date', 'col' => 6],
             ['name' => 'end_date', 'label' => 'End date', 'type' => 'date', 'col' => 6],
             ['name' => 'make_current', 'label' => 'Make this the current session', 'type' => 'switch', 'col' => 12, 'transient' => true],
-            ['name' => 'create_semesters', 'label' => 'Also create First and Second semesters', 'type' => 'switch', 'col' => 12, 'transient' => true, 'only' => 'create', 'default' => true],
+            ['name' => 'create_semesters', 'label' => 'Also create this session\'s semesters (see Semester Types)', 'type' => 'switch', 'col' => 12, 'transient' => true, 'only' => 'create', 'default' => true],
         ];
     }
 
@@ -86,7 +86,7 @@ class SessionController extends CrudController
     protected function saved(Model $record, Request $request, bool $created): void
     {
         if ($created && $request->boolean('create_semesters')) {
-            foreach ([1 => 'First Semester', 2 => 'Second Semester'] as $order => $name) {
+            foreach (\App\Models\SemesterType::options() as $order => $name) {
                 Semester::firstOrCreate(
                     ['academic_session_id' => $record->id, 'name' => $name],
                     ['sort_order' => $order]

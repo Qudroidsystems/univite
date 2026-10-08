@@ -101,6 +101,56 @@ class PermissionCatalog
                 ],
             ],
 
+            'Study categories' => [
+                'about' => 'The kinds of programme the university runs (Degree, NCE, Diploma, Postgraduate ...). A category sets how levels are named, for example "100 Level" or "NCE 1".',
+                'permissions' => [
+                    ['View study categories', 'View', 'See every study category with its duration and how its levels are labelled.'],
+                    ['Create study categories', 'Create', 'Add a study category and choose how its levels are written.'],
+                    ['Edit study categories', 'Edit', 'Rename a category or change its level format. Existing programmes pick up the new wording straight away.'],
+                    ['Delete study categories', 'Delete', 'Delete a study category. This is refused while any programme belongs to it.'],
+                ],
+            ],
+
+            'Semester types' => [
+                'about' => 'The semesters the university teaches in (First and Second, or Harmattan, Rain and Third). Each new session gets one semester per active type.',
+                'permissions' => [
+                    ['View semester types', 'View', 'See the semester types and the order they run in.'],
+                    ['Create semester types', 'Create', 'Add a semester type such as a Third or Summer semester.'],
+                    ['Edit semester types', 'Edit', 'Rename a semester type or switch it on or off. Renaming changes the name shown everywhere.'],
+                    ['Delete semester types', 'Delete', 'Delete a semester type. This is refused while any curriculum or semester uses it.'],
+                ],
+            ],
+
+            'Student statuses' => [
+                'about' => 'The states a student can be in (Active, Deferred, Suspended ...). Each status controls whether the student can sign in, register for courses, pay fees and counts as enrolled.',
+                'permissions' => [
+                    ['View student statuses', 'View', 'See every student status and what it allows the student to do.'],
+                    ['Create student statuses', 'Create', 'Add a student status, for example Probation, and choose what it allows.'],
+                    ['Edit student statuses', 'Edit', 'Rename a status or change what it allows. Changing sign-in access updates every student who has that status.'],
+                    ['Delete student statuses', 'Delete', 'Delete a student status. This is refused for the default status or any status a student currently has.'],
+                ],
+            ],
+
+            'Entry modes' => [
+                'about' => 'The ways a student can enter the university (UTME, Direct Entry, Transfer ...). Each sets the entry level and whether JAMB scores or a prior result are needed.',
+                'permissions' => [
+                    ['View entry modes', 'View', 'See the entry modes with their entry level and requirements.'],
+                    ['Create entry modes', 'Create', 'Add an entry mode and set its entry level and requirements.'],
+                    ['Edit entry modes', 'Edit', 'Change an entry mode\'s name, entry level, requirements or whether it is open for online application.'],
+                    ['Delete entry modes', 'Delete', 'Delete an entry mode. This is refused while any applicant uses it.'],
+                ],
+            ],
+
+            'Reference lists' => [
+                'about' => 'The pick-lists used across forms: titles, gender, religion, blood group, states and so on. Edit them so forms match this university.',
+                'permissions' => [
+                    ['View reference lists', 'View', 'See every pick-list and its options.'],
+                    ['Create reference lists', 'Create', 'Add a new option to one of the pick-lists, such as a new title or religion.'],
+                    ['Edit reference lists', 'Edit', 'Rename an option or switch it on or off. The stored code stays the same so old records keep working.'],
+                    ['Delete reference lists', 'Delete', 'Delete an option you added. Built-in options cannot be deleted, only switched off.'],
+                ],
+            ],
+
             'Programmes' => [
                 'about' => 'A programme is a degree or diploma a department awards, such as B.Sc. Computer Science. Its length decides its levels.',
                 'permissions' => [
@@ -153,12 +203,20 @@ class PermissionCatalog
             'Applicants' => [
                 'about' => 'People who have applied but are not students yet. Admitting an applicant creates their student record, matric number and login.',
                 'permissions' => [
-                    ['View applicants', 'View', 'See the list of applicants with their programme, entry level and admission status, and search or filter it.'],
+                    ['View applicants', 'View', 'See the list of applicants (including those who applied online), open an application to read their details and uploaded documents, and search or filter the list.'],
                     ['Create applicants', 'Create', 'Record a new applicant with their personal details, guardian, programme and entry session.'],
                     ['Edit applicants', 'Edit', 'Correct an applicant\'s details. Not possible once the applicant has been admitted.'],
-                    ['Admit applicants', 'Manage', 'Admit an applicant as a student. This generates a matric number, creates a login account with a temporary password, and cannot be undone. Also lets you admit a previously rejected applicant.'],
+                    ['Admit applicants', 'Manage', 'Admit a submitted applicant as a student, one at a time or a whole batch at once. This generates a matric number and a login account, and cannot be undone. Also lets you admit a previously rejected applicant.'],
                     ['Reject applicants', 'Manage', 'Mark a pending application as rejected. The record is kept and the person can still be admitted later.'],
                     ['Delete applicants', 'Delete', 'Permanently delete an applicant who has not been admitted.'],
+                ],
+            ],
+
+            'Application settings' => [
+                'about' => 'Opening and closing online applications, and the fee and rules applicants see.',
+                'permissions' => [
+                    ['View application settings', 'View', 'See whether applications are open, the session, deadline, screening fee and instructions.'],
+                    ['Edit application settings', 'Edit', 'Open or close online applications, choose the session and deadline, set the screening fee and minimum UTME score, choose which bill item is the acceptance fee, and write the instructions applicants see. Opening applications makes the public form available to everyone.'],
                 ],
             ],
 
@@ -168,6 +226,7 @@ class PermissionCatalog
                     ['View students', 'View', 'See the list of students and open a student\'s full profile: personal details, programme, level, guardian and status.'],
                     ['Edit students', 'Edit', 'Correct a student\'s personal details, guardian, login email and current level, and upload their passport photo.'],
                     ['Change student status', 'Manage', 'Mark a student active, deferred, suspended, withdrawn or graduated. Suspended and withdrawn students are blocked from signing in.'],
+                    ['Verify new students', 'Manage', 'Confirm, after checking the original documents in person, that a newly admitted student has been physically verified. Can also be undone. Only possible once the student has accepted the offer, paid the acceptance fee and finished their biodata and uploads.'],
                     ['Reset student passwords', 'Manage', 'Generate a new temporary password for a student. The old password stops working at once.'],
                 ],
             ],
@@ -177,6 +236,16 @@ class PermissionCatalog
                 'permissions' => [
                     ['View matric number format', 'View', 'See the current matric number pattern and an example of the next number.'],
                     ['Set the matric number format', 'Set', 'Change the pattern used for students admitted from now on. Existing matric numbers never change.'],
+                ],
+            ],
+
+            'Invoices & payments' => [
+                'about' => 'What each student owes (built from the school bills) and the money received against it.',
+                'permissions' => [
+                    ['View invoices', 'View', 'See every invoice and payment: who owes what, what has been paid, and print receipts.'],
+                    ['Generate invoices', 'Manage', 'Create session fee invoices for all active students (or one programme and level) from the school bills. Students who already have one are skipped, so it is safe to repeat.'],
+                    ['Record offline payments', 'Manage', 'Record money received outside the portal (bank teller, transfer, POS or cash) against an invoice. This changes what a student owes, so only give it to bursary staff.'],
+                    ['Cancel invoices', 'Manage', 'Cancel an invoice that has no payments, for example one raised by mistake. The student no longer owes it.'],
                 ],
             ],
         ];

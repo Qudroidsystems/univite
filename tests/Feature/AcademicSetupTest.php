@@ -60,7 +60,7 @@ it('renders every setup page for a super admin', function (string $route) {
     'dashboard', 'users.index', 'roles.index', 'permissions.index',
     'academics.sessions.index', 'academics.semesters.index', 'academics.faculties.index',
     'academics.departments.index', 'academics.programmes.index', 'academics.courses.index',
-    'academics.curriculum.index', 'applicants.index', 'students.index', 'students.settings', 'bills.items.index', 'bills.structure.index',
+    'academics.curriculum.index', 'applicants.index', 'invoices.index', 'students.index', 'students.settings', 'bills.items.index', 'bills.structure.index',
 ]);
 
 it('renders role and user detail pages', function () {
@@ -125,7 +125,7 @@ it('builds faculty, department, programme and course', function () {
     $dept = Department::first();
 
     $this->post(route('academics.programmes.store'), [
-        'department_id' => $dept->id, 'name' => 'B.Sc. Computer Science', 'code' => 'bsc-csc', 'degree_type' => 'B.Sc',
+        'department_id' => $dept->id, 'name' => 'B.Sc. Computer Science', 'code' => 'bsc-csc', 'degree_type' => 'B.Sc', 'study_category_id' => \App\Models\StudyCategory::firstOrCreate(['code' => 'DEG'], ['name' => 'Degree', 'duration_years' => 4])->id,
         'duration_years' => 4, 'min_credit_load' => 15, 'max_credit_load' => 24,
     ])->assertSessionHasNoErrors();
     $prog = Programme::first();
@@ -140,7 +140,7 @@ it('builds faculty, department, programme and course', function () {
 it('rejects a maximum credit load below the minimum', function () {
     [, $dept] = makeStructure();
     $this->actingAs($this->admin)->post(route('academics.programmes.store'), [
-        'department_id' => $dept->id, 'name' => 'B.Sc. Physics', 'code' => 'PHY', 'degree_type' => 'B.Sc',
+        'department_id' => $dept->id, 'name' => 'B.Sc. Physics', 'code' => 'PHY', 'degree_type' => 'B.Sc', 'study_category_id' => \App\Models\StudyCategory::create(['name' => 'Degree', 'code' => 'DEG', 'duration_years' => 4])->id,
         'duration_years' => 4, 'min_credit_load' => 20, 'max_credit_load' => 10,
     ])->assertSessionHasErrors('max_credit_load');
 });

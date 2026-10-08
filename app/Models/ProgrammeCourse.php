@@ -7,9 +7,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProgrammeCourse extends Model
 {
-    public const STATUSES = ['core' => 'Core', 'required' => 'Required', 'elective' => 'Elective'];
-    public const SEMESTERS = [1 => 'First Semester', 2 => 'Second Semester'];
-
     protected $fillable = ['programme_id', 'course_id', 'level', 'semester_order', 'status'];
 
     public function programme(): BelongsTo

@@ -39,7 +39,7 @@
                             @endif
                             <h5 class="mb-1">{{ $student->full_name }}</h5>
                             <p class="text-muted mb-2">{{ $student->matric_number }}</p>
-                            <span class="badge {{ \App\Models\Student::STATUS_BADGES[$student->status] }}">{{ \App\Models\Student::STATUSES[$student->status] }}</span>
+                            <span class="badge {{ \App\Models\StudentStatus::badgeClass($student->status) }}">{{ \App\Models\StudentStatus::label($student->status) }}</span>
 
                             @if ($canEdit)
                                 <form method="POST" action="{{ route('students.photo', $student->id) }}" enctype="multipart/form-data" class="mt-3 text-start">
@@ -62,7 +62,7 @@
                                 <form method="POST" action="{{ route('students.status', $student->id) }}" class="d-flex gap-2">
                                     @csrf
                                     <select name="status" class="form-select">
-                                        @foreach (\App\Models\Student::STATUSES as $value => $label)
+                                        @foreach (\App\Models\StudentStatus::options() as $value => $label)
                                             <option value="{{ $value }}" @selected($student->status === $value)>{{ $label }}</option>
                                         @endforeach
                                     </select>
@@ -93,7 +93,7 @@
                             {!! $row('Department', $student->programme->department->name) !!}
                             {!! $row('Faculty', $student->programme->department->faculty->name) !!}
                             {!! $row('Entry session', $student->entrySession->name) !!}
-                            {!! $row('Entry mode', \App\Models\Applicant::ENTRY_MODES[$student->entry_mode] ?? $student->entry_mode) !!}
+                            {!! $row('Entry mode', \App\Models\EntryMode::label($student->entry_mode)) !!}
                             {!! $row('Entry level', $student->entry_level . ' Level') !!}
                             {!! $row('Current level', $student->current_level . ' Level') !!}
                             {!! $row('Application no.', $student->applicant?->application_no) !!}

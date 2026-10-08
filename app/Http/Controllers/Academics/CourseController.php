@@ -20,8 +20,6 @@ class CourseController extends CrudController
     protected string $intro = 'The course catalogue. Each course has a code, a title and its credit units. Use Curriculum to decide which programme takes which course at which level and semester.';
     protected array $searchable = ['code', 'title'];
 
-    public const LEVELS = [100 => '100 Level', 200 => '200 Level', 300 => '300 Level', 400 => '400 Level', 500 => '500 Level', 600 => '600 Level', 700 => '700 Level', 800 => '800 Level'];
-
     protected function model(): string
     {
         return Course::class;
@@ -45,7 +43,7 @@ class CourseController extends CrudController
     {
         return [
             ['department_id', 'Department', Department::orderBy('name')->pluck('name', 'id')->all()],
-            ['level', 'Level', self::LEVELS],
+            ['level', 'Level', \App\Support\Levels::options()],
         ];
     }
 
@@ -56,7 +54,7 @@ class CourseController extends CrudController
             'code'          => ['required', 'string', 'max:20', Rule::unique('courses', 'code')->ignore($record?->id)],
             'title'         => ['required', 'string', 'max:255'],
             'credit_units'  => ['required', 'integer', 'min:0', 'max:12'],
-            'level'         => ['nullable', Rule::in(array_keys(self::LEVELS))],
+            'level'         => ['nullable', Rule::in(array_keys(\App\Support\Levels::options()))],
             'description'   => ['nullable', 'string', 'max:2000'],
             'is_active'     => ['nullable', 'boolean'],
         ];
@@ -77,7 +75,7 @@ class CourseController extends CrudController
             ['name' => 'code', 'label' => 'Course code', 'type' => 'text', 'required' => true, 'col' => 4, 'placeholder' => 'CSC 101'],
             ['name' => 'title', 'label' => 'Course title', 'type' => 'text', 'required' => true, 'col' => 8, 'placeholder' => 'Introduction to Computer Science'],
             ['name' => 'credit_units', 'label' => 'Credit units', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 2],
-            ['name' => 'level', 'label' => 'Level', 'type' => 'select', 'options' => self::LEVELS, 'col' => 6, 'blank' => 'Any level'],
+            ['name' => 'level', 'label' => 'Level', 'type' => 'select', 'options' => \App\Support\Levels::options(), 'col' => 6, 'blank' => 'Any level'],
             ['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'col' => 12],
             ['name' => 'is_active', 'label' => 'Active', 'type' => 'switch', 'col' => 12, 'default' => true],
         ];

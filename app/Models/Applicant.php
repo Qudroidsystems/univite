@@ -8,14 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Applicant extends Model
 {
-    public const ENTRY_MODES = [
-        'utme'         => 'UTME (100 level)',
-        'direct_entry' => 'Direct Entry',
-        'transfer'     => 'Transfer',
-        'postgraduate' => 'Postgraduate',
-    ];
-
-    public const STATUSES = ['pending' => 'Pending', 'admitted' => 'Admitted', 'rejected' => 'Rejected'];
+    public const STATUSES = ['draft' => 'Not submitted', 'pending' => 'Submitted', 'admitted' => 'Admitted', 'rejected' => 'Rejected'];
 
     /** Personal, origin and guardian details that are copied onto the student when admitted. */
     public const PROFILE_FIELDS = [
@@ -25,11 +18,13 @@ class Applicant extends Model
     ];
 
     protected $fillable = [
-        'application_no', 'email', 'programme_id', 'academic_session_id', 'entry_mode', 'entry_level',
+        'application_no', 'email', 'jamb_reg_no', 'jamb_score', 'password', 'submitted_at', 'admission_batch', 'programme_id', 'academic_session_id', 'entry_mode', 'entry_level',
         'status', 'decided_at', ...self::PROFILE_FIELDS,
     ];
 
-    protected $casts = ['date_of_birth' => 'date', 'decided_at' => 'datetime'];
+    protected $hidden = ['password'];
+
+    protected $casts = ['date_of_birth' => 'date', 'decided_at' => 'datetime', 'submitted_at' => 'datetime', 'password' => 'hashed'];
 
     public function programme(): BelongsTo
     {
@@ -39,6 +34,27 @@ class Applicant extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(AcademicSession::class, 'academic_session_id');
+    }
+
+    public function results(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ApplicantResult::class)->orderBy('exam_type')->orderBy('subject');
+    }
+
+    public function documents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ApplicantDocument::class);
+    }
+
+    public function invoices(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Invoice::class, 'payable');
+    }
+
+    /** What staff see in lists: the application number. */
+    public function getIdentifierAttribute(): ?string
+    {
+        return $this->application_no;
     }
 
     public function student(): HasOne

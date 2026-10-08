@@ -16,7 +16,7 @@ class MatricSettingsController extends Controller
     public function __construct(private MatricNumberGenerator $generator)
     {
         $this->middleware('permission:View matric number format')->only('edit');
-        $this->middleware('permission:Set the matric number format')->only('update');
+        $this->middleware('permission:Set the matric number format')->only(['update', 'updateIssue']);
     }
 
     public function edit(Request $request): View
@@ -35,8 +35,20 @@ class MatricSettingsController extends Controller
             'error'     => $error,
             'preview'   => $preview,
             'tokens'    => MatricNumberGenerator::TOKENS,
+            'issueAt'   => MatricNumberGenerator::issueAt(),
+            'autoIssue' => MatricNumberGenerator::autoIssue(),
             'sample'    => $programme ? $programme->name . ' (' . $programme->code . '), ' . ($session?->name ?? 'no session yet') : null,
         ]);
+    }
+
+    public function updateIssue(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['issue_at' => ['required', 'in:clearance,admission'], 'auto_issue' => ['nullable', 'boolean']]);
+
+        Setting::put('matric.issue_at', $data['issue_at']);
+        Setting::put('matric.auto_issue', $request->boolean('auto_issue') ? '1' : '0');
+
+        return redirect()->route('students.settings')->with('success', 'Saved. This applies to students admitted or cleared from now on.');
     }
 
     public function update(Request $request): RedirectResponse
@@ -49,6 +61,6 @@ class MatricSettingsController extends Controller
 
         Setting::put(MatricNumberGenerator::SETTING_KEY, $pattern);
 
-        return redirect()->route('students.settings')->with('success', 'Matric number format saved. It applies to students admitted from now on; existing matric numbers do not change.');
+        return redirect()->route('students.settings')->with('success', 'Matric number format saved. It applies to numbers issued from now on; existing matric numbers do not change.');
     }
 }

@@ -38,7 +38,7 @@
                             @forelse ($students as $s)
                                 @php $list = $onboarding->checklist($s); $left = collect($list)->reject(fn ($i) => $i[2] || $i[0] === 'verified'); @endphp
                                 <tr>
-                                    <td><a href="{{ route('students.show', $s->id) }}" class="fw-semibold">{{ $s->full_name }}</a><div class="text-muted fs-12">{{ $s->matric_number }}@if ($s->admission_batch) · {{ $s->admission_batch }}@endif</div></td>
+                                    <td><a href="{{ route('students.show', $s->id) }}" class="fw-semibold">{{ $s->full_name }}</a><div class="text-muted fs-12">{{ $s->matric_label }}@if ($s->admission_batch) · {{ $s->admission_batch }}@endif</div></td>
                                     <td>{{ $s->programme->name }}</td>
                                     <td>
                                         @if ($s->verified_at)

@@ -29,6 +29,18 @@ class MatricNumberGenerator
         'SEQ:n'           => 'Running number padded to n digits (1 to 8), e.g. {SEQ:4} gives 0001. Required.',
     ];
 
+    /** When a matric number is issued: after clearance (the default) or straight at admission. */
+    public static function issueAt(): string
+    {
+        return Setting::get('matric.issue_at', 'clearance') === 'admission' ? 'admission' : 'clearance';
+    }
+
+    /** After clearance: issue the number the moment the last item is cleared (true), or wait for staff to generate a batch (false). */
+    public static function autoIssue(): bool
+    {
+        return Setting::get('matric.auto_issue', '1') === '1';
+    }
+
     public static function pattern(): string
     {
         return Setting::get(self::SETTING_KEY, self::DEFAULT_PATTERN) ?: self::DEFAULT_PATTERN;
@@ -88,7 +100,7 @@ class MatricNumberGenerator
             do {
                 $number++;
                 $matric = $this->format($prefixKey, $number, $width);
-            } while (Student::where('matric_number', $matric)->exists());
+            } while ($this->taken($matric));
 
             DB::table('matric_sequences')->updateOrInsert(
                 ['key' => $prefixKey],
@@ -97,6 +109,33 @@ class MatricNumberGenerator
 
             return $matric;
         });
+    }
+
+    /** A number is taken if a student holds it, or if it was cancelled (cancelled numbers are never reused). */
+    public function taken(string $matric): bool
+    {
+        return Student::where('matric_number', $matric)->exists()
+            || \App\Models\MatricEvent::where('action', 'cancelled')->where('matric_number', $matric)->exists();
+    }
+
+    /**
+     * After numbers are undone, wind the sequence for this student's prefix back to the highest number still in use
+     * so the freed numbers can be issued again.
+     */
+    public function rewind(Student $student): void
+    {
+        $student->loadMissing('programme.department.faculty', 'entrySession');
+        [$prefixKey, $width] = $this->resolve(self::pattern(), $student->programme, $student->entrySession);
+
+        $highest = $this->highestExisting($prefixKey, $width);
+        $regex = '/^' . str_replace('\\{SEQ\\}', '(\\d+)', preg_quote($prefixKey, '/')) . '$/';
+        \App\Models\MatricEvent::where('action', 'cancelled')->pluck('matric_number')->each(function ($m) use ($regex, &$highest) {
+            if (preg_match($regex, (string) $m, $x)) {
+                $highest = max($highest, (int) $x[1]);
+            }
+        });
+
+        DB::table('matric_sequences')->where('key', $prefixKey)->update(['last_number' => $highest, 'updated_at' => now()]);
     }
 
     /** @return array{0: string, 1: int} the pattern with every token filled except {SEQ}, and the SEQ width */

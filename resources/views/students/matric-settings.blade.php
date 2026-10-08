@@ -61,6 +61,18 @@
 
                 <div class="col-lg-5">
                     <div class="card">
+                        <div class="card-header"><h6 class="card-title mb-0">When is the number issued?</h6></div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('students.settings.issue') }}">
+                                @csrf @method('PUT')
+                                <div class="form-check mb-2"><input class="form-check-input" type="radio" name="issue_at" id="at-clearance" value="clearance" @checked($issueAt === 'clearance') @disabled(! $canSet)><label class="form-check-label" for="at-clearance"><strong>After clearance</strong> (recommended)<div class="text-muted fs-12">The student gets a login with their application number first. The matric number comes once every required clearance item is cleared.</div></label></div>
+                                <div class="form-check mb-3"><input class="form-check-input" type="radio" name="issue_at" id="at-admission" value="admission" @checked($issueAt === 'admission') @disabled(! $canSet)><label class="form-check-label" for="at-admission"><strong>At admission</strong><div class="text-muted fs-12">The number is issued the moment the applicant is admitted.</div></label></div>
+                                <div class="form-check form-switch mb-3"><input type="hidden" name="auto_issue" value="0"><input class="form-check-input" type="checkbox" role="switch" name="auto_issue" id="auto-issue" value="1" @checked($autoIssue) @disabled(! $canSet)><label class="form-check-label" for="auto-issue">Issue automatically when a student is cleared<div class="text-muted fs-12">Turn off if staff should generate numbers in a batch instead.</div></label></div>
+                                @if ($canSet)<button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save</button>@endif
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">Parts you can use</h6></div>
                         <ul class="list-group list-group-flush">
                             @foreach ($tokens as $token => $meaning)

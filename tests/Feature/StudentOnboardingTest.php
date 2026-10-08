@@ -24,6 +24,7 @@ beforeEach(function () {
     Storage::fake('local');
     Storage::fake('public');
     $this->seed(DatabaseSeeder::class);
+    \App\Models\Setting::put('matric.issue_at', 'admission'); // these tests cover the issue-at-admission option; clearance has its own tests
     $this->admin = User::where('email', env('ADMIN_EMAIL', 'eliabsiji@gmail.com'))->firstOrFail();
 
     $faculty = Faculty::create(['name' => 'Faculty of Education', 'code' => 'EDU']);
@@ -88,7 +89,7 @@ function finishOnlineSteps(Student $student): void
 
 it('lets an applicant check their status with JAMB number and surname only', function () {
     $student = admitted();
-    $applicant = $student->applicant;
+    $applicant = $student->applicant->fresh();
 
     $this->get(route('admission-status'))->assertOk()->assertSee('Check your admission status');
     $this->post(route('admission-status.check'), ['jamb_reg_no' => '12345678ab', 'last_name' => 'ADEYEMI'])

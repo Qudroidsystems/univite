@@ -6,6 +6,10 @@ use App\Http\Controllers\Apply\AdmissionStatusController;
 use App\Http\Controllers\Apply\ApplicationPortalController;
 use App\Http\Controllers\StudentOnboardingController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\ClearanceController;
+use App\Http\Controllers\MatricController;
+use App\Http\Controllers\StudentClearanceController;
+use App\Http\Controllers\Academics\ClearanceItemController;
 use App\Http\Controllers\Academics\BillController;
 use App\Http\Controllers\Academics\MatricSettingsController;
 use App\Http\Controllers\Academics\StudentController;
@@ -107,6 +111,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('student-statuses', StudentStatusController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('entry-modes', EntryModeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('lists', LookupController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('clearance-items', ClearanceItemController::class)->only(['index', 'store', 'update', 'destroy']);
 
         // Programme curriculum: which courses are taken at which level/semester
         Route::get('curriculum', [CurriculumController::class, 'index'])->name('curriculum.index');
@@ -127,6 +132,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('students/matric-format', [MatricSettingsController::class, 'edit'])->name('students.settings');
     Route::put('students/matric-format', [MatricSettingsController::class, 'update'])->name('students.settings.update');
+    Route::put('students/matric-format/issue', [MatricSettingsController::class, 'updateIssue'])->name('students.settings.issue');
     Route::post('students/{student}/photo', [StudentController::class, 'photo'])->name('students.photo');
     Route::post('students/{student}/status', [StudentController::class, 'status'])->name('students.status');
     Route::post('students/{student}/reset-password', [StudentController::class, 'resetPassword'])->name('students.reset-password');
@@ -145,6 +151,28 @@ Route::middleware('auth')->group(function () {
     Route::get('verification/documents/{document}', [VerificationController::class, 'document'])->name('verification.documents.show');
     Route::post('verification/{student}/verify', [VerificationController::class, 'verify'])->name('verification.verify');
     Route::post('verification/{student}/unverify', [VerificationController::class, 'unverify'])->name('verification.unverify');
+
+    // ---- Matric numbers (after clearance) ----
+    Route::get('matric', [MatricController::class, 'index'])->name('matric.index');
+    Route::post('matric/generate', [MatricController::class, 'generate'])->name('matric.generate');
+    Route::post('matric/import', [MatricController::class, 'import'])->name('matric.import');
+    Route::post('matric/undo', [MatricController::class, 'undo'])->name('matric.undo');
+    Route::post('matric/{student}/special', [MatricController::class, 'special'])->name('matric.special');
+    Route::post('matric/{student}/cancel', [MatricController::class, 'cancel'])->name('matric.cancel');
+    Route::post('matric/{student}/restore', [MatricController::class, 'restore'])->name('matric.restore');
+
+    // ---- Clearance (staff) ----
+    Route::get('clearance', [ClearanceController::class, 'index'])->name('clearance.index');
+    Route::post('clearance/bulk', [ClearanceController::class, 'bulk'])->name('clearance.bulk');
+    Route::get('clearance/{student}', [ClearanceController::class, 'show'])->name('clearance.show');
+    Route::get('clearance/{student}/slip', [ClearanceController::class, 'slip'])->name('clearance.slip');
+    Route::post('clearance/{student}/items/{item}/decide', [ClearanceController::class, 'decide'])->name('clearance.decide');
+    Route::post('clearance/{student}/items/{item}/reset', [ClearanceController::class, 'reset'])->name('clearance.reset');
+
+    // ---- A student's own clearance ----
+    Route::get('my/clearance', [StudentClearanceController::class, 'index'])->name('my.clearance');
+    Route::get('my/clearance/slip', [StudentClearanceController::class, 'slip'])->name('my.clearance.slip');
+    Route::post('my/clearance/{item}/resubmit', [StudentClearanceController::class, 'resubmit'])->name('my.clearance.resubmit');
 
     // ---- A newly admitted student's own steps ----
     Route::get('my/getting-started', [StudentOnboardingController::class, 'index'])->name('my.onboarding');

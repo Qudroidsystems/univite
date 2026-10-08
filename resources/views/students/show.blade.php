@@ -19,7 +19,7 @@
                             <ol class="breadcrumb m-0">
                                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                                 <li class="breadcrumb-item"><a href="{{ route('students.index') }}">Students</a></li>
-                                <li class="breadcrumb-item active">{{ $student->matric_number }}</li>
+                                <li class="breadcrumb-item active">{{ $student->matric_label }}</li>
                             </ol>
                         </div>
                     </div>
@@ -38,7 +38,7 @@
                                 <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary fw-semibold fs-2 mb-3" style="width:110px;height:110px;">{{ $student->initials }}</span>
                             @endif
                             <h5 class="mb-1">{{ $student->full_name }}</h5>
-                            <p class="text-muted mb-2">{{ $student->matric_number }}</p>
+                            <p class="text-muted mb-2">{{ $student->matric_label }}</p>
                             <span class="badge {{ \App\Models\StudentStatus::badgeClass($student->status) }}">{{ \App\Models\StudentStatus::label($student->status) }}</span>
 
                             @if ($canEdit)

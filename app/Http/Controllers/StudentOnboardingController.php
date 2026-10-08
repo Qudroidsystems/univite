@@ -70,6 +70,7 @@ class StudentOnboardingController extends Controller
 
         $student->update($request->validate($rules));
         $student->user->update(['phone_number' => $student->phone_number, 'gender' => $student->gender, 'date_of_birth' => $student->date_of_birth]);
+        $this->onboarding->refreshClearance($student);
 
         return back()->with('success', 'Your biodata has been saved.');
     }

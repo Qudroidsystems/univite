@@ -28,7 +28,7 @@
         @if ($applicant->status === 'admitted')
             <div class="alert alert-success">
                 <h5 class="alert-heading"><i class="ri-medal-line me-1"></i>Congratulations, you have been admitted!</h5>
-                @if ($applicant->student)<p class="mb-1">Your matric number is <strong>{{ $applicant->student->matric_number }}</strong>.</p>@endif
+                @if ($applicant->student)<p class="mb-1">{!! $applicant->student->matric_number ? 'Your matric number is <strong>' . e($applicant->student->matric_number) . '</strong>.' : 'Your matric number will be issued after you complete clearance.' !!}</p>@endif
                 <p class="mb-0">Sign in at <a href="{{ route('login') }}">Student / staff sign in</a> with <strong>{{ $applicant->email }}</strong> and the password you chose when you applied.</p>
             </div>
         @elseif ($applicant->status === 'rejected')

@@ -22,6 +22,12 @@ class OnboardingService
     {
     }
 
+    /** Clearance depends on these steps, so re-check it whenever one changes. */
+    public function refreshClearance(Student $student): void
+    {
+        app(ClearanceService::class)->refresh($student->fresh());
+    }
+
     public function acceptOffer(Student $student): void
     {
         if (! $student->needs_onboarding) {
@@ -36,6 +42,7 @@ class OnboardingService
 
         $student->update(['offer_accepted_at' => now()]);
         $this->invoices->generateAcceptanceInvoice($student);
+        $this->refreshClearance($student);
     }
 
     public function acceptanceInvoice(Student $student): ?Invoice
@@ -121,7 +128,10 @@ class OnboardingService
         }
         $applicant = $student->applicant ?? throw new RuntimeException('There is no application on file for this student.');
 
-        return $this->applications->storeDocument($applicant, $type, $file);
+        $document = $this->applications->storeDocument($applicant, $type, $file);
+        $this->refreshClearance($student);
+
+        return $document;
     }
 
     public function verify(Student $student, int $userId, ?string $note = null): void
@@ -135,10 +145,12 @@ class OnboardingService
         }
 
         $student->update(['verified_at' => now(), 'verified_by' => $userId, 'verification_note' => $note]);
+        $this->refreshClearance($student);
     }
 
     public function unverify(Student $student): void
     {
         $student->update(['verified_at' => null, 'verified_by' => null, 'verification_note' => null]);
+        $this->refreshClearance($student);
     }
 }

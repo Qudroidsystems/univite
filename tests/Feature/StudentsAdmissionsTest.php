@@ -20,6 +20,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(DatabaseSeeder::class);
+    \App\Models\Setting::put('matric.issue_at', 'admission'); // these tests cover the issue-at-admission option; clearance has its own tests
     $this->admin = User::where('email', env('ADMIN_EMAIL', 'eliabsiji@gmail.com'))->firstOrFail();
 
     $faculty = Faculty::create(['name' => 'Faculty of Science', 'code' => 'SCI']);

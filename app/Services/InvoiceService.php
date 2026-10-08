@@ -204,5 +204,10 @@ class InvoiceService
             'amount_paid' => $paid,
             'status'      => $paid <= 0 ? 'unpaid' : ($paid + 0.001 >= (float) $invoice->total ? 'paid' : 'partial'),
         ]);
+
+        // Paying fees can complete a student's clearance.
+        if ($invoice->payable_type === Student::class && ($student = Student::find($invoice->payable_id))) {
+            app(ClearanceService::class)->refresh($student);
+        }
     }
 }

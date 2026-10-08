@@ -10,12 +10,12 @@ class Student extends Model
 {
     protected $fillable = [
         'user_id', 'applicant_id', 'matric_number', 'admission_batch',
-        'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note',
+        'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note', 'cleared_at',
         'programme_id', 'academic_session_id', 'entry_mode', 'entry_level', 'current_level', 'status', 'photo',
         ...Applicant::PROFILE_FIELDS,
     ];
 
-    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime'];
+    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime', 'cleared_at' => 'datetime'];
 
     public function user(): BelongsTo
     {
@@ -56,6 +56,22 @@ class Student extends Model
     public function getIdentifierAttribute(): ?string
     {
         return $this->matric_number;
+    }
+
+    /** The matric number, or a plain note while it has not been issued yet. */
+    public function getMatricLabelAttribute(): string
+    {
+        return $this->matric_number ?: 'Matric number not yet issued';
+    }
+
+    public function matricEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MatricEvent::class);
+    }
+
+    public function clearances(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StudentClearance::class);
     }
 
     public function getFullNameAttribute(): string

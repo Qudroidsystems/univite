@@ -75,3 +75,13 @@ home/foreign students; a blank target means everyone. When several bills exist f
 percentages, billed per semester on a separate invoice, and given a payment window (opens/closes). Optional bill items
 are left off automatic invoices. The home nationality defaults to Nigerian (setting `institution.home_nationality`).
 Run `php artisan migrate`.
+
+## Clearance and matric numbers (phase 4, step 3)
+
+Flow: Application → Admission → Acceptance → Verification → **Clearance** → **Matric number**.
+Each university defines its clearance checklist (Academic Setup → Clearance Items): automatic items clear themselves
+(offer accepted, acceptance fee, biodata, documents, verification, school fees); manual items are signed by an office
+(a role). Students see a live checklist, can re-submit rejected items, get notifications and a printable slip.
+Matric numbers are issued after clearance by default (setting on the Matric Number Format page: after clearance or at
+admission; automatically or in a staff-run batch). The Matric Numbers screen can generate a batch, set special numbers,
+apply a CSV of external numbers, cancel/restore numbers and undo a batch. Run `php artisan migrate` and `php artisan db:seed`.

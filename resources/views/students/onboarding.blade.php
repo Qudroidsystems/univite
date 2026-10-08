@@ -18,7 +18,7 @@
             @endif
 
             <div class="card">
-                <div class="card-header"><h6 class="card-title mb-0">{{ $student->full_name }} · {{ $student->matric_number }}</h6></div>
+                <div class="card-header"><h6 class="card-title mb-0">{{ $student->full_name }} · {{ $student->matric_label }}</h6></div>
                 <div class="card-body">
                     <p class="text-muted mb-3">{{ $student->programme->name }} · {{ $student->entry_level }} Level · {{ $student->entrySession->name }} session</p>
                     <ul class="list-unstyled mb-0">

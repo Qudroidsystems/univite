@@ -78,7 +78,7 @@
                         </div></div>
                     @endif
                     @if ($applicant->student)
-                        <div class="card"><div class="card-body">Admitted as <a href="{{ route('students.show', $applicant->student->id) }}" class="fw-semibold">{{ $applicant->student->matric_number }}</a></div></div>
+                        <div class="card"><div class="card-body">Admitted as <a href="{{ route('students.show', $applicant->student->id) }}" class="fw-semibold">{{ $applicant->student->matric_label }}</a></div></div>
                     @endif
 
                     <div class="card">

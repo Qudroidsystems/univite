@@ -93,7 +93,7 @@ class StudentController extends CrudController
     protected function columns(): array
     {
         return [
-            ['Matric number', fn ($r) => new HtmlString('<a href="' . e(route('students.show', $r->id)) . '" class="fw-semibold">' . e($r->matric_number) . '</a>')],
+            ['Matric number', fn ($r) => new HtmlString('<a href="' . e(route('students.show', $r->id)) . '" class="fw-semibold">' . e($r->matric_label) . '</a>')],
             ['Student', fn ($r) => new HtmlString('<span class="fw-medium">' . e($r->full_name) . '</span><div class="text-muted fs-12">' . e($r->user?->email) . '</div>')],
             ['Programme', fn ($r) => new HtmlString(e($r->programme->name) . '<div class="text-muted fs-12">Entered ' . e($r->entrySession->name) . '</div>')],
             ['Level', fn ($r) => $r->current_level . 'L'],

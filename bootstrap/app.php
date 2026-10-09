@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
+        $middleware->web(append: [\App\Http\Middleware\AjaxResponses::class]);
+
         $middleware->validateCsrfTokens(except: [
             'webhook/*',
         ]);

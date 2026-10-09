@@ -121,6 +121,99 @@ class PermissionCatalog
                 ],
             ],
 
+            'Custom fields' => [
+                'about' => 'Extra questions added to the applicant, student and staff forms: text, numbers, dates, choices, yes/no and file uploads.',
+                'permissions' => [
+                    ['View custom fields', 'View', 'See the extra form fields that have been added and where they appear.'],
+                    ['Create custom fields', 'Create', 'Add a new question to the applicant, student or staff form.'],
+                    ['Edit custom fields', 'Edit', 'Change a custom field: its label, choices, whether it is required, or hide it.'],
+                    ['Delete custom fields', 'Delete', 'Delete a custom field. Every answer and uploaded file for it is deleted too.'],
+                ],
+            ],
+
+            'Grade bands' => [
+                'about' => 'The grading scale: which score earns which letter and grade points, and which grades are a pass.',
+                'permissions' => [
+                    ['View grade bands', 'View', 'See the grading scale: score ranges, letters, grade points and pass marks.'],
+                    ['Create grade bands', 'Create', 'Add a grade to the scale, for example a new letter or a different pass mark.'],
+                    ['Edit grade bands', 'Edit', 'Change the score range, points or pass status of a grade. Results that are already approved are not regraded.'],
+                    ['Delete grade bands', 'Delete', 'Remove a grade from the scale. Refused while any result uses it.'],
+                ],
+            ],
+
+            'Degree classes' => [
+                'about' => 'The class of degree a graduating student earns from their CGPA (First Class, Second Class Upper ...).',
+                'permissions' => [
+                    ['View degree classes', 'View', 'See the classes of degree and the CGPA each one needs.'],
+                    ['Create degree classes', 'Create', 'Add a class of degree with its minimum CGPA.'],
+                    ['Edit degree classes', 'Edit', 'Rename a class of degree or change its minimum CGPA.'],
+                    ['Delete degree classes', 'Delete', 'Remove a class of degree from the list used to classify graduates.'],
+                ],
+            ],
+
+            'Course registrations' => [
+                'about' => 'Students choose their courses each semester. A course adviser or HOD reviews the form before it counts.',
+                'permissions' => [
+                    ['View course registrations', 'View', 'See students\' course registration forms and the courses on each one.'],
+                    ['Approve course registrations', 'Manage', 'Approve a submitted registration form, return it to the student with a reason, or reopen an approved form so the student can change it.'],
+                ],
+            ],
+
+            'Registration settings' => [
+                'about' => 'The rules for course registration: unit limits, fee check, approval, carry-overs and prerequisites.',
+                'permissions' => [
+                    ['View registration settings', 'View', 'See the course registration rules.'],
+                    ['Edit registration settings', 'Edit', 'Change the unit limits, fee check, approval step and other registration rules.'],
+                ],
+            ],
+
+            'Course assignments' => [
+                'about' => 'Which lecturer teaches which course each semester. Assigned lecturers can enter scores for their courses.',
+                'permissions' => [
+                    ['View course assignments', 'View', 'See which lecturer is assigned to which course in each session and semester.'],
+                    ['Create course assignments', 'Create', 'Assign a lecturer to a course for a session and semester.'],
+                    ['Edit course assignments', 'Edit', 'Change a lecturer assignment, for example to a different course or semester.'],
+                    ['Delete course assignments', 'Delete', 'Remove a lecturer assignment so they can no longer enter scores for that course.'],
+                ],
+            ],
+
+            'Result stages' => [
+                'about' => 'The approval steps a score sheet passes through after the lecturer submits it, such as Head of Department then Dean.',
+                'permissions' => [
+                    ['View result stages', 'View', 'See the result approval steps and which role signs each one.'],
+                    ['Create result stages', 'Create', 'Add an approval step to the result chain, for example a Senate step.'],
+                    ['Edit result stages', 'Edit', 'Rename an approval step, change its order or role, or switch it off.'],
+                    ['Delete result stages', 'Delete', 'Remove an approval step. Refused while score sheets are waiting at it.'],
+                ],
+            ],
+
+            'Result sheets' => [
+                'about' => 'Course score sheets: lecturers enter or upload CA and exam scores, then the sheet is approved step by step and published to students.',
+                'permissions' => [
+                    ['View result sheets', 'View', 'See every course score sheet and where it is in the approval chain, even for courses you do not teach.'],
+                    ['Enter results for any course', 'Manage', 'Enter, upload and submit scores for any course, not only the ones you are assigned to. Give this to the exams officer.'],
+                    ['Approve results', 'Manage', 'Approve or return a score sheet waiting at your approval step (the role set on each step decides which steps are yours).'],
+                    ['Approve results for any stage', 'Manage', 'Approve or return a score sheet at any step of the chain, whatever role the step asks for.'],
+                    ['Amend published results', 'Manage', 'Correct a single student\'s score on a published sheet. A reason is required and the old and new scores are recorded on the sheet\'s history.'],
+                    ['Publish results', 'Manage', 'Publish an approved score sheet so students can see their results, or send an approved sheet back for correction.'],
+                ],
+            ],
+
+            'Student results' => [
+                'about' => 'Published results, GPA and CGPA for individual students.',
+                'permissions' => [
+                    ['View student results', 'View', 'Open any student\'s published results and print their transcript with semester GPA, CGPA and class.'],
+                ],
+            ],
+
+            'Result settings' => [
+                'about' => 'How a course\'s marks are split between continuous assessment and exam.',
+                'permissions' => [
+                    ['View result settings', 'View', 'See the CA and exam mark split used for score entry.'],
+                    ['Edit result settings', 'Edit', 'Change the CA and exam mark split. It must add up to 100.'],
+                ],
+            ],
+
             'Student statuses' => [
                 'about' => 'The states a student can be in (Active, Deferred, Suspended ...). Each status controls whether the student can sign in, register for courses, pay fees and counts as enrolled.',
                 'permissions' => [

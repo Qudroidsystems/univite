@@ -1,0 +1,177 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Course;
+use App\Models\ResultSheet;
+use App\Services\RegistrationService;
+use App\Services\ResultService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\View\View;
+use RuntimeException;
+
+/** Lecturers' score sheets and the approval chain. Access is by course assignment or by permission, checked per sheet. */
+class ResultSheetController extends Controller
+{
+    public function __construct(private ResultService $results, private RegistrationService $registration)
+    {
+    }
+
+    private function mayView(ResultSheet $sheet): bool
+    {
+        $u = auth()->user();
+
+        return $this->results->canEnter($u, $sheet) || $u->can('View result sheets');
+    }
+
+    private function authorizeEntry(ResultSheet $sheet): void
+    {
+        abort_unless($this->results->canEnter(auth()->user(), $sheet), 403, 'You are not assigned to this course.');
+    }
+
+    public function index(Request $request): View
+    {
+        $user = auth()->user();
+        $ctx = $this->registration->context();
+        $mine = $ctx ? $user->courseAssignments()->with('course')
+            ->where('academic_session_id', $ctx['session']->id)->where('semester_type_id', $ctx['type']->id)->get() : collect();
+
+        $sheets = ResultSheet::with('course', 'session', 'semesterType', 'stage')->withCount('results');
+        $status = $request->query('status', 'submitted');
+        $all = null;
+        if ($user->can('View result sheets')) {
+            $all = (clone $sheets)->when($status !== 'all', fn ($q) => $q->where('status', $status))->latest('updated_at')->paginate(25)->withQueryString();
+        }
+        $mySheets = (clone $sheets)->whereIn('course_id', $user->courseAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
+            ->filter(fn ($s) => $this->results->canEnter($user, $s));
+
+        return view('results.index', [
+            'pagetitle' => 'Results', 'ctx' => $ctx, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status,
+            'counts' => ResultSheet::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status'),
+        ]);
+    }
+
+    /** Open (creating if needed) the sheet for an assigned course this semester. */
+    public function open(Course $course): RedirectResponse
+    {
+        $ctx = $this->registration->context() ?? abort(404, 'No semester is running.');
+        $sheet = $this->results->sheet($course->id, $ctx['session']->id, $ctx['type']->id);
+        $this->authorizeEntry($sheet);
+
+        return redirect()->route('results.sheets.show', $sheet->id);
+    }
+
+    public function show(ResultSheet $sheet): View
+    {
+        abort_unless($this->mayView($sheet), 403);
+        if ($sheet->isEditable() && $this->results->canEnter(auth()->user(), $sheet)) {
+            $this->results->syncRows($sheet);
+        }
+        $sheet->load('course', 'session', 'semesterType', 'stage', 'events.user', 'results.student');
+
+        return view('results.show', [
+            'pagetitle'  => $sheet->course->code . ' results',
+            'sheet'      => $sheet,
+            'rows'       => $sheet->results->sortBy(fn ($r) => $r->student->last_name . $r->student->first_name),
+            'canEnter'   => $this->results->canEnter(auth()->user(), $sheet),
+            'canApprove' => $this->results->canApprove(auth()->user(), $sheet),
+            'caMax'      => ResultService::caMax(), 'examMax' => ResultService::examMax(),
+            'missing'    => $sheet->isEditable() ? $this->results->incomplete($sheet) : 0,
+        ]);
+    }
+
+    public function save(Request $request, ResultSheet $sheet): RedirectResponse
+    {
+        $this->authorizeEntry($sheet);
+        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable']]);
+
+        try {
+            $problems = $this->results->saveScores($sheet, $data['scores'], $request->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return $problems
+            ? back()->with('warning', 'Saved, except: ' . implode(' ', $problems))
+            : back()->with('success', 'Scores saved.');
+    }
+
+    public function upload(Request $request, ResultSheet $sheet): RedirectResponse
+    {
+        $this->authorizeEntry($sheet);
+        $request->validate(['file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:4096']]);
+
+        try {
+            $out = $this->results->import($sheet, $request->file('file'), $request->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $msg = $out['saved'] . ' row(s) read.';
+
+        return $out['problems']
+            ? back()->with('warning', $msg . ' Not saved: ' . implode(' ', array_slice($out['problems'], 0, 8)) . (count($out['problems']) > 8 ? ' (and ' . (count($out['problems']) - 8) . ' more)' : ''))
+            : back()->with('success', $msg . ' Scores saved.');
+    }
+
+    /** A CSV the lecturer can fill in and upload again. */
+    public function template(ResultSheet $sheet): Response
+    {
+        abort_unless($this->mayView($sheet), 403);
+        $out = "Matric Number,Name,CA,Exam\n";
+        foreach ($sheet->results()->with('student')->get()->sortBy(fn ($r) => $r->student->last_name) as $r) {
+            $out .= sprintf("%s,\"%s\",%s,%s\n", $r->student->matric_number, str_replace('"', '""', $r->student->full_name), $r->ca, $r->exam);
+        }
+
+        return response($out, 200, ['Content-Type' => 'text/csv', 'Content-Disposition' => 'attachment; filename="' . str_replace(' ', '_', $sheet->course->code) . '_scores.csv"']);
+    }
+
+    public function submit(Request $request, ResultSheet $sheet): RedirectResponse
+    {
+        $this->authorizeEntry($sheet);
+
+        try {
+            $this->results->submit($sheet, $request->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Scores submitted for approval.');
+    }
+
+    /** Correct a published score (reason required, logged on the sheet). */
+    public function amend(Request $request, \App\Models\CourseResult $result): RedirectResponse
+    {
+        abort_unless($request->user()->can('Amend published results'), 403);
+        $d = $request->validate(['ca' => ['required', 'numeric'], 'exam' => ['required', 'numeric'], 'reason' => ['required', 'string', 'max:400']]);
+
+        try {
+            $this->results->amend($result, $d['ca'], $d['exam'], $d['reason'], $request->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Result corrected and logged.');
+    }
+
+    public function decide(Request $request, ResultSheet $sheet): RedirectResponse
+    {
+        $data = $request->validate(['decision' => ['required', 'in:approve,return,publish'], 'note' => ['nullable', 'string', 'max:500']]);
+        $user = $request->user();
+        abort_if($data['decision'] === 'publish' && ! $user->can('Publish results'), 403);
+
+        try {
+            match ($data['decision']) {
+                'approve' => $this->results->approve($sheet, $user, $data['note'] ?? null),
+                'return'  => $this->results->returnToLecturer($sheet, $user, $data['note'] ?? null),
+                'publish' => $this->results->publish($sheet, $user),
+            };
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', ['approve' => 'Approved.', 'return' => 'Returned to the lecturer.', 'publish' => 'Results published. Students can see them now.'][$data['decision']]);
+    }
+}

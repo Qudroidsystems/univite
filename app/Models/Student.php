@@ -69,6 +69,11 @@ class Student extends Model
         return $this->hasMany(MatricEvent::class);
     }
 
+    public function registrationForms(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(RegistrationForm::class);
+    }
+
     public function clearances(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(StudentClearance::class);

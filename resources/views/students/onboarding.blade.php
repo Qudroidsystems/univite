@@ -61,7 +61,7 @@
 
             <div class="card">
                 <div class="card-header"><h6 class="card-title mb-0">3. Complete your biodata</h6></div>
-                <form method="POST" action="{{ route('my.onboarding.biodata') }}" class="card-body row g-3">
+                <form method="POST" action="{{ route('my.onboarding.biodata') }}" class="card-body row g-3" enctype="multipart/form-data">
                     @csrf @method('PUT')
                     <div class="col-md-4"><label class="form-label">Phone number</label><input name="phone_number" value="{{ $field('phone_number') }}" class="form-control" required {{ $ro }}></div>
                     <div class="col-md-4"><label class="form-label">Gender</label>
@@ -76,6 +76,7 @@
                     <div class="col-md-3"><label class="form-label">Relationship</label><input name="guardian_relationship" value="{{ $field('guardian_relationship') }}" class="form-control" required {{ $ro }}></div>
                     <div class="col-md-4"><label class="form-label">Guardian phone</label><input name="guardian_phone" value="{{ $field('guardian_phone') }}" class="form-control" required {{ $ro }}></div>
                     <div class="col-12"><label class="form-label">Guardian address</label><textarea name="guardian_address" rows="2" class="form-control" {{ $ro }}>{{ $field('guardian_address') }}</textarea></div>
+                    @include('partials.custom-field-inputs', ['cfTarget' => 'student', 'cfSubject' => $student ?? null, 'cfSelfService' => true, 'cfReadonly' => $locked])
                     @unless ($locked)<div class="col-12"><button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save biodata</button></div>@endunless
                 </form>
             </div>

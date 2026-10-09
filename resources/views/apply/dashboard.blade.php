@@ -79,7 +79,7 @@
 
         <div class="card pub-card mb-3">
             <div class="card-header"><h6 class="card-title mb-0">Personal details</h6></div>
-            <form method="POST" action="{{ route('apply.profile') }}" class="card-body row g-3">
+            <form method="POST" action="{{ route('apply.profile') }}" class="card-body row g-3" enctype="multipart/form-data">
                 @csrf @method('PUT')
                 <div class="col-md-4"><label class="form-label">First name</label><input name="first_name" value="{{ $field('first_name') }}" class="form-control" required {{ $ro }}></div>
                 <div class="col-md-4"><label class="form-label">Surname</label><input name="last_name" value="{{ $field('last_name') }}" class="form-control" required {{ $ro }}></div>
@@ -101,6 +101,7 @@
                 <div class="col-md-3"><label class="form-label">Relationship</label><input name="guardian_relationship" value="{{ $field('guardian_relationship') }}" class="form-control" required {{ $ro }}></div>
                 <div class="col-md-4"><label class="form-label">Phone</label><input name="guardian_phone" value="{{ $field('guardian_phone') }}" class="form-control" required {{ $ro }}></div>
                 <div class="col-12"><label class="form-label">Address</label><textarea name="guardian_address" rows="2" class="form-control" {{ $ro }}>{{ $field('guardian_address') }}</textarea></div>
+                @include('partials.custom-field-inputs', ['cfTarget' => 'applicant', 'cfSubject' => $applicant, 'cfSelfService' => true, 'cfReadonly' => ! $editable, 'cfFileRoute' => 'apply.custom-files'])
                 @if ($editable)<div class="col-12"><button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save details</button></div>@endif
             </form>
         </div>

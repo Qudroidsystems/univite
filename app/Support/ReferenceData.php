@@ -59,6 +59,21 @@ class ReferenceData
         ];
     }
 
+    /** Starting grading scale (the common Nigerian 5-point scale). Administrators edit it afterwards. @return array<int, array> */
+    public static function gradeBands(): array
+    {
+        return [
+            ['A', 70, 100, 5, 'Excellent', true], ['B', 60, 69.99, 4, 'Very good', true], ['C', 50, 59.99, 3, 'Good', true],
+            ['D', 45, 49.99, 2, 'Fair', true], ['E', 40, 44.99, 1, 'Pass', true], ['F', 0, 39.99, 0, 'Fail', false],
+        ];
+    }
+
+    /** @return array<int, array{0: string, 1: float}> */
+    public static function degreeClasses(): array
+    {
+        return [['First Class', 4.50], ['Second Class Upper', 3.50], ['Second Class Lower', 2.40], ['Third Class', 1.50], ['Pass', 1.00]];
+    }
+
     /** Idempotent: only adds what is missing, never overwrites an administrator's edits. */
     public static function seed(): void
     {
@@ -81,6 +96,17 @@ class ReferenceData
         $i = 0;
         foreach (self::studentStatuses() as [$code, $name, $badge, $login, $register, $pay, $enrolled, $default]) {
             DB::table('student_statuses')->insertOrIgnore(['code' => $code, 'name' => $name, 'badge' => $badge, 'can_login' => $login, 'can_register' => $register, 'can_pay' => $pay, 'is_enrolled' => $enrolled, 'is_default' => $default, 'sort_order' => ++$i, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now]);
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('grade_bands') && ! DB::table('grade_bands')->exists()) {
+            foreach (self::gradeBands() as [$letter, $min, $max, $points, $remark, $pass]) {
+                DB::table('grade_bands')->insert(['letter' => $letter, 'min_score' => $min, 'max_score' => $max, 'points' => $points, 'remark' => $remark, 'is_pass' => $pass, 'created_at' => $now, 'updated_at' => $now]);
+            }
+        }
+        if (\Illuminate\Support\Facades\Schema::hasTable('degree_classes') && ! DB::table('degree_classes')->exists()) {
+            foreach (self::degreeClasses() as [$name, $min]) {
+                DB::table('degree_classes')->insert(['name' => $name, 'min_cgpa' => $min, 'created_at' => $now, 'updated_at' => $now]);
+            }
         }
 
         $i = 0;

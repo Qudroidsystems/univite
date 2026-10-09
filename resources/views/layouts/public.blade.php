@@ -5,6 +5,11 @@
     <title>@yield('title', 'Apply') | {{ config('app.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="uv-layout" content="public">
+    <meta name="uv-ajax" content="on">
+    <meta name="uv-ping" content="{{ route('ping', [], false) }}">
+    <link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="{{ asset('theme/layouts/assets/js/layout.js') }}"></script>
@@ -20,13 +25,14 @@
     </style>
 </head>
 <body>
+<div id="ajax-root">
 <nav class="navbar bg-white border-bottom d-print-none">
     <div class="container d-flex justify-content-between">
         <a href="{{ url('/') }}" class="d-flex align-items-center gap-2 text-decoration-none text-body"><span class="brand-mark">U</span><span class="fw-semibold fs-5">{{ config('app.name') }}</span></a>
         <div class="d-flex gap-2 align-items-center">
             @if (session('applicant_id'))
                 <a href="{{ route('apply.dashboard') }}" class="btn btn-sm btn-soft-primary">My application</a>
-                <form method="POST" action="{{ route('apply.logout') }}">@csrf<button class="btn btn-sm btn-light" type="submit">Sign out</button></form>
+                <form method="POST" action="{{ route('apply.logout') }}" data-no-ajax>@csrf<button class="btn btn-sm btn-light" type="submit">Sign out</button></form>
             @else
                 <a href="{{ route('apply.register') }}" class="btn btn-sm btn-soft-primary">Apply</a>
                 <a href="{{ route('apply.login') }}" class="btn btn-sm btn-light">Continue my application</a>
@@ -39,7 +45,12 @@
     @yield('content')
     <p class="text-center text-muted fs-12 mt-4 mb-0 d-print-none">{{ now()->year }} © {{ config('app.name') }}</p>
 </div>
+</div>
 <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
+<script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
+<div id="uv-page-scripts">
 @stack('scripts')
+</div>
 </body>
 </html>

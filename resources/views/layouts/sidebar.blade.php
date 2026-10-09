@@ -16,6 +16,11 @@
         ['Student Statuses',  'academics.student-statuses.index', 'View student statuses', 'academics.student-statuses.*'],
         ['Entry Modes',       'academics.entry-modes.index',      'View entry modes',      'academics.entry-modes.*'],
         ['Clearance Items',   'academics.clearance-items.index',  'View clearance items',  'academics.clearance-items.*'],
+        ['Custom Form Fields','academics.custom-fields.index',   'View custom fields',    'academics.custom-fields.*'],
+        ['Grading Scale',     'academics.grade-bands.index',      'View grade bands',      'academics.grade-bands.*'],
+        ['Classes of Degree', 'academics.degree-classes.index',   'View degree classes',   'academics.degree-classes.*'],
+        ['Course Lecturers',  'academics.course-assignments.index','View course assignments','academics.course-assignments.*'],
+        ['Result Approval Steps','academics.result-stages.index', 'View result stages',    'academics.result-stages.*'],
         ['Reference Lists',   'academics.lists.index',            'View reference lists',  'academics.lists.*'],
     ];
     $students = [
@@ -24,6 +29,11 @@
         ['Clearance',            'clearance.index',         'View clearance',            'clearance.*'],
         ['Application Settings', 'applicants.settings',     'View application settings', 'applicants.settings*'],
         ['Students',             'students.index',          'View students',             'students.index', 'students.show'],
+        ['Course Registrations', 'registrations.index',     'View course registrations', 'registrations.index', 'registrations.show'],
+        ['Registration Settings', 'registrations.settings', 'View registration settings', 'registrations.settings*'],
+        ['Score Sheets',      'results.sheets.index',        'View result sheets',        'results.sheets.*', 'results.open'],
+        ['Broadsheet',        'results.broadsheet',          'View student results',      'results.broadsheet'],
+        ['Result Settings',   'results.settings',            'View result settings',      'results.settings*'],
         ['Matric Numbers',       'matric.index',            'View matric numbers',       'matric.*'],
         ['Matric Number Format', 'students.settings',       'View matric number format', 'students.settings*'],
     ];
@@ -80,9 +90,30 @@
                         </a>
                     </li>
                 @endif
+                @if ($u->student && (! $u->student->needs_onboarding || $u->student->cleared_at))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.registration*') ? 'active' : '' }}" href="{{ route('my.registration') }}">
+                            <i class="ri-draft-line"></i> <span>Course Registration</span>
+                        </a>
+                    </li>
+                @endif
+                @if ($u->courseAssignments()->exists() && ! $u->can('View result sheets'))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('results.*') ? 'active' : '' }}" href="{{ route('results.sheets.index') }}">
+                            <i class="ri-file-list-3-line"></i> <span>My Courses &amp; Scores</span>
+                        </a>
+                    </li>
+                @endif
+                @if ($u->student && (! $u->student->needs_onboarding || $u->student->cleared_at))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.results*') ? 'active' : '' }}" href="{{ route('my.results') }}">
+                            <i class="ri-award-line"></i> <span>My Results</span>
+                        </a>
+                    </li>
+                @endif
                 @if ($u->student)
                     <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.*') ? 'active' : '' }}" href="{{ route('my.fees') }}">
+                        <a class="nav-link menu-link {{ $on('my.fees*') ? 'active' : '' }}" href="{{ route('my.fees') }}">
                             <i class="ri-wallet-3-line"></i> <span>My Fees</span>
                         </a>
                     </li>

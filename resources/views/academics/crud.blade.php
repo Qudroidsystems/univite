@@ -131,7 +131,7 @@
 @if ($canCreate || $canUpdate)
 <div class="modal fade" id="crud-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form method="POST" action="{{ $canCreate ? route($routeBase . '.store') : '#' }}" class="modal-content" id="crud-form" autocomplete="off">
+        <form method="POST" action="{{ $canCreate ? route($routeBase . '.store') : '#' }}" class="modal-content" id="crud-form" autocomplete="off" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="_method" value="POST" id="crud-method">
             <input type="hidden" name="_form_mode" value="{{ old('_form_mode', 'create') }}" id="crud-mode">
@@ -144,14 +144,19 @@
 
             <div class="modal-body">
                 <div class="row g-3">
+                    @php $lastSection = null; @endphp
                     @foreach ($fields as $f)
+                        @if (! empty($f['custom']) && ($f['section'] ?? null) !== $lastSection)
+                            @php $lastSection = $f['section'] ?? null; @endphp
+                            @if ($lastSection)<div class="col-12"><h6 class="text-uppercase text-muted fs-12 border-bottom pb-1 mb-0 mt-2">{{ $lastSection }}</h6></div>@endif
+                        @endif
                         @php
                             $name    = $f['name'];
                             $type    = $f['type'] ?? 'text';
                             $default = $f['default'] ?? ($type === 'switch' ? false : '');
                             $value   = old($name, $default);
                         @endphp
-                        <div class="col-md-{{ $f['col'] ?? 12 }}" @if (isset($f['only'])) data-only="{{ $f['only'] }}" @endif>
+                        <div class="col-md-{{ $f['col'] ?? 12 }}" @if (isset($f['only'])) data-only="{{ $f['only'] }}" @endif @if (isset($f['showWhen'])) data-show-when="{{ $f['showWhen'][0] }}={{ $f['showWhen'][1] }}" @endif>
                             @if ($type === 'switch')
                                 <div class="form-check form-switch form-switch-lg">
                                     <input type="hidden" name="{{ $name }}" value="0">
@@ -176,6 +181,9 @@
                                             @endif
                                         @endforeach
                                     </select>
+                                @elseif ($type === 'file')
+                                    <input type="file" class="form-control @error($name) is-invalid @enderror" id="f-{{ $name }}" name="{{ $name }}" @if (! empty($f['accept'])) accept="{{ $f['accept'] }}" @endif>
+                                    <div class="form-text text-success d-none" data-file-for="{{ $name }}"></div>
                                 @elseif ($type === 'textarea')
                                     <textarea class="form-control @error($name) is-invalid @enderror" id="f-{{ $name }}" name="{{ $name }}" rows="3">{{ $value }}</textarea>
                                 @else
@@ -226,7 +234,9 @@
     }
 
     function resetForm() {
+        form.querySelectorAll('[data-file-for]').forEach(el => { el.textContent = ''; el.classList.add('d-none'); });
         form.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea').forEach(el => {
+            if (el.type === 'file') { el.value = ''; el.classList.remove('is-invalid'); return; }
             el.value = el.dataset.default ?? '';
             el.classList.remove('is-invalid');
         });
@@ -234,28 +244,43 @@
         form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
     }
 
+    function applyShowWhen() {
+        form.querySelectorAll('[data-show-when]').forEach(el => {
+            const [dep, want] = el.dataset.showWhen.split('=');
+            const src = form.querySelector('[name="' + dep + '"]');
+            el.style.display = (src && src.value === want) ? '' : 'none';
+        });
+    }
+    form.addEventListener('change', applyShowWhen);
+
     document.getElementById('btn-add')?.addEventListener('click', () => {
-        resetForm(); setMode('create'); modal.show();
+        resetForm(); setMode('create'); applyShowWhen(); modal.show();
     });
 
     document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => {
         const rec = JSON.parse(btn.dataset.record);
         resetForm(); setMode('edit', rec.id);
         Object.entries(rec).forEach(([key, val]) => {
+            if (key.endsWith('__file')) {
+                const note = form.querySelector('[data-file-for="' + key.slice(0, -6) + '"]');
+                if (note && val) { note.textContent = 'Current file: ' + val + ' (choose a new file to replace it)'; note.classList.remove('d-none'); }
+                return;
+            }
             const input = form.querySelector('[name="' + key + '"]:not([type=hidden])');
             if (!input) return;
+            if (input.type === 'file') return;
             if (input.type === 'checkbox') input.checked = !!val;
             else input.value = val ?? '';
         });
-        modal.show();
+        applyShowWhen(); modal.show();
     }));
 
     // Re-open the modal after a failed validation.
     @if ($errors->any() && $hasOld)
         setMode(@json(old('_form_mode')), @json(old('_form_id')));
-        modal.show();
+        applyShowWhen(); modal.show();
     @else
-        setMode('create');
+        setMode('create'); applyShowWhen();
     @endif
 })();
 </script>

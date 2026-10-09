@@ -17,6 +17,11 @@ class Course extends Model
         return $this->belongsTo(Department::class);
     }
 
+    public function prerequisites(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_prerequisites', 'course_id', 'prerequisite_id');
+    }
+
     public function programmeCourses(): HasMany
     {
         return $this->hasMany(ProgrammeCourse::class);

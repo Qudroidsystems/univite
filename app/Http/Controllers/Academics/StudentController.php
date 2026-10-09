@@ -26,6 +26,7 @@ class StudentController extends CrudController
     use HasProfileFields;
 
     protected string $permission = 'students';
+    protected ?string $customTarget = 'student';
     protected array $actions = ['edit'];
     protected string $title = 'Students';
     protected string $singular = 'Student';

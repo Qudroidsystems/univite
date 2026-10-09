@@ -24,7 +24,7 @@ it('seeds every permission with a group and a real description', function () {
 it('uses clear names: no technical slugs, and every name starts with a verb', function () {
     foreach (array_keys(PermissionCatalog::all()) as $name) {
         expect($name)->not->toMatch('/[-_]/')
-            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo) /');
+            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo|Approve|Enter|Publish|Amend) /');
     }
 });
 
@@ -63,7 +63,7 @@ it('keeps every permission checked in code in the catalog (no typos, nothing und
             }
             // Permission names written as plain strings (row actions, sidebar rows) -- not UI labels in other views
             if (str_starts_with($file->getPathname(), app_path()) || $file->getFilename() === 'sidebar.blade.php') {
-                preg_match_all("/'((?:View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo) [a-z]+(?: [a-z]+)*)'/", $source, $m3);
+                preg_match_all("/'((?:View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo|Approve|Enter|Publish|Amend) [a-z]+(?: [a-z]+)*)'/", $source, $m3);
                 foreach ($m3[1] as $name) {
                     $used[$name] = $file->getFilename();
                 }

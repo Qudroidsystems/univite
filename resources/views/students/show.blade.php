@@ -73,6 +73,10 @@
                         </div>
                     @endif
 
+                    @can('View student results')
+                        <a href="{{ route('students.transcript', $student->id) }}" class="btn btn-soft-primary w-100 mb-3"><i class="ri-award-line me-1"></i>Results &amp; transcript</a>
+                    @endcan
+
                     @if ($canReset)
                         <div class="card">
                             <div class="card-body">
@@ -124,6 +128,8 @@
                             {!! $row('Address', $student->guardian_address) !!}
                         </ul>
                     </div>
+
+                    @include('partials.custom-field-display', ['cfTarget' => 'student', 'cfSubject' => $student])
 
                     @can('Edit students')
                         <a href="{{ route('students.index', ['q' => $student->matric_number]) }}" class="text-muted fs-12">To edit these details, use the pencil on the Students list.</a>

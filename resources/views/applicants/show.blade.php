@@ -55,6 +55,8 @@
                         </ul>
                     </div>
 
+                    @include('partials.custom-field-display', ['cfTarget' => 'applicant', 'cfSubject' => $applicant])
+
                     <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">Results</h6></div>
                         <div class="table-responsive"><table class="table table-sm align-middle mb-0">

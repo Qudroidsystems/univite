@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\CustomFields;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -62,7 +63,8 @@ class UserController extends Controller
             'password'     => ['nullable', 'string', 'min:8', 'confirmed'],
             'roles'        => ['nullable', 'array'],
             'roles.*'      => [Rule::in($this->assignableRoles())],
-        ]);
+        ] + ($custom = CustomFields::rules('staff', null, true)), [], CustomFields::attributeNames('staff'));
+        $data = array_diff_key($data, $custom);
 
         $plain = $data['password'] ?? Str::password(10, symbols: false);
 
@@ -73,6 +75,7 @@ class UserController extends Controller
             'password'     => $plain,
         ]);
         $user->syncRoles($data['roles'] ?? []);
+        CustomFields::save('staff', $user, $request);
 
         $redirect = back()->with('success', "User {$user->name} created.");
 
@@ -89,13 +92,15 @@ class UserController extends Controller
             'phone_number' => ['nullable', 'string', 'max:30'],
             'roles'        => ['nullable', 'array'],
             'roles.*'      => [Rule::in($this->assignableRoles())],
-        ]);
+        ] + ($custom = CustomFields::rules('staff', $user, true)), [], CustomFields::attributeNames('staff'));
+        $data = array_diff_key($data, $custom);
 
         $user->update(collect($data)->only(['name', 'email', 'phone_number'])->all());
 
         // Roles this admin is not allowed to hand out (e.g. Super Admin) are left as they are.
         $locked = $user->roles->pluck('name')->diff($this->assignableRoles())->all();
         $user->syncRoles(array_merge($locked, $data['roles'] ?? []));
+        CustomFields::save('staff', $user, $request);
 
         return back()->with('success', "{$user->name} updated.");
     }

@@ -37,6 +37,8 @@
                 </div>
 
                 <div class="col-lg-8">
+                    @include('partials.custom-field-display', ['cfTarget' => 'staff', 'cfSubject' => $user])
+
                     <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">Roles and permissions</h6></div>
                         <div class="card-body">

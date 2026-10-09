@@ -24,6 +24,7 @@ class ApplicantController extends CrudController
     use HasProfileFields;
 
     protected string $permission = 'applicants';
+    protected ?string $customTarget = 'applicant';
     protected string $title = 'Applicants';
     protected string $singular = 'Applicant';
     protected string $icon = 'ri-user-add-line';

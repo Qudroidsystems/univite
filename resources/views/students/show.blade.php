@@ -73,6 +73,10 @@
                         </div>
                     @endif
 
+                    @can('View student results')
+                        <a href="{{ route('students.transcript', $student->id) }}" class="btn btn-soft-primary w-100 mb-3"><i class="ri-award-line me-1"></i>Results &amp; transcript</a>
+                    @endcan
+
                     @if ($canReset)
                         <div class="card">
                             <div class="card-body">

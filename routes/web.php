@@ -18,6 +18,10 @@ use App\Http\Controllers\Academics\CourseController;
 use App\Http\Controllers\Academics\EntryModeController;
 use App\Http\Controllers\Academics\LookupController;
 use App\Http\Controllers\Academics\SemesterTypeController;
+use App\Http\Controllers\Academics\GradeBandController;
+use App\Http\Controllers\Academics\CourseAssignmentController;
+use App\Http\Controllers\Academics\ResultStageController;
+use App\Http\Controllers\Academics\DegreeClassController;
 use App\Http\Controllers\Academics\CustomFieldController;
 use App\Http\Controllers\Academics\StudentStatusController;
 use App\Http\Controllers\Academics\StudyCategoryController;
@@ -115,6 +119,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('semester-types', SemesterTypeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('student-statuses', StudentStatusController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('entry-modes', EntryModeController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('grade-bands', GradeBandController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('degree-classes', DegreeClassController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('course-assignments', CourseAssignmentController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('result-stages', ResultStageController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('custom-fields', CustomFieldController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('lists', LookupController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('clearance-items', ClearanceItemController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -174,6 +182,35 @@ Route::middleware('auth')->group(function () {
     Route::get('clearance/{student}/slip', [ClearanceController::class, 'slip'])->name('clearance.slip');
     Route::post('clearance/{student}/items/{item}/decide', [ClearanceController::class, 'decide'])->name('clearance.decide');
     Route::post('clearance/{student}/items/{item}/reset', [ClearanceController::class, 'reset'])->name('clearance.reset');
+
+    // ---- Results ----
+    $rs = \App\Http\Controllers\ResultSheetController::class;
+    Route::get('results', [$rs, 'index'])->name('results.sheets.index');
+    Route::get('results/open/{course}', [$rs, 'open'])->name('results.open');
+    Route::get('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'index'])->name('results.settings');
+    Route::put('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'update'])->name('results.settings.update');
+    Route::get('results/broadsheet', [\App\Http\Controllers\StudentResultController::class, 'broadsheet'])->name('results.broadsheet');
+    Route::post('results/amend/{result}', [$rs, 'amend'])->name('results.amend');
+    Route::get('results/{sheet}', [$rs, 'show'])->name('results.sheets.show');
+    Route::post('results/{sheet}/save', [$rs, 'save'])->name('results.sheets.save');
+    Route::post('results/{sheet}/upload', [$rs, 'upload'])->name('results.sheets.upload');
+    Route::get('results/{sheet}/template', [$rs, 'template'])->name('results.sheets.template');
+    Route::post('results/{sheet}/submit', [$rs, 'submit'])->name('results.sheets.submit');
+    Route::post('results/{sheet}/decide', [$rs, 'decide'])->name('results.sheets.decide');
+    Route::get('my/results', [\App\Http\Controllers\StudentResultController::class, 'mine'])->name('my.results');
+    Route::get('students/{student}/transcript', [\App\Http\Controllers\StudentResultController::class, 'transcript'])->name('students.transcript');
+
+    // ---- Course registration ----
+    Route::get('registrations', [\App\Http\Controllers\RegistrationApprovalController::class, 'index'])->name('registrations.index');
+    Route::post('registrations/bulk', [\App\Http\Controllers\RegistrationApprovalController::class, 'bulk'])->name('registrations.bulk');
+    Route::get('registrations/settings', [\App\Http\Controllers\RegistrationSettingsController::class, 'index'])->name('registrations.settings');
+    Route::put('registrations/settings', [\App\Http\Controllers\RegistrationSettingsController::class, 'update'])->name('registrations.settings.update');
+    Route::get('registrations/{form}', [\App\Http\Controllers\RegistrationApprovalController::class, 'show'])->name('registrations.show');
+    Route::post('registrations/{form}/decide', [\App\Http\Controllers\RegistrationApprovalController::class, 'decide'])->name('registrations.decide');
+    Route::post('registrations/{form}/reopen', [\App\Http\Controllers\RegistrationApprovalController::class, 'reopen'])->name('registrations.reopen');
+    Route::get('my/registration', [\App\Http\Controllers\StudentRegistrationController::class, 'index'])->name('my.registration');
+    Route::post('my/registration', [\App\Http\Controllers\StudentRegistrationController::class, 'save'])->name('my.registration.save');
+    Route::get('my/registration/{form}/print', [\App\Http\Controllers\StudentRegistrationController::class, 'print'])->name('my.registration.print');
 
     // ---- A student's own clearance ----
     Route::get('my/clearance', [StudentClearanceController::class, 'index'])->name('my.clearance');

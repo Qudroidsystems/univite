@@ -106,3 +106,39 @@ reads the attributes directly.
 **Network awareness.** A signal indicator in the top bar shows Good / Fair / Poor / Offline (browser online state, the
 Network Information API and a small `/ping` probe). Going offline opens a SweetAlert modal that closes itself when the
 connection returns; poor connections get longer timeouts and a retry prompt instead of a silent failure.
+
+## Grading and course registration (phase 4, step 4a)
+
+**Grading scale** (Academic Setup → Grading Scale, Classes of Degree): score bands → letter, grade points, pass/fail; CGPA → class of
+degree. Seeded with the common 5-point scale; edit freely (overlaps are refused, gaps are flagged). `App\Support\GradeScale` does
+grade lookup, GPA and class.
+
+**Registration** (students: Course Registration; staff: Admissions & Students → Course Registrations / Registration Settings).
+Each semester a student is offered the curriculum for their level and semester plus any carry-overs (failed and not yet passed).
+Admin settings: open/closed, min/max units, fee check (none / first instalment / full), approval required, clearance required for new
+students, carry-overs forced, prerequisites checked (set on each course), carry-overs exempt from the maximum. Flow: draft → submitted →
+approved/returned (with a reason); approved forms print; staff can approve in bulk or reopen a form. Code: `RegistrationService`,
+`RegistrationSettings`. Tables: grade_bands, degree_classes, course_prerequisites, registration_forms, course_registrations,
+course_results. Run `php artisan migrate` and `php artisan db:seed`.
+
+## Results (phase 4, step 4b)
+
+Flow: **assign lecturer → enter / upload scores → submit → approval steps → publish → students see results**.
+
+- *Course Lecturers* (Academic Setup) assigns a lecturer to a course for a session and semester. Assigned lecturers see "My Courses & Scores".
+- A score sheet exists per course/session/semester with a row for every student whose registration form is **approved**. CA and exam are
+  entered in the grid or uploaded as CSV/Excel (first row: Matric Number, CA, Exam; a fill-in template can be downloaded). Limits come from
+  Result Settings (default 30/70, must total 100). Grades come from the Grading Scale. Every student needs scores (0 = absent) before submitting.
+- *Result Approval Steps* define the chain (default Head of Department, then Dean); each step can name the role that signs it, or be open to
+  anyone with "Approve results". Approvers can return a sheet with a reason. After the last step the sheet is "approved"; **Publish results**
+  makes it visible. With no steps, submission goes straight to approved. Every action is logged on the sheet.
+- Students: *My Results* shows published results by semester with GPA and CGPA (each course counts once, its latest published attempt) and class
+  of degree. Staff with "View student results" get a printable transcript from the student page.
+- Published/approved results feed registration: failed courses become carry-overs, passed courses satisfy prerequisites.
+- Excel upload needs `phpoffice/phpspreadsheet` (run `composer require phpoffice/phpspreadsheet` if it is not installed); CSV always works.
+
+Run `php artisan migrate` and `php artisan db:seed`.
+
+**Broadsheet and corrections.** *Broadsheet* (Admissions & Students) shows a programme's published results for one level, session and semester:
+every student's score and grade per course, semester GPA and CGPA, printable. A published score can be corrected by someone with
+**Amend published results**: a reason is required and the old and new scores are written to the sheet's history, and the grade is recomputed.

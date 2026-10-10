@@ -10,7 +10,7 @@ class Programme extends Model
 {
     protected $fillable = [
         'department_id', 'study_category_id', 'name', 'code', 'degree_type', 'duration_years',
-        'min_credit_load', 'max_credit_load', 'is_active',
+        'min_credit_load', 'max_credit_load', 'graduation_units', 'is_active',
     ];
 
     protected $casts = ['is_active' => 'boolean'];

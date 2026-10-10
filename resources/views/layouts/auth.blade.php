@@ -2,12 +2,12 @@
 <html lang="en" data-layout="vertical" data-sidebar="dark" data-sidebar-size="lg" data-preloader="disable" data-theme="default" data-topbar="light" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <title>@yield('title', 'Sign in') | {{ config('app.name') }}</title>
+    <title>@yield('title', 'Sign in') | {{ \App\Support\Institution::get('name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="uv-layout" content="auth">
     <meta name="uv-ajax" content="off">
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    @include('partials.brand-head')
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="{{ asset('theme/layouts/assets/js/layout.js') }}"></script>
     <link href="{{ asset('theme/layouts/assets/css/bootstrap.min.css') }}" rel="stylesheet">
@@ -25,16 +25,16 @@
     <div class="row justify-content-center align-items-center" style="min-height:100vh">
         <div class="col-md-8 col-lg-5 col-xl-4">
             <div class="text-center mb-4">
-                <span class="brand-mark mb-2">U</span>
-                <h4 class="mb-0 mt-2">{{ config('app.name') }}</h4>
-                <p class="text-muted mb-0">University portal</p>
+                <div class="mb-2">@include('partials.brand-mark', ['size' => 64])</div>
+                <h4 class="mb-0 mt-2">{{ \App\Support\Institution::get('name') }}</h4>
+                <p class="text-muted mb-0">{{ \App\Support\Institution::get('tagline', 'University portal') }}</p>
             </div>
             <div class="card auth-card">
                 <div class="card-body p-4">
                     @yield('content')
                 </div>
             </div>
-            <p class="text-center text-muted fs-12 mt-4 mb-0">{{ now()->year }} © {{ config('app.name') }} · Built by Qudroid Systems</p>
+            <p class="text-center text-muted fs-12 mt-4 mb-0">{{ now()->year }} © {{ \App\Support\Institution::get('name') }} · Built by Qudroid Systems</p>
         </div>
     </div>
 </div>

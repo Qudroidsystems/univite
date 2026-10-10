@@ -258,6 +258,7 @@ class ResultService
         $sheet->update(['status' => 'published', 'published_at' => now()]);
         $this->mirror($sheet);
         $this->log($sheet, $user, 'published');
+        app(OperationAudit::class)->note('result_publish', 'results', $user, 'published', $sheet, ['status' => 'approved'], ['status' => 'published', 'course_id' => $sheet->course_id], null, $sheet->academic_session_id);
 
         return $sheet;
     }
@@ -277,11 +278,13 @@ class ResultService
             throw new RuntimeException('Give the reason for the correction.');
         }
         $old = "{$result->ca}/{$result->exam} ({$result->grade})";
+        $before = ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade];
         $this->apply($result, $ca, $exam);
         $result->refresh();
         if ($result->total === null) {
             throw new RuntimeException('Both the CA and exam scores are required.');
         }
+        app(OperationAudit::class)->note('result_amend', 'results', $user, 'score_amended', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $result->academic_session_id);
         if ($result->result_sheet_id) {
             $this->log($result->sheet, $user, 'amended', null, "{$result->student->matric_number}: {$old} to {$result->ca}/{$result->exam} ({$result->grade}). {$reason}");
         }
@@ -308,19 +311,52 @@ class ResultService
         $rows = $students->map(function (Student $s) use ($term) {
             $mine = $term->get($s->id, collect());
 
-            return ['student' => $s, 'results' => $mine->keyBy('course_id'), 'units' => (int) $mine->sum('credit_units'), 'gpa' => GradeScale::gpa($mine), 'cgpa' => $this->transcript($s)['cgpa']];
+            return ['student' => $s, 'results' => $mine->keyBy('course_id'), 'units' => (int) $mine->sum('credit_units'), 'gpa' => GradeScale::gpa($mine)] + array_intersect_key($this->transcript($s), ['cgpa' => 1, 'standing' => 1]);
         });
 
         return ['courses' => $courses, 'rows' => $rows];
+    }
+
+    /**
+     * A department's end-of-semester summary: each student registered that semester sorted into
+     * pending (no published result yet), withdraw, probation, carry-over (outstanding failed courses) or passed.
+     *
+     * @return Collection<string, array{programme: \App\Models\Programme, level: int, rows: Collection}> keyed "programmeId-level"
+     */
+    public function summary(int $departmentId, ?int $level, int $sessionId, int $semesterTypeId): Collection
+    {
+        $forms = RegistrationForm::with('student.programme')->where('status', 'approved')->where('academic_session_id', $sessionId)->where('semester_type_id', $semesterTypeId)
+            ->when($level, fn ($q) => $q->where('level', $level))
+            ->whereHas('student', fn ($q) => $q->whereHas('programme', fn ($p) => $p->where('department_id', $departmentId)))->get();
+
+        return $forms->map(function (RegistrationForm $f) use ($sessionId, $semesterTypeId) {
+            $s = $f->student;
+            $term = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')
+                ->where('academic_session_id', $sessionId)->where('semester_type_id', $semesterTypeId)->get();
+            $t = $this->transcript($s);
+            $passed = CourseResult::where('student_id', $s->id)->where('status', 'published')->where('is_pass', true)->pluck('course_id')->flip();
+            $outstanding = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')->where('is_pass', false)->get()
+                ->reject(fn ($r) => $passed->has($r->course_id))->pluck('course.code')->unique()->sort()->values();
+            $bucket = $term->isEmpty() ? 'pending' : match ($t['standing']) {
+                'Advised to withdraw' => 'withdraw', 'On probation' => 'probation', default => $outstanding->isNotEmpty() ? 'carryover' : 'pass',
+            };
+
+            return ['student' => $s, 'level' => (int) $f->level, 'gpa' => GradeScale::gpa($term), 'cgpa' => $t['cgpa'], 'standing' => $t['standing'],
+                'outstanding' => $outstanding, 'bucket' => $bucket, 'pending' => $f->courses()->count() - $term->count()];
+        })->sortBy(fn ($r) => $r['student']->matric_number)
+            ->groupBy(fn ($r) => $r['student']->programme_id . '-' . $r['level'])
+            ->map(fn ($rows) => ['programme' => $rows->first()['student']->programme, 'level' => $rows->first()['level'], 'rows' => $rows->values()])
+            ->sortBy(fn ($g) => [$g['programme']->name, $g['level']]);
     }
 
     // ---- Reading results back --------------------------------------------------------------------------
 
     /**
      * A student's published results grouped by session and semester, with GPA per semester and the running CGPA.
-     * Each course counts once in the CGPA: its latest published attempt.
+     * By default each course counts once in the CGPA (its latest published attempt); under the "every attempt" rule
+     * (TCP / TNU) every attempt counts. Standing (probation / withdrawal) follows the programme's rules.
      *
-     * @return array{terms: Collection, cgpa: float, units: int, class: ?string}
+     * @return array{terms: Collection, cgpa: float, units: int, earned: int, class: ?string, standing: ?string, method: string}
      */
     public function transcript(Student $student): array
     {
@@ -332,12 +368,15 @@ class ResultService
             'units' => $rows->sum('credit_units'), 'gpa' => GradeScale::gpa($rows),
         ])->values();
 
+        $rules = app(\App\Support\AcademicRules::class)->forStudent($student);
         $latest = $all->groupBy('course_id')->map->last()->values();
-        $cgpa = GradeScale::gpa($latest);
+        $counted = $rules['cgpa_method'] === 'all' ? $all : $latest;
+        $cgpa = GradeScale::gpa($counted);
 
         return [
-            'terms' => $terms, 'cgpa' => $cgpa, 'units' => (int) $latest->sum('credit_units'),
+            'terms' => $terms, 'cgpa' => $cgpa, 'units' => (int) $counted->sum('credit_units'),
             'earned' => (int) $latest->where('is_pass', true)->sum('credit_units'), 'class' => $latest->isEmpty() ? null : GradeScale::classOf($cgpa),
+            'standing' => \App\Support\AcademicRules::standing($rules, $cgpa, $latest->isNotEmpty()), 'method' => $rules['cgpa_method'],
         ];
     }
 }

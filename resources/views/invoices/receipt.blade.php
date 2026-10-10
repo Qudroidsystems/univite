@@ -11,10 +11,7 @@
             </div>
             <div class="card">
                 <div class="card-body">
-                    <div class="text-center mb-4">
-                        <h4 class="mb-0">{{ config('app.name') }}</h4>
-                        <div class="text-muted">Official payment receipt</div>
-                    </div>
+                    @include('partials.letterhead', ['subtitle' => 'Official payment receipt'])
                     <table class="table table-sm">
                         <tr><th style="width:35%">Receipt no.</th><td>{{ $payment->reference }}</td></tr>
                         <tr><th>Date</th><td>{{ ($payment->paid_at ?? $payment->created_at)->format('d M Y, H:i') }}</td></tr>
@@ -28,6 +25,7 @@
                         <tr><th>Invoice balance</th><td>₦{{ number_format($payment->invoice->outstanding, 2) }}</td></tr>
                         @if ($payment->recorder)<tr><th>Received by</th><td>{{ $payment->recorder->name }}</td></tr>@endif
                     </table>
+                    @include('partials.signatory', ['role' => 'bursar'])
                 </div>
             </div>
         </div>

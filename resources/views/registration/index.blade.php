@@ -4,7 +4,7 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <div class="page-title-box"><h4 class="mb-0">Course registrations</h4></div>
+            <div class="page-title-box"><h4 class="mb-0">{{ $pagetitle }}</h4></div>
             @include('academics.partials.alerts')
             <div class="card">
                 <div class="card-header">
@@ -43,7 +43,7 @@
                         </table>
                     </div>
                     <div class="card-footer d-flex justify-content-between align-items-center">
-                        @can('Approve course registrations')<button class="btn btn-success btn-sm" type="submit" data-confirm="Approve every ticked registration?"><i class="ri-check-double-line me-1"></i>Approve ticked</button>@else<span></span>@endcan
+                        @if ($adviser || auth()->user()->can('Approve course registrations'))<button class="btn btn-success btn-sm" type="submit" data-confirm="Approve every ticked registration?"><i class="ri-check-double-line me-1"></i>Approve ticked</button>@else<span></span>@endif
                         {{ $forms->links() }}
                     </div>
                 </form>

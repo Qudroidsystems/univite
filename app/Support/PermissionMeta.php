@@ -35,6 +35,7 @@ class PermissionMeta
         'Import'   => ['Import',  'Import {x}.'],
         'Send'     => ['Send',    'Send {x}.'],
         'Assign'   => ['Assign',  'Assign {x}.'],
+        'Respond'  => ['Manage',  'Respond to {x}.'],
     ];
 
     /** ['action' => chip word, 'label' => readable name, 'desc' => sentence] */

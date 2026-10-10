@@ -19,7 +19,7 @@
                     <table class="table table-sm table-bordered align-middle mb-0 text-center">
                         <thead class="table-light"><tr><th class="text-start">Matric</th><th class="text-start">Name</th>
                             @foreach ($sheet['courses'] as $c)<th title="{{ $c->title }}">{{ $c->code }}<div class="fw-normal fs-11">{{ $c->credit_units }}u</div></th>@endforeach
-                            <th>Units</th><th>GPA</th><th>CGPA</th></tr></thead>
+                            <th>Units</th><th>GPA</th><th>CGPA</th><th>Remark</th></tr></thead>
                         <tbody>
                         @forelse ($sheet['rows'] as $r)
                             <tr><td class="text-start">{{ $r['student']->matric_label }}</td><td class="text-start">{{ $r['student']->full_name }}</td>
@@ -27,9 +27,9 @@
                                     @php $x = $r['results']->get($c->id); @endphp
                                     <td class="{{ $x && ! $x->is_pass ? 'text-danger fw-semibold' : '' }}">{{ $x ? rtrim(rtrim(number_format($x->total, 2), '0'), '.') . ' ' . $x->grade : '—' }}</td>
                                 @endforeach
-                                <td>{{ $r['units'] }}</td><td>{{ number_format($r['gpa'], 2) }}</td><td class="fw-semibold">{{ number_format($r['cgpa'], 2) }}</td></tr>
+                                <td>{{ $r['units'] }}</td><td>{{ number_format($r['gpa'], 2) }}</td><td class="fw-semibold">{{ number_format($r['cgpa'], 2) }}</td><td class="{{ $r['standing'] ? 'text-danger' : '' }}">{{ $r['standing'] ?? 'Good standing' }}</td></tr>
                         @empty
-                            <tr><td colspan="{{ 5 + $sheet['courses']->count() }}" class="text-muted py-4">No registered students for this selection.</td></tr>
+                            <tr><td colspan="{{ 6 + $sheet['courses']->count() }}" class="text-muted py-4">No registered students for this selection.</td></tr>
                         @endforelse
                         </tbody>
                     </table></div></div>

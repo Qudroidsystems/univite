@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Academics\AcademicRuleController;
+use App\Models\AcademicSession;
+use App\Models\Department;
+use App\Models\SemesterType;
+use App\Models\StandingWaiver;
+use App\Models\Student;
+use App\Services\ResultService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+/**
+ * A department's semester result summary (passed / carry-overs / probation / advised to withdraw), and letting
+ * a student who was advised to withdraw register for a session. Open to "View student results", and to a
+ * department's head, administrators and dean for their own departments.
+ */
+class ResultSummaryController extends Controller
+{
+    public function __construct(private ResultService $results)
+    {
+    }
+
+    private function departments(): \Illuminate\Support\Collection
+    {
+        $user = auth()->user();
+        $all = Department::orderBy('name')->get();
+
+        return $user->can('View student results') ? $all : $all->filter(fn ($d) => AcademicRuleController::canEdit($user, 'department', $d->id))->values();
+    }
+
+    public function index(Request $request): View
+    {
+        $departments = $this->departments();
+        abort_if($departments->isEmpty(), 403);
+        $dept = $departments->firstWhere('id', (int) $request->query('department_id')) ?? ($request->filled('department_id') ? abort(403) : null);
+        $session = (int) $request->query('session_id', AcademicSession::current()?->id);
+        $type = (int) $request->query('semester_type_id', SemesterType::orderBy('sort_order')->value('id'));
+        $level = $request->filled('level') ? (int) $request->query('level') : null;
+
+        return view('results.summary', [
+            'pagetitle' => 'Result summary', 'departments' => $departments->pluck('name', 'id'), 'dept' => $dept,
+            'groups' => $dept && $session && $type ? $this->results->summary($dept->id, $level, $session, $type) : null,
+            'f' => compact('session', 'type', 'level'), 'sessions' => AcademicSession::orderByDesc('name')->pluck('name', 'id'),
+            'types' => SemesterType::orderBy('sort_order')->pluck('name', 'id'), 'levels' => \App\Support\Levels::options(),
+            'waivers' => StandingWaiver::where('academic_session_id', AcademicSession::current()?->id)->pluck('student_id')->flip(),
+            'current' => AcademicSession::current(),
+        ]);
+    }
+
+    /** Let a student advised to withdraw register in the current session. */
+    public function waive(Request $request, Student $student): RedirectResponse
+    {
+        abort_unless(AcademicRuleController::canEdit($request->user(), 'programme', $student->programme_id), 403);
+        $d = $request->validate(['note' => ['required', 'string', 'max:500']]);
+        $session = AcademicSession::current() ?? abort(422, 'No session is current.');
+        StandingWaiver::updateOrCreate(['student_id' => $student->id, 'academic_session_id' => $session->id], ['note' => $d['note'], 'granted_by' => $request->user()->id]);
+
+        return back()->with('success', "{$student->full_name} may register in {$session->name}.");
+    }
+}

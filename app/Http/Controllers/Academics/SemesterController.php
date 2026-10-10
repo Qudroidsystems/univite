@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\HtmlString;
+use App\Services\SessionLifecycle;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
 class SemesterController extends CrudController
 {
@@ -57,6 +59,8 @@ class SemesterController extends CrudController
             'sort_order'   => ['required', 'integer', 'min:1', 'max:9', Rule::unique('semesters', 'sort_order')->where('academic_session_id', $sessionId)->ignore($record?->id)],
             'start_date'   => ['nullable', 'date'],
             'end_date'     => ['nullable', 'date', 'after:start_date'],
+            'registration_opens_at'  => ['nullable', 'date'],
+            'registration_closes_at' => ['nullable', 'date', 'after:registration_opens_at'],
             'make_current' => ['nullable', 'boolean'],
         ];
     }
@@ -69,6 +73,8 @@ class SemesterController extends CrudController
             ['name' => 'sort_order', 'label' => 'Order', 'type' => 'number', 'required' => true, 'col' => 4, 'help' => '1 = first, 2 = second', 'default' => 1],
             ['name' => 'start_date', 'label' => 'Start date', 'type' => 'date', 'col' => 6],
             ['name' => 'end_date', 'label' => 'End date', 'type' => 'date', 'col' => 6],
+            ['name' => 'registration_opens_at', 'label' => 'Registration opens', 'type' => 'datetime-local', 'col' => 6, 'help' => 'Leave both blank to keep registration open all semester.'],
+            ['name' => 'registration_closes_at', 'label' => 'Registration closes', 'type' => 'datetime-local', 'col' => 6],
             ['name' => 'make_current', 'label' => 'Make this the current semester', 'type' => 'switch', 'col' => 12, 'transient' => true],
         ];
     }
@@ -81,6 +87,8 @@ class SemesterController extends CrudController
             ['Order', fn ($r) => $r->sort_order],
             ['Start', fn ($r) => $r->start_date?->format('d M Y') ?? '—'],
             ['End', fn ($r) => $r->end_date?->format('d M Y') ?? '—'],
+            ['Registration', fn ($r) => $r->registration_opens_at || $r->registration_closes_at
+                ? ($r->registration_opens_at?->format('d M') ?? '…') . ' – ' . ($r->registration_closes_at?->format('d M Y') ?? '…') : 'Always open'],
         ];
     }
 
@@ -101,13 +109,24 @@ class SemesterController extends CrudController
     protected function saved(Model $record, Request $request, bool $created): void
     {
         if ($request->boolean('make_current')) {
-            $record->makeCurrent();
+            try {
+                app(SessionLifecycle::class)->makeCurrent($record->session, $request->user());
+                $record->makeCurrent();
+            } catch (RuntimeException $e) {
+                session()->flash('error', $record->name . ' was saved but could not be made current: ' . $e->getMessage());
+            }
         }
     }
 
     public function makeCurrent($semester): RedirectResponse
     {
-        Semester::with('session')->findOrFail($semester)->makeCurrent();
+        $semester = Semester::with('session')->findOrFail($semester);
+        try {
+            app(SessionLifecycle::class)->makeCurrent($semester->session, request()->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        $semester->makeCurrent();
 
         return back()->with('success', 'Current semester updated.');
     }

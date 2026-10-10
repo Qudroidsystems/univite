@@ -12,10 +12,7 @@
         </div>
         <div class="card pub-card">
             <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <h4 class="mb-0">{{ config('app.name') }}</h4>
-                    <div class="text-muted">Post-UTME screening slip · {{ $applicant->session->name }} session</div>
-                </div>
+                @include('partials.letterhead', ['subtitle' => 'Post-UTME screening slip · ' . ($applicant->session->name) . ' session'])
                 <div class="d-flex gap-4">
                     <table class="table table-sm flex-grow-1 mb-0">
                         <tr><th style="width:38%">Application no.</th><td class="fw-semibold">{{ $applicant->application_no }}</td></tr>

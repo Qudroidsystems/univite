@@ -11,7 +11,7 @@
             @include('academics.partials.alerts')
             <div class="card">
                 <div class="card-body">
-                    <p class="mb-2 text-muted">{{ $form->student->matric_label }} · {{ $form->student->programme->name }} · {{ $form->level }} level · {{ $form->session->name }} {{ $form->semesterType->name }}</p>
+                    <p class="mb-2 text-muted">{{ $form->student->matric_label }} · {{ $form->student->programme->name }} · {{ $form->level }} level · {{ $form->session->name }} {{ $form->semesterType->name }}@if ($standing) · <span class="badge bg-danger-subtle text-danger">{{ $standing }}</span>@endif</p>
                     <table class="table table-sm mb-0">
                         <thead class="table-light"><tr><th>Code</th><th>Title</th><th>Status</th><th class="text-end">Units</th></tr></thead>
                         <tbody>
@@ -24,7 +24,7 @@
                     @if ($form->note)<div class="alert alert-light border mt-3 mb-0">Note: {{ $form->note }}</div>@endif
                 </div>
             </div>
-            @can('Approve course registrations')
+            @if ($canDecide)
                 @if ($form->status === 'submitted')
                     <div class="card"><form method="POST" action="{{ route('registrations.decide', $form->id) }}" class="card-body d-flex flex-wrap gap-2 align-items-start">
                         @csrf
@@ -35,7 +35,7 @@
                 @elseif (in_array($form->status, ['approved', 'rejected']))
                     <form method="POST" action="{{ route('registrations.reopen', $form->id) }}" data-confirm="Let the student change this form again?">@csrf<button class="btn btn-soft-warning"><i class="ri-edit-line me-1"></i>Reopen for the student</button></form>
                 @endif
-            @endcan
+            @endif
         </div>
     </div>
 </div>

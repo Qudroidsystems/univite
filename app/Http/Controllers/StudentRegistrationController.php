@@ -36,7 +36,7 @@ class StudentRegistrationController extends Controller
             'blockers'  => $blockers,
             'form'      => $form,
             'offered'   => ($ctx && ! $blockers) || ($form && ! $form->isEditable()) ? $this->registration->offered($student, $ctx) : collect(),
-            'limits'    => ['min' => RegistrationSettings::int('min_units'), 'max' => RegistrationSettings::int('max_units'), 'exempt' => RegistrationSettings::on('carryover_exempt')],
+            'limits'    => $this->registration->limits($student, $ctx),
             'problems'  => $form && $form->isEditable() && $form->courses->isNotEmpty() ? $this->registration->problems($form, $ctx) : [],
             'history'   => $student->registrationForms()->with('session', 'semesterType')->latest('id')->get(),
         ]);

@@ -37,10 +37,15 @@ class CurriculumController extends Controller
                 ->get()
                 ->sortBy(fn ($e) => $e->course->code);
 
+            $types = \App\Models\SemesterType::pluck('id', 'sort_order');
+            $rules = app(\App\Support\AcademicRules::class);
             foreach ($programme->levels() as $level) {
                 foreach (\App\Models\SemesterType::options() as $order => $label) {
                     $rows = $entries->where('level', $level)->where('semester_order', $order)->values();
+                    $r = $rules->forProgramme($programme, $level, $types[$order] ?? null);
                     $grid[$level][$order] = [
+                        'min'     => (int) $r['min_units'],
+                        'max'     => (int) $r['max_units'],
                         'label'   => $label,
                         'entries' => $rows,
                         'units'   => $rows->where('status', '!=', 'elective')->sum(fn ($e) => $e->course->credit_units),

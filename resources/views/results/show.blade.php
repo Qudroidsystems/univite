@@ -90,6 +90,16 @@
                     </div></div>
             @endif
 
+            @if ($complaints->isNotEmpty())
+                <div class="card"><div class="card-header d-flex justify-content-between"><h6 class="card-title mb-0">Student queries</h6>@can('View result complaints')<a href="{{ route('results.complaints', ['status' => 'all']) }}" class="fs-13">All queries</a>@endcan</div>
+                    <ul class="list-group list-group-flush">
+                        @foreach ($complaints as $c)
+                            <li class="list-group-item fs-13">{{ $c->created_at->format('j M Y') }} · <strong>{{ $c->student->matric_label }}</strong> {{ $c->student->full_name }}: {{ $c->reason }}
+                                <span class="badge {{ \App\Models\ResultComplaint::BADGES[$c->status] }} ms-1">{{ \App\Models\ResultComplaint::STATUSES[$c->status] }}</span>@if ($c->response)<div class="text-muted">Answer: {{ $c->response }}</div>@endif</li>
+                        @endforeach
+                    </ul></div>
+            @endif
+
             @if ($sheet->events->isNotEmpty())
                 <div class="card"><div class="card-header"><h6 class="card-title mb-0">History</h6></div>
                     <ul class="list-group list-group-flush">

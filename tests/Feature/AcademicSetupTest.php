@@ -80,7 +80,7 @@ it('creates a session with semesters and makes it current', function () {
         ->and($session->semesters->pluck('name')->all())->toBe(['First Semester', 'Second Semester']);
 
     // A second session takes over as current
-    $this->actingAs($this->admin)->post(route('academics.sessions.store'), ['name' => '2026/2027', 'make_current' => 1]);
+    $this->actingAs($this->admin)->post(route('academics.sessions.store'), ['name' => '2026/2027', 'make_current' => 1, 'create_semesters' => 1]);
     expect(AcademicSession::current()->name)->toBe('2026/2027')
         ->and(AcademicSession::where('is_current', true)->count())->toBe(1);
 });
@@ -126,7 +126,7 @@ it('builds faculty, department, programme and course', function () {
 
     $this->post(route('academics.programmes.store'), [
         'department_id' => $dept->id, 'name' => 'B.Sc. Computer Science', 'code' => 'bsc-csc', 'degree_type' => 'B.Sc', 'study_category_id' => \App\Models\StudyCategory::firstOrCreate(['code' => 'DEG'], ['name' => 'Degree', 'duration_years' => 4])->id,
-        'duration_years' => 4, 'min_credit_load' => 15, 'max_credit_load' => 24,
+        'duration_years' => 4,
     ])->assertSessionHasNoErrors();
     $prog = Programme::first();
     expect($prog->levels())->toBe([100, 200, 300, 400]);
@@ -135,14 +135,6 @@ it('builds faculty, department, programme and course', function () {
         'department_id' => $dept->id, 'code' => ' csc   101 ', 'title' => 'Intro to Computing', 'credit_units' => 3, 'level' => 100,
     ])->assertSessionHasNoErrors();
     expect(Course::first()->code)->toBe('CSC 101')->and(Course::first()->credit_units)->toBe(3);
-});
-
-it('rejects a maximum credit load below the minimum', function () {
-    [, $dept] = makeStructure();
-    $this->actingAs($this->admin)->post(route('academics.programmes.store'), [
-        'department_id' => $dept->id, 'name' => 'B.Sc. Physics', 'code' => 'PHY', 'degree_type' => 'B.Sc', 'study_category_id' => \App\Models\StudyCategory::create(['name' => 'Degree', 'code' => 'DEG', 'duration_years' => 4])->id,
-        'duration_years' => 4, 'min_credit_load' => 20, 'max_credit_load' => 10,
-    ])->assertSessionHasErrors('max_credit_load');
 });
 
 it('refuses to delete records that are in use instead of crashing', function () {

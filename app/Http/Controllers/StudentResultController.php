@@ -45,9 +45,12 @@ class StudentResultController extends Controller
 
     private function render(Student $student, string $title, bool $mine): View
     {
+        $complaints = $mine ? \App\Models\ResultComplaint::where('student_id', $student->id)->latest('id')->get()->groupBy('course_result_id') : collect();
+
         return view('results.transcript', [
             'pagetitle' => $title, 'student' => $student->load('programme.department.faculty', 'entrySession'),
-            'mine' => $mine, 't' => $this->results->transcript($student),
+            'mine' => $mine, 't' => $this->results->transcript($student), 'complaints' => $complaints,
+            'canQuery' => $mine ? fn ($r) => app(\App\Services\ResultComplaintService::class)->blocker($student, $r) === null : fn () => false,
         ]);
     }
 }

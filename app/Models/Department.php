@@ -22,6 +22,12 @@ class Department extends Model
         return $this->belongsTo(User::class, 'hod_id');
     }
 
+    /** Staff who administer this department besides its head. */
+    public function admins(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'department_admins');
+    }
+
     public function programmes(): HasMany
     {
         return $this->hasMany(Programme::class);

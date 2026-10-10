@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\HtmlString;
+use App\Services\SessionLifecycle;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
 class SessionController extends CrudController
 {
@@ -63,6 +65,7 @@ class SessionController extends CrudController
     {
         return [
             ['Session', fn ($r) => new HtmlString('<span class="fw-semibold">' . e($r->name) . '</span>' . ($r->is_current ? ' <span class="badge bg-success ms-1">Current</span>' : ''))],
+            ['Status', fn ($r) => new HtmlString('<a href="' . e(route('sessions.lifecycle', $r->id)) . '" class="badge bg-' . (SessionLifecycle::BADGES[$r->status] ?? 'secondary') . '" title="Open the status page">' . e(SessionLifecycle::STATUSES[$r->status] ?? $r->status) . '</a>')],
             ['Start', fn ($r) => $r->start_date?->format('d M Y') ?? '—'],
             ['End', fn ($r) => $r->end_date?->format('d M Y') ?? '—'],
             ['Semesters', fn ($r) => $r->semesters_count],
@@ -95,13 +98,21 @@ class SessionController extends CrudController
         }
 
         if ($request->boolean('make_current')) {
-            $record->makeCurrent();
+            try {
+                app(SessionLifecycle::class)->makeCurrent($record, $request->user());
+            } catch (RuntimeException $e) {
+                session()->flash('error', $record->name . ' was saved but could not be made current: ' . $e->getMessage());
+            }
         }
     }
 
     public function makeCurrent($session): RedirectResponse
     {
-        AcademicSession::findOrFail($session)->makeCurrent();
+        try {
+            app(SessionLifecycle::class)->makeCurrent(AcademicSession::findOrFail($session), request()->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Current session updated.');
     }

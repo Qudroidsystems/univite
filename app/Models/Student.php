@@ -12,10 +12,11 @@ class Student extends Model
         'user_id', 'applicant_id', 'matric_number', 'admission_batch',
         'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note', 'cleared_at',
         'programme_id', 'academic_session_id', 'entry_mode', 'entry_level', 'current_level', 'status', 'photo',
+        'graduated_at', 'degree_class', 'final_cgpa',
         ...Applicant::PROFILE_FIELDS,
     ];
 
-    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime', 'cleared_at' => 'datetime'];
+    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime', 'cleared_at' => 'datetime', 'graduated_at' => 'datetime', 'final_cgpa' => 'float'];
 
     public function user(): BelongsTo
     {

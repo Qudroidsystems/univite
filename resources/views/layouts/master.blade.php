@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>{{ $pagetitle ?? 'Portal' }} | {{ config('app.name') }}</title>
+    <title>{{ $pagetitle ?? 'Portal' }} | {{ \App\Support\Institution::get('name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="uv-layout" content="master">
@@ -11,7 +11,7 @@
     <meta name="uv-ping" content="{{ route('ping', [], false) }}">
     <link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    @include('partials.brand-head')
 
     <link rel="preconnect" href="https://fonts.googleapis.com/">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
@@ -91,7 +91,7 @@
     <footer class="footer">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-sm-6">{{ now()->year }} © {{ config('app.name') }}</div>
+                <div class="col-sm-6">{{ now()->year }} © {{ \App\Support\Institution::get('name') }}@if (\App\Support\Institution::get('footer_text')) · {{ \App\Support\Institution::get('footer_text') }}@endif</div>
                 <div class="col-sm-6"><div class="text-sm-end">Built by <a href="https://qudroids.com" target="_blank" rel="noopener" class="fw-semibold">Qudroid Systems</a></div></div>
             </div>
         </div>

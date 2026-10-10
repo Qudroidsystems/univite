@@ -233,3 +233,183 @@ it('builds a broadsheet of published results for a programme and level', functio
     $this->get(route('results.broadsheet', $q))->assertOk()->assertSee('BIO 101')->assertSee('90 A')->assertSee('30 F')->assertSee('5.00');
     $this->get(route('results.broadsheet'))->assertOk();
 });
+
+function publishSheet($test, array $scores): void
+{
+    $test->actingAs($test->lecturer)->post(route('results.sheets.save', $test->sheet->id), ['scores' => scoresFor($scores)]);
+    $test->post(route('results.sheets.submit', $test->sheet->id));
+    $test->actingAs($test->admin);
+    foreach (['approve', 'approve', 'publish'] as $d) {
+        $test->post(route('results.sheets.decide', $test->sheet->id), ['decision' => $d]);
+    }
+}
+
+it('lets a student query a published result once, inside the time limit, and staff answer and correct it', function () {
+    publishSheet($this, [[20, 40], [10, 20]]);
+    $s = $this->students[1];
+    $row = CourseResult::where('student_id', $s->id)->first();
+    $other = CourseResult::where('student_id', $this->students[0]->id)->first();
+
+    $this->actingAs($s->user->fresh())->get(route('my.results'))->assertOk()->assertSee('Query this result');
+    $this->post(route('my.results.query', $other->id), ['reason' => 'Not mine'])->assertSessionHas('error');
+    $this->post(route('my.results.query', $row->id), ['reason' => 'My exam score is missing a section'])->assertSessionHas('success');
+    $this->post(route('my.results.query', $row->id), ['reason' => 'Again'])->assertSessionHas('error', fn ($m) => str_contains($m, 'already'));
+    $complaint = \App\Models\ResultComplaint::firstOrFail();
+
+    $this->actingAs($this->lecturer)->get(route('results.complaints'))->assertForbidden();
+    $this->actingAs($this->lecturer)->get(route('results.sheets.show', $this->sheet->id))->assertSee('My exam score is missing a section');
+
+    $clerk = User::factory()->create();
+    $clerk->givePermissionTo('View result complaints', 'Respond to result complaints');
+    $this->actingAs($clerk)->get(route('results.complaints'))->assertOk()->assertSee('My exam score is missing a section');
+    $this->post(route('results.complaints.respond', $complaint->id), ['decision' => 'upheld', 'response' => 'Re-marked', 'ca' => 25, 'exam' => 50])
+        ->assertSessionHas('error', fn ($m) => str_contains($m, 'not allowed'));
+
+    $this->actingAs($this->admin)->post(route('results.complaints.respond', $complaint->id), ['decision' => 'upheld', 'response' => 'Script re-marked', 'ca' => 25, 'exam' => 50])->assertSessionHas('success');
+    expect($row->fresh()->grade)->toBe('A')->and($complaint->fresh()->status)->toBe('upheld')
+        ->and($this->sheet->fresh()->events()->first()->note)->toContain('Script re-marked');
+    $this->actingAs($s->user->fresh())->get(route('my.results'))->assertSee('Script re-marked');
+
+    // the window closes
+    Setting::put('results.complaint_days', '7');
+    $this->travel(8)->days();
+    $this->actingAs($this->students[0]->user->fresh())->post(route('my.results.query', $other->id), ['reason' => 'Too late'])->assertSessionHas('error', fn ($m) => str_contains($m, '7 days'));
+});
+
+it('checks final-year students for graduation, holds back on request and graduates the eligible on approval', function () {
+    $this->programme->update(['duration_years' => 1]);
+    app(\App\Support\AcademicRules::class)->save('programme', $this->programme->id, null, null, ['graduation_units' => 3], null);
+    publishSheet($this, [[25, 50], [10, 20]]);   // student 0 passes BIO 101, student 1 fails it
+    $this->students->each->update(['current_level' => 100, 'status' => 'active']);
+
+    $this->actingAs($this->admin)->post(route('graduation.run'), ['programme_id' => $this->programme->id, 'academic_session_id' => $this->session->id])->assertRedirect();
+    $list = \App\Models\GraduationList::firstOrFail();
+    $entries = $list->entries->keyBy('student_id');
+    expect($entries)->toHaveCount(2)
+        ->and($entries[$this->students[0]->id]->is_eligible)->toBeTrue()
+        ->and($entries[$this->students[0]->id]->degree_class)->not->toBeNull()
+        ->and($entries[$this->students[1]->id]->is_eligible)->toBeFalse()
+        ->and(implode(' ', $entries[$this->students[1]->id]->problems))->toContain('BIO 101')->toContain('0 of the 3 units');
+
+    $this->get(route('graduation.show', $list->id))->assertOk()->assertSee('Eligible')->assertSee('Failed and not yet passed');
+
+    // hold back needs a reason; putting back works
+    $e0 = $entries[$this->students[0]->id];
+    $this->post(route('graduation.exclude', $e0->id), ['exclude' => 1])->assertSessionHas('error');
+    $this->post(route('graduation.exclude', $e0->id), ['exclude' => 1, 'note' => 'Owes library'])->assertSessionHas('success');
+    $this->post(route('graduation.approve', $list->id))->assertSessionHas('error', fn ($m) => str_contains($m, 'No student'));
+    $this->post(route('graduation.exclude', $e0->id), ['exclude' => 0])->assertSessionHas('success');
+
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('View graduation lists');
+    $this->actingAs($viewer)->post(route('graduation.approve', $list->id))->assertForbidden();
+
+    $this->actingAs($this->admin)->post(route('graduation.approve', $list->id))->assertSessionHas('success', '1 student(s) graduated.');
+    $s0 = $this->students[0]->fresh();
+    expect($s0->status)->toBe('graduated')->and($s0->graduated_at)->not->toBeNull()->and($s0->final_cgpa)->toBe(5.0)
+        ->and($this->students[1]->fresh()->status)->toBe('active')->and($list->fresh()->status)->toBe('approved');
+
+    $this->post(route('graduation.run'), ['programme_id' => $this->programme->id, 'academic_session_id' => $this->session->id])->assertSessionHas('error');
+    $this->get(route('students.transcript', $s0->id))->assertSee('Graduated');
+    $this->get(route('graduation.index'))->assertOk()->assertSee('B.Ed. Biology')->assertSee('Approved');
+    $this->get(route('results.settings'))->assertOk()->assertSee('query a result');
+    $this->get(route('academics.programmes.index'))->assertOk()->assertSee('Credit load');
+});
+
+it('stops graduation while registered results are unpublished or compulsory courses were never taken', function () {
+    $this->programme->update(['duration_years' => 1]);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course2->id, 'level' => 100, 'semester_order' => 2, 'status' => 'required']);
+    $this->students->each->update(['current_level' => 100, 'status' => 'active']);
+
+    $c = app(\App\Services\GraduationService::class)->check($this->students[0]->fresh());
+    expect(implode(' ', $c['problems']))->toContain('Results not yet published for: BIO 101')->toContain('never taken: BIO 102');
+
+    Setting::put('graduation.require_core', '0');
+    $c = app(\App\Services\GraduationService::class)->check($this->students[0]->fresh());
+    expect(implode(' ', $c['problems']))->not->toContain('never taken');
+});
+
+it('applies the programme\'s graduation rules: failed electives, elective units, minimum CGPA and years of study', function () {
+    $this->programme->update(['duration_years' => 1]);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course2->id, 'level' => 100, 'semester_order' => 1, 'status' => 'elective']);
+    $s = $this->students[0];
+    $s->update(['current_level' => 100, 'status' => 'active']);
+    CourseResult::query()->delete();
+    $mk = fn ($course, $total) => CourseResult::create(['student_id' => $s->id, 'course_id' => $course->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id,
+        'credit_units' => $course->credit_units, 'ca' => 0, 'exam' => $total, 'total' => $total, 'grade' => \App\Support\GradeScale::grade($total)['grade'],
+        'points' => \App\Support\GradeScale::grade($total)['points'], 'is_pass' => \App\Support\GradeScale::grade($total)['is_pass'], 'status' => 'published']);
+    $mk($this->course, 50);    // C in BIO 101 (core)
+    $mk($this->course2, 20);   // F in BIO 102 (elective)
+    $rules = app(\App\Support\AcademicRules::class);
+    $check = fn () => implode(' ', app(\App\Services\GraduationService::class)->check($s->fresh())['problems']);
+
+    expect($check())->toContain('Failed and not yet passed: BIO 102');
+    $rules->save('department', $this->programme->department_id, null, null, ['retake_failed_electives' => false], null);
+    expect($check())->toBe('');
+
+    $rules->save('programme', $this->programme->id, null, null, ['min_elective_units' => 2, 'min_graduation_cgpa' => 4.0, 'max_years' => 1], null);
+    $prev = AcademicSession::create(['name' => '2025/2026']);
+    RegistrationForm::create(['student_id' => $s->id, 'academic_session_id' => $prev->id, 'semester_type_id' => $this->type->id, 'level' => 100, 'status' => 'approved', 'total_units' => 0]);
+    expect($check())->toContain('0 of the 2 elective units')->toContain('below the 4.00 needed')->toContain('2 sessions');
+});
+
+it('counts every attempt under the TCP/TNU rule and shows probation from the programme\'s rules', function () {
+    $s = $this->students[0];
+    CourseResult::query()->delete();
+    $prev = AcademicSession::create(['name' => '2025/2026']);
+    foreach ([[$prev, 20], [$this->session, 70]] as [$sess, $total]) {
+        CourseResult::create(['student_id' => $s->id, 'course_id' => $this->course->id, 'academic_session_id' => $sess->id, 'semester_type_id' => $this->type->id, 'credit_units' => 3,
+            'ca' => 0, 'exam' => $total, 'total' => $total, 'grade' => \App\Support\GradeScale::grade($total)['grade'], 'points' => \App\Support\GradeScale::grade($total)['points'],
+            'is_pass' => \App\Support\GradeScale::grade($total)['is_pass'], 'status' => 'published']);
+    }
+    expect(app(ResultService::class)->transcript($s)['cgpa'])->toBe(5.0);
+
+    $rules = app(\App\Support\AcademicRules::class);
+    $rules->save('programme', $this->programme->id, null, null, ['cgpa_method' => 'all', 'probation_cgpa' => 3.0], null);
+    $t = app(ResultService::class)->transcript($s);
+    expect($t['cgpa'])->toBe(2.5)->and($t['units'])->toBe(6)->and($t['standing'])->toBe('On probation');
+    $this->actingAs($s->user->fresh())->get(route('my.results'))->assertSee('On probation')->assertSee('TNU');
+});
+
+it('puts weak students on probation or advises withdrawal, limits or holds their registration, and lets the department allow them', function () {
+    publishSheet($this, [[25, 50], [10, 20]]);   // student 0: CGPA 5, student 1: CGPA 0
+    [$good, $weak] = [$this->students[0]->fresh(), $this->students[1]->fresh()];
+    $rules = app(\App\Support\AcademicRules::class);
+    $rules->save('department', $this->programme->department_id, null, null, ['probation_cgpa' => 5.5, 'withdrawal_cgpa' => 1.0, 'probation_max_units' => 3], null);
+    $reg = app(\App\Services\RegistrationService::class);
+
+    expect($reg->standing($good))->toBe('On probation')->and($reg->limits($good, $reg->context())['max'])->toBe(3)
+        ->and($reg->standing($weak))->toBe('Advised to withdraw')
+        ->and(implode(' ', $reg->blockers($weak)))->toContain('advised to withdraw');
+
+    // the head of department sees the summary for their department and allows the weak student for this session
+    Role::create(['name' => 'HOD'])->givePermissionTo('Edit department academic rules');
+    $hod = User::factory()->create();
+    $hod->assignRole('HOD');
+    $this->programme->department->update(['hod_id' => $hod->id]);
+    $q = ['department_id' => $this->programme->department_id, 'session_id' => $this->session->id, 'semester_type_id' => $this->type->id];
+    $this->actingAs($hod)->get(route('results.summary', $q))->assertOk()->assertSee('Advised to withdraw (1)')->assertSee('On probation (1)')->assertSee('BIO 101');
+    $this->post(route('results.summary.waive', $weak->id), ['note' => 'Senate approved'])->assertSessionHas('success');
+    expect(implode(' ', $reg->blockers($weak)))->not->toContain('advised to withdraw');
+
+    $this->actingAs($this->lecturer)->get(route('results.summary', $q))->assertForbidden();
+    $this->post(route('results.summary.waive', $weak->id), ['note' => 'x'])->assertForbidden();
+});
+
+it('lets a course adviser approve the registration forms of the level they advise, and nothing else', function () {
+    $form = RegistrationForm::where('student_id', $this->students[0]->id)->first();
+    $form->update(['status' => 'submitted']);
+    $adviser = User::factory()->create();
+
+    $this->actingAs($adviser)->get(route('registrations.index'))->assertForbidden();
+    $this->actingAs($this->admin)->post(route('academics.rules.advisers.store', $this->programme->id), ['level' => 100, 'user_id' => $adviser->id])->assertSessionHas('success');
+    $this->get(route('academics.rules.index', ['scope' => 'programme', 'id' => $this->programme->id]))->assertSee('Course advisers')->assertSee($adviser->name);
+
+    $this->actingAs($adviser)->get(route('registrations.index'))->assertOk()->assertSee('My advisees')->assertSee('Adeyemi');
+    $this->post(route('registrations.decide', $form->id), ['decision' => 'approve'])->assertSessionHas('success');
+    expect($form->fresh()->status)->toBe('approved');
+
+    $form->update(['level' => 200, 'status' => 'submitted']);
+    $this->post(route('registrations.decide', $form->id), ['decision' => 'approve'])->assertForbidden();
+    $this->get(route('registrations.show', $form->id))->assertForbidden();
+});

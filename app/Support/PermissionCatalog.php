@@ -59,6 +59,14 @@ class PermissionCatalog
                 ],
             ],
 
+            'Institution profile' => [
+                'about' => 'The institution\'s own details: name, address, contacts, principal officers, logo, signature, stamp and colours.',
+                'permissions' => [
+                    ['View institution profile', 'View', 'See the institution\'s name, address, contacts, principal officers and branding as set in the portal.'],
+                    ['Edit institution profile', 'Edit', 'Change the institution\'s name, address, contacts, officers, logo, signature, stamp and colours. The change shows everywhere at once, including printed documents.'],
+                ],
+            ],
+
             'Academic sessions' => [
                 'about' => 'A session is one academic year, written like 2025/2026. Exactly one session is "current" at a time.',
                 'permissions' => [
@@ -67,6 +75,24 @@ class PermissionCatalog
                     ['Edit academic sessions', 'Edit', 'Change a session\'s name or its start and end dates.'],
                     ['Set the current academic session', 'Manage', 'Choose which session the whole portal treats as the present one. Fees, registration and results will follow this choice.'],
                     ['Delete academic sessions', 'Delete', 'Permanently delete a session together with its semesters and all school bills set for it. Do not use once students have been billed.'],
+                ],
+            ],
+
+            'Session lifecycle' => [
+                'about' => 'Sessions move through Draft, Setup, Active, Closing, Closed and Archived. Every change is checked first and recorded with a reason.',
+                'permissions' => [
+                    ['Change session status', 'Manage', 'Move a session to the next stage (activate, start closing, close, reopen or archive it). A session is checked before it goes live and a reason is recorded.'],
+                    ['Copy session setup', 'Manage', 'Copy a session\'s setup (registration windows, school bills, course lecturers) into another session after a preview. No student data, scores or payments are ever copied.'],
+                    ['Undo session copies', 'Manage', 'Undo a session copy. Only what nothing has used since is removed; anything already in use is kept and reported.'],
+                    ['View session rules', 'View', 'See the rules a university can choose for sessions, such as late registration and whether several sessions can be active together.'],
+                    ['Edit session rules', 'Edit', 'Change the session rules, such as late registration days and whether closed sessions can be reopened.'],
+                ],
+            ],
+
+            'Operation history' => [
+                'about' => 'A permanent log of bulk and sensitive actions (session copies, matric batches, published results). Entries are never edited or deleted.',
+                'permissions' => [
+                    ['View operation history', 'View', 'Search the log of bulk and sensitive actions by session, module, person, date or operation ID, and see exactly what each one changed.'],
                 ],
             ],
 
@@ -210,7 +236,33 @@ class PermissionCatalog
                 'about' => 'How a course\'s marks are split between continuous assessment and exam.',
                 'permissions' => [
                     ['View result settings', 'View', 'See the CA and exam mark split used for score entry.'],
-                    ['Edit result settings', 'Edit', 'Change the CA and exam mark split. It must add up to 100.'],
+                    ['Edit result settings', 'Edit', 'Change the CA and exam mark split (it must add up to 100), how long students may query a result, and the graduation rules.'],
+                ],
+            ],
+
+            'Academic rules' => [
+                'about' => 'Credit load, carry-over, CGPA, probation and graduation rules. The university sets defaults; faculties, departments and programmes can override them, and the credit load can differ by level and semester.',
+                'permissions' => [
+                    ['View academic rules', 'View', 'See the academic rules of the university and of every faculty, department and programme, and where each value comes from.'],
+                    ['Edit academic rules', 'Edit', 'Change the academic rules anywhere, including the university defaults, and choose who administers each department.'],
+                    ['Edit department academic rules', 'Edit', 'Change the academic rules of your own department and its programmes (as head of department or a department administrator), or of your faculty and everything in it (as dean).'],
+                ],
+            ],
+
+            'Result complaints' => [
+                'about' => 'Queries students raise about a published result, and the answers they get.',
+                'permissions' => [
+                    ['View result complaints', 'View', 'See every query students have raised about their published results, with the answers given.'],
+                    ['Respond to result complaints', 'Manage', 'Answer a student\'s result query as upheld or not upheld. With "Amend published results" as well, the score can be corrected in the same step.'],
+                ],
+            ],
+
+            'Graduation lists' => [
+                'about' => 'The final-year run: each final-year student is checked against the graduation rules, then the list is approved and the eligible students graduate.',
+                'permissions' => [
+                    ['View graduation lists', 'View', 'See graduation lists for each programme: who is eligible, CGPA and class, and why others cannot graduate yet.'],
+                    ['Generate graduation lists', 'Generate', 'Run or re-run the graduation check for a programme, and hold individual students back with a reason.'],
+                    ['Approve graduation lists', 'Approve', 'Approve a graduation list. Every eligible student on it is marked Graduated with their final CGPA and class. This cannot be undone from the portal.'],
                 ],
             ],
 

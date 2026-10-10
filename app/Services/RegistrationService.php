@@ -12,6 +12,7 @@ use App\Models\Semester;
 use App\Models\SemesterType;
 use App\Models\Student;
 use App\Models\StudentStatus;
+use App\Support\AcademicRules;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -43,11 +44,17 @@ class RegistrationService
         if (! RegistrationSettings::on('open')) {
             $why[] = 'Course registration is closed.';
         }
+        if ($windowReason = $this->windowBlocker($ctx['semester'])) {
+            $why[] = $windowReason;
+        }
         if (! $ctx['type']->is_teaching) {
             $why[] = $ctx['type']->name . ' is not a teaching semester, so there is nothing to register.';
         }
         if (! (StudentStatus::byCode($student->status)?->can_register)) {
             $why[] = 'Your status (' . StudentStatus::label($student->status) . ') does not allow course registration.';
+        }
+        if ($reason = $this->standingBlocker($student, $ctx)) {
+            $why[] = $reason;
         }
         if (RegistrationSettings::on('require_clearance') && $student->needs_onboarding && ! $student->cleared_at) {
             $why[] = 'Finish your clearance first.';
@@ -57,6 +64,42 @@ class RegistrationService
         }
 
         return $why;
+    }
+
+    /** "On probation" / "Advised to withdraw" / null, from the student's CGPA and their programme's rules. */
+    public function standing(Student $student): ?string
+    {
+        return app(ResultService::class)->transcript($student)['standing'];
+    }
+
+    private function standingBlocker(Student $student, array $ctx): ?string
+    {
+        $rules = $this->rules($student, $ctx);
+        if (! $rules['withdrawal_blocks_registration'] || $this->standing($student) !== 'Advised to withdraw') {
+            return null;
+        }
+        if (\App\Models\StandingWaiver::where('student_id', $student->id)->where('academic_session_id', $ctx['session']->id)->exists()) {
+            return null;
+        }
+
+        return 'Your CGPA is below ' . number_format($rules['withdrawal_cgpa'], 2) . ', so you have been advised to withdraw. See your department: they must allow you to register this session.';
+    }
+
+    /** Registration opens and closes on dates set per semester; a late period can follow if the university allows it. */
+    private function windowBlocker(Semester $semester): ?string
+    {
+        $now = now();
+        if ($semester->registration_opens_at && $now->lt($semester->registration_opens_at)) {
+            return 'Registration opens on ' . $semester->registration_opens_at->format('d M Y, g:i A') . '.';
+        }
+        if ($semester->registration_closes_at && $now->gt($semester->registration_closes_at)) {
+            $lateUntil = SessionSettings::on('late_registration') ? $semester->registration_closes_at->copy()->addDays(SessionSettings::int('late_registration_days')) : null;
+            if (! $lateUntil || $now->gt($lateUntil)) {
+                return 'Registration closed on ' . $semester->registration_closes_at->format('d M Y, g:i A') . '.';
+            }
+        }
+
+        return null;
     }
 
     private function feeBlocker(Student $student, array $ctx): ?string
@@ -111,6 +154,7 @@ class RegistrationService
         $carry = ProgrammeCourse::with('course.prerequisites')->where('programme_id', $student->programme_id)
             ->where('semester_order', $order)->whereIn('course_id', $failed)->get();
 
+        $checkPrereqs = (bool) $this->rules($student, $ctx)['check_prerequisites'];
         $rows = collect();
         foreach ($current->merge($carry)->unique('course_id') as $pc) {
             if ($passed->contains($pc->course_id) || ! $pc->course->is_active) {
@@ -118,7 +162,7 @@ class RegistrationService
             }
             $isCarry = $failed->contains($pc->course_id);
             $blocked = null;
-            if (RegistrationSettings::on('check_prerequisites')) {
+            if ($checkPrereqs) {
                 $missing = $pc->course->prerequisites->whereNotIn('id', $passed->all());
                 if ($missing->isNotEmpty()) {
                     $blocked = 'Needs ' . $missing->pluck('code')->implode(', ') . ' first.';
@@ -128,6 +172,22 @@ class RegistrationService
         }
 
         return $rows->sortBy(fn ($r) => [$r['carryover'] ? 0 : 1, $r['course']->code])->values();
+    }
+
+    /** The academic rules for this student in a semester (credit load, carry-overs ...). */
+    public function rules(Student $student, ?array $ctx, ?int $level = null): array
+    {
+        return app(AcademicRules::class)->forStudent($student, $level ?? $student->current_level, $ctx['type']->id ?? null);
+    }
+
+    /** @return array{min: int, max: int, exempt: bool} */
+    public function limits(Student $student, ?array $ctx, ?int $level = null): array
+    {
+        $r = $this->rules($student, $ctx, $level);
+        $max = (int) $r['max_units'];
+        $probation = $r['probation_max_units'] !== null && $this->standing($student) === 'On probation';
+
+        return ['min' => (int) $r['min_units'], 'max' => $probation ? min($max, (int) $r['probation_max_units']) : $max, 'exempt' => (bool) $r['carryover_exempt'], 'probation' => $probation];
     }
 
     public function form(Student $student, array $ctx): RegistrationForm
@@ -184,9 +244,11 @@ class RegistrationService
         $form->loadMissing('courses');
         $problems = [];
         $units = (int) $form->courses->sum('credit_units');
-        $countable = RegistrationSettings::on('carryover_exempt') ? (int) $form->courses->where('is_carryover', false)->sum('credit_units') : $units;
-        $min = RegistrationSettings::int('min_units');
-        $max = RegistrationSettings::int('max_units');
+        $rules = $this->rules($form->student, $ctx, $form->level);
+        $countable = $rules['carryover_exempt'] ? (int) $form->courses->where('is_carryover', false)->sum('credit_units') : $units;
+        $limits = $this->limits($form->student, $ctx, $form->level);
+        $min = $limits['min'];
+        $max = $limits['max'];
 
         if ($form->courses->isEmpty()) {
             return ['Choose at least one course.'];
@@ -195,13 +257,14 @@ class RegistrationService
             $problems[] = "You have chosen {$units} units; the minimum is {$min}.";
         }
         if ($countable > $max) {
-            $problems[] = "You have chosen {$countable} units; the maximum is {$max}" . (RegistrationSettings::on('carryover_exempt') ? ' (not counting carry-overs).' : '.');
+            $problems[] = "You have chosen {$countable} units; the maximum is {$max}" . ($limits['probation'] ? ' while you are on probation' : '') . ($rules['carryover_exempt'] ? ' (not counting carry-overs).' : '.');
         }
 
         $offered = $this->offered($form->student, $ctx);
         $chosenIds = $form->courses->pluck('course_id');
-        if (RegistrationSettings::on('force_carryovers')) {
-            $missing = $offered->where('carryover', true)->filter(fn ($r) => ! $chosenIds->contains($r['course']->id) && ! $r['blocked']);
+        if ($rules['force_carryovers']) {
+            $missing = $offered->where('carryover', true)->filter(fn ($r) => ! $chosenIds->contains($r['course']->id) && ! $r['blocked']
+                && ($rules['retake_failed_electives'] || $r['status'] !== 'elective'));
             if ($missing->isNotEmpty()) {
                 $problems[] = 'Carry-over courses must be registered: ' . $missing->map(fn ($r) => $r['course']->code)->implode(', ') . '.';
             }

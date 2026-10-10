@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\DB;
 
 class AcademicSession extends Model
 {
-    protected $fillable = ['name', 'start_date', 'end_date', 'is_current'];
+    protected $fillable = ['name', 'start_date', 'end_date', 'is_current', 'status'];
+
+    protected $attributes = ['status' => 'draft'];
 
     protected $casts = [
         'start_date' => 'date',

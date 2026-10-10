@@ -24,7 +24,7 @@ it('seeds every permission with a group and a real description', function () {
 it('uses clear names: no technical slugs, and every name starts with a verb', function () {
     foreach (array_keys(PermissionCatalog::all()) as $name) {
         expect($name)->not->toMatch('/[-_]/')
-            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo|Approve|Enter|Publish|Amend) /');
+            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo|Approve|Enter|Publish|Amend|Respond) /');
     }
 });
 

@@ -102,6 +102,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('roles/removeuserrole/{userid}/{roleid}', [RoleController::class, 'removeuserrole'])->name('roles.removeuserrole');
     Route::resource('permissions', PermissionController::class);
 
+    // ---- Institution profile (name, address, logo ...) ----
+    Route::get('institution', [\App\Http\Controllers\InstitutionController::class, 'edit'])->name('institution.edit');
+    Route::put('institution', [\App\Http\Controllers\InstitutionController::class, 'update'])->name('institution.update');
+
     // ---- Academic setup ----
     Route::prefix('academics')->name('academics.')->group(function () {
         Route::post('sessions/{session}/make-current', [SessionController::class, 'makeCurrent'])->name('sessions.make-current');
@@ -126,6 +130,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('custom-fields', CustomFieldController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('lists', LookupController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('clearance-items', ClearanceItemController::class)->only(['index', 'store', 'update', 'destroy']);
+
+        // Academic rules (credit load, carry-overs, CGPA, graduation) per university / faculty / department / programme
+        Route::get('rules', [\App\Http\Controllers\Academics\AcademicRuleController::class, 'index'])->name('rules.index');
+        Route::put('rules', [\App\Http\Controllers\Academics\AcademicRuleController::class, 'update'])->name('rules.update');
+        Route::post('rules/admins/{department}', [\App\Http\Controllers\Academics\AcademicRuleController::class, 'admins'])->name('rules.admins');
+        Route::post('rules/advisers/{programme}', [\App\Http\Controllers\Academics\AcademicRuleController::class, 'addAdviser'])->name('rules.advisers.store');
+        Route::delete('rules/advisers/{adviser}', [\App\Http\Controllers\Academics\AcademicRuleController::class, 'removeAdviser'])->name('rules.advisers.destroy');
 
         // Programme curriculum: which courses are taken at which level/semester
         Route::get('curriculum', [CurriculumController::class, 'index'])->name('curriculum.index');
@@ -183,14 +194,38 @@ Route::middleware('auth')->group(function () {
     Route::post('clearance/{student}/items/{item}/decide', [ClearanceController::class, 'decide'])->name('clearance.decide');
     Route::post('clearance/{student}/items/{item}/reset', [ClearanceController::class, 'reset'])->name('clearance.reset');
 
+    // ---- Session lifecycle, copying and the operation log ----
+    Route::get('sessions/rules', [\App\Http\Controllers\SessionRulesController::class, 'index'])->name('sessions.rules');
+    Route::put('sessions/rules', [\App\Http\Controllers\SessionRulesController::class, 'update'])->name('sessions.rules.update');
+    Route::get('sessions/copy', [\App\Http\Controllers\SessionCloneController::class, 'index'])->name('sessions.clone');
+    Route::post('sessions/copy', [\App\Http\Controllers\SessionCloneController::class, 'run'])->name('sessions.clone.run');
+    Route::post('sessions/copy/{batch}/undo', [\App\Http\Controllers\SessionCloneController::class, 'undo'])->name('sessions.clone.undo');
+    Route::get('sessions/{session}/status', [\App\Http\Controllers\SessionLifecycleController::class, 'show'])->name('sessions.lifecycle');
+    Route::post('sessions/{session}/status', [\App\Http\Controllers\SessionLifecycleController::class, 'change'])->name('sessions.lifecycle.change');
+    Route::get('operations', [\App\Http\Controllers\OperationHistoryController::class, 'index'])->name('operations.index');
+    Route::get('operations/{batch}', [\App\Http\Controllers\OperationHistoryController::class, 'show'])->name('operations.show');
+
     // ---- Results ----
     $rs = \App\Http\Controllers\ResultSheetController::class;
     Route::get('results', [$rs, 'index'])->name('results.sheets.index');
     Route::get('results/open/{course}', [$rs, 'open'])->name('results.open');
     Route::get('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'index'])->name('results.settings');
     Route::put('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'update'])->name('results.settings.update');
+    Route::get('results/summary', [\App\Http\Controllers\ResultSummaryController::class, 'index'])->name('results.summary');
+    Route::post('results/summary/allow/{student}', [\App\Http\Controllers\ResultSummaryController::class, 'waive'])->name('results.summary.waive');
     Route::get('results/broadsheet', [\App\Http\Controllers\StudentResultController::class, 'broadsheet'])->name('results.broadsheet');
     Route::post('results/amend/{result}', [$rs, 'amend'])->name('results.amend');
+    Route::get('results/complaints', [\App\Http\Controllers\ResultComplaintController::class, 'index'])->name('results.complaints');
+    Route::post('results/complaints/{complaint}', [\App\Http\Controllers\ResultComplaintController::class, 'respond'])->name('results.complaints.respond');
+    Route::post('my/results/{result}/query', [\App\Http\Controllers\ResultComplaintController::class, 'store'])->name('my.results.query');
+
+    // ---- Graduation ----
+    $gr = \App\Http\Controllers\GraduationController::class;
+    Route::get('graduation', [$gr, 'index'])->name('graduation.index');
+    Route::post('graduation/run', [$gr, 'run'])->name('graduation.run');
+    Route::get('graduation/{list}', [$gr, 'show'])->name('graduation.show');
+    Route::post('graduation/{list}/approve', [$gr, 'approve'])->name('graduation.approve');
+    Route::post('graduation/entries/{entry}/exclude', [$gr, 'exclude'])->name('graduation.exclude');
     Route::get('results/{sheet}', [$rs, 'show'])->name('results.sheets.show');
     Route::post('results/{sheet}/save', [$rs, 'save'])->name('results.sheets.save');
     Route::post('results/{sheet}/upload', [$rs, 'upload'])->name('results.sheets.upload');

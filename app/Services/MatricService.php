@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\MatricEvent;
+use App\Models\OperationBatch;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -41,19 +42,25 @@ class MatricService
     {
         $batch = strtoupper(Str::random(8));
         $issued = 0;
+        $audit = app(OperationAudit::class);
+        $op = $audit->begin('matric_generate', 'matric', $by, null, null, ['batch' => $batch, 'programme_id' => $programmeId]);
 
         $this->waiting()
             ->when($studentIds, fn ($q, $ids) => $q->whereIn('id', $ids))
             ->when($programmeId, fn ($q, $p) => $q->where('programme_id', $p))
             ->orderBy('programme_id')->orderBy('academic_session_id')->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-            ->each(function (Student $student) use ($by, $batch, &$issued) {
+            ->each(function (Student $student) use ($by, $batch, &$issued, $audit, $op) {
                 $this->clearance->issueMatric($student, $by, 'generated', $batch);
+                $audit->record($op, 'matric_issued', $student, null, ['matric_number' => $student->fresh()->matric_number]);
                 $issued++;
             });
 
         if (! $issued) {
+            $audit->finish($op, 0, 0, 0);
+            $op->update(['status' => 'failed']);
             throw new RuntimeException('There are no cleared students waiting for a matric number.');
         }
+        $audit->finish($op, $issued);
 
         return ['batch' => $batch, 'issued' => $issued];
     }
@@ -173,7 +180,10 @@ class MatricService
         }
 
         $undone = 0;
-        DB::transaction(function () use ($events, $batch, $by, &$undone) {
+        $audit = app(OperationAudit::class);
+        $original = OperationBatch::where('type', 'matric_generate')->where('meta->batch', $batch)->first();
+        $op = $audit->begin('matric_undo', 'matric', $by, null, null, ['batch' => $batch], $original);
+        DB::transaction(function () use ($events, $batch, $by, &$undone, $audit, $op) {
             foreach ($events as $event) {
                 $student = Student::find($event->student_id);
                 if (! $student || $student->matric_number !== $event->matric_number) {
@@ -182,10 +192,15 @@ class MatricService
                 $this->clearance->assignMatric($student, null);
                 MatricEvent::create(['student_id' => $student->id, 'action' => 'undone', 'matric_number' => $event->matric_number, 'batch' => $batch, 'performed_by' => $by->id, 'note' => 'Batch undone']);
                 $this->generator->rewind($student);
+                $audit->record($op, 'matric_taken_back', $student, ['matric_number' => $event->matric_number], ['matric_number' => null]);
                 $undone++;
             }
         });
 
+        $audit->finish($op, $undone, 0, $events->count() - $undone);
+        if ($undone && $original && $undone === $events->count()) {
+            $audit->markReversed($original);
+        }
         if (! $undone) {
             throw new RuntimeException('None of that batch\'s numbers could be undone: they have all been changed or cancelled since.');
         }

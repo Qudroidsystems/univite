@@ -2,7 +2,7 @@
 <html lang="en" data-layout="vertical" data-sidebar="dark" data-sidebar-size="lg" data-preloader="disable" data-theme="default" data-topbar="light" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <title>@yield('title', 'Apply') | {{ config('app.name') }}</title>
+    <title>@yield('title', 'Apply') | {{ \App\Support\Institution::get('name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="uv-layout" content="public">
@@ -10,7 +10,7 @@
     <meta name="uv-ping" content="{{ route('ping', [], false) }}">
     <link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
-    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    @include('partials.brand-head')
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="{{ asset('theme/layouts/assets/js/layout.js') }}"></script>
     <link href="{{ asset('theme/layouts/assets/css/bootstrap.min.css') }}" rel="stylesheet">
@@ -28,7 +28,7 @@
 <div id="ajax-root">
 <nav class="navbar bg-white border-bottom d-print-none">
     <div class="container d-flex justify-content-between">
-        <a href="{{ url('/') }}" class="d-flex align-items-center gap-2 text-decoration-none text-body"><span class="brand-mark">U</span><span class="fw-semibold fs-5">{{ config('app.name') }}</span></a>
+        <a href="{{ url('/') }}" class="d-flex align-items-center gap-2 text-decoration-none text-body">@include('partials.brand-mark', ['size' => 40])<span class="fw-semibold fs-5">{{ \App\Support\Institution::get('name') }}</span></a>
         <div class="d-flex gap-2 align-items-center">
             @if (session('applicant_id'))
                 <a href="{{ route('apply.dashboard') }}" class="btn btn-sm btn-soft-primary">My application</a>
@@ -43,7 +43,7 @@
 </nav>
 <div class="container py-4">
     @yield('content')
-    <p class="text-center text-muted fs-12 mt-4 mb-0 d-print-none">{{ now()->year }} © {{ config('app.name') }}</p>
+    <p class="text-center text-muted fs-12 mt-4 mb-0 d-print-none">{{ now()->year }} © {{ \App\Support\Institution::get('name') }}</p>
 </div>
 </div>
 <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>

@@ -9,7 +9,7 @@
                 <div class="d-flex gap-2"><a href="{{ url()->previous() }}" class="btn btn-light">Back</a><button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button></div>
             </div>
             <div class="card"><div class="card-body">
-                <div class="text-center mb-4"><h4 class="mb-0">{{ config('app.name') }}</h4><div class="text-muted">Course registration form · {{ $form->session->name }} · {{ $form->semesterType->name }}</div></div>
+                @include('partials.letterhead', ['subtitle' => 'Course registration form · ' . ($form->session->name) . ' · ' . ($form->semesterType->name)])
                 <table class="table table-sm">
                     <tr><th style="width:30%">Name</th><td>{{ $form->student->full_name }}</td></tr>
                     <tr><th>Matric number</th><td>{{ $form->student->matric_label }}</td></tr>

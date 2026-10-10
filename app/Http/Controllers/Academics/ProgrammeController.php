@@ -57,8 +57,6 @@ class ProgrammeController extends CrudController
             'study_category_id' => ['required', Rule::exists('study_categories', 'id')],
             'degree_type'     => ['required', 'string', 'max:30'],
             'duration_years'  => ['required', 'integer', 'min:1', 'max:8'],
-            'min_credit_load' => ['required', 'integer', 'min:0', 'max:60'],
-            'max_credit_load' => ['required', 'integer', 'gte:min_credit_load', 'max:60'],
             'is_active'       => ['nullable', 'boolean'],
         ];
     }
@@ -79,8 +77,6 @@ class ProgrammeController extends CrudController
             ['name' => 'study_category_id', 'label' => 'Study category', 'type' => 'select', 'options' => \App\Models\StudyCategory::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6, 'help' => 'Degree, NCE, Part-time ... set up under Study Categories.'],
             ['name' => 'degree_type', 'label' => 'Qualification awarded', 'type' => 'text', 'required' => true, 'col' => 6, 'placeholder' => 'B.Sc. (Ed.)'],
             ['name' => 'duration_years', 'label' => 'Duration (years)', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 4],
-            ['name' => 'min_credit_load', 'label' => 'Min credit units / semester', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 15],
-            ['name' => 'max_credit_load', 'label' => 'Max credit units / semester', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 24],
             ['name' => 'is_active', 'label' => 'Active (accepting students)', 'type' => 'switch', 'col' => 12, 'default' => true],
         ];
     }
@@ -92,7 +88,7 @@ class ProgrammeController extends CrudController
             ['Programme', fn ($r) => new HtmlString('<span class="fw-semibold">' . e($r->name) . '</span><div class="text-muted fs-12">' . e($r->department->name) . ' · ' . e($r->department->faculty->name) . '</div>')],
             ['Category', fn ($r) => new HtmlString(e($r->studyCategory?->name ?? '—') . '<div class="text-muted fs-12">' . e($r->degree_type) . '</div>')],
             ['Duration', fn ($r) => $r->duration_years . ' yr' . ($r->duration_years > 1 ? 's' : '')],
-            ['Credit load', fn ($r) => $r->min_credit_load . ' – ' . $r->max_credit_load . ' units'],
+            ['Rules', fn ($r) => new HtmlString('<a href="' . route('academics.rules.index', ['scope' => 'programme', 'id' => $r->id]) . '" class="fs-13">Credit load &amp; graduation</a>')],
             ['Status', fn ($r) => new HtmlString($r->is_active ? '<span class="badge bg-success-subtle text-success">Active</span>' : '<span class="badge bg-secondary-subtle text-secondary">Inactive</span>')],
         ];
     }

@@ -55,7 +55,7 @@
             @else
                 <div class="alert alert-info py-2">
                     <strong>{{ $programme->name }}</strong> · {{ $programme->degree_type }} · {{ $programme->duration_years }} year(s) ·
-                    credit load {{ $programme->min_credit_load }}–{{ $programme->max_credit_load }} units per semester
+                    credit load per semester as shown on each card (set under <a href="{{ route('academics.rules.index', ['scope' => 'programme', 'id' => $programme->id]) }}">Academic Rules</a>)
                 </div>
 
                 @foreach ($grid as $level => $semesters)
@@ -63,22 +63,22 @@
                     <div class="row">
                         @foreach ($semesters as $order => $sem)
                             @php
-                                $low  = $sem['entries']->isNotEmpty() && $sem['units'] < $programme->min_credit_load;
-                                $high = $sem['all'] > $programme->max_credit_load;
+                                $low  = $sem['entries']->isNotEmpty() && $sem['units'] < $sem['min'];
+                                $high = $sem['all'] > $sem['max'];
                             @endphp
                             <div class="col-xl-6">
                                 <div class="card">
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <h6 class="card-title mb-0">{{ $sem['label'] }}</h6>
                                         <span>
-                                            <span class="badge {{ $high ? 'bg-danger' : ($low ? 'bg-warning' : 'bg-success-subtle text-success') }}">{{ $sem['units'] }} units</span>
+                                            <span class="text-muted fs-12 me-1">{{ $sem['min'] }}–{{ $sem['max'] }} allowed</span><span class="badge {{ $high ? 'bg-danger' : ($low ? 'bg-warning' : 'bg-success-subtle text-success') }}">{{ $sem['units'] }} units</span>
                                             @if ($sem['all'] !== $sem['units'])
                                                 <span class="badge bg-light text-body border">{{ $sem['all'] }} incl. electives</span>
                                             @endif
                                         </span>
                                     </div>
-                                    @if ($low) <div class="px-3 pt-2 text-warning fs-12">Below the minimum of {{ $programme->min_credit_load }} units.</div> @endif
-                                    @if ($high) <div class="px-3 pt-2 text-danger fs-12">Above the maximum of {{ $programme->max_credit_load }} units.</div> @endif
+                                    @if ($low) <div class="px-3 pt-2 text-warning fs-12">Below the minimum of {{ $sem['min'] }} units.</div> @endif
+                                    @if ($high) <div class="px-3 pt-2 text-danger fs-12">Above the maximum of {{ $sem['max'] }} units.</div> @endif
                                     <div class="table-responsive">
                                         <table class="table table-sm align-middle mb-0">
                                             <tbody>

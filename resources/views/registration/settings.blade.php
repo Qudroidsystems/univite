@@ -10,6 +10,7 @@
                 @csrf @method('PUT')
                 <div class="card-body row g-3">
                     <div class="col-12"><div class="form-check form-switch form-switch-lg"><input type="hidden" name="open" value="0"><input class="form-check-input" type="checkbox" name="open" value="1" id="s-open" @checked($s['open'] === '1')><label class="form-check-label" for="s-open">Registration is open</label></div></div>
+                    <div class="col-12 text-muted fs-13">These are the university's defaults. A faculty, department or programme can set its own credit load (also per level and semester) under <a href="{{ route('academics.rules.index') }}">Academic Rules</a>.</div>
                     <div class="col-md-6"><label class="form-label">Minimum units per semester</label><input type="number" name="min_units" value="{{ old('min_units', $s['min_units']) }}" class="form-control @error('min_units') is-invalid @enderror" min="0" required>@error('min_units')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
                     <div class="col-md-6"><label class="form-label">Maximum units per semester</label><input type="number" name="max_units" value="{{ old('max_units', $s['max_units']) }}" class="form-control @error('max_units') is-invalid @enderror" min="1" required>@error('max_units')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
                     <div class="col-12"><label class="form-label">Check school fees before registering</label>

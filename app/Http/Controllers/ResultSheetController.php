@@ -79,6 +79,7 @@ class ResultSheetController extends Controller
             'canApprove' => $this->results->canApprove(auth()->user(), $sheet),
             'caMax'      => ResultService::caMax(), 'examMax' => ResultService::examMax(),
             'missing'    => $sheet->isEditable() ? $this->results->incomplete($sheet) : 0,
+            'complaints' => \App\Models\ResultComplaint::with('student')->whereIn('course_result_id', $sheet->results->pluck('id'))->latest()->get(),
         ]);
     }
 

@@ -203,3 +203,55 @@ it('saves registration settings and stores prerequisites on a course', function 
     expect($c->fresh()->prerequisites->pluck('code')->all())->toBe(['BIO 101']);
     $this->put(route('academics.courses.update', $c->id), ['department_id' => $this->dept->id, 'code' => $c->code, 'title' => $c->title, 'credit_units' => 3, 'prerequisites' => 'NOPE 999'])->assertSessionHasErrors('prerequisites');
 });
+
+it('uses the department\'s credit load for the student\'s level and semester', function () {
+    $rules = app(\App\Support\AcademicRules::class);
+    $type = \App\Models\SemesterType::where('sort_order', 1)->first();
+    $rules->save('department', $this->dept->id, 100, $type->id, ['min_units' => 6, 'max_units' => 9], null);
+
+    regAs()->post(route('my.registration.save'), ['courses' => ids(1, 2, 3, 4), 'submit' => 1])->assertSessionHas('error', fn ($m) => str_contains($m, 'maximum is 9'));
+    $this->post(route('my.registration.save'), ['courses' => ids(1, 2), 'submit' => 1])->assertSessionHas('success');
+
+    // another level is untouched: the university's 15 still applies there
+    expect(app(\App\Services\RegistrationService::class)->limits($this->student->fresh(), ['type' => $type], 200)['min'])->toBe(15);
+});
+
+it('only forces a failed elective back when the rules say so', function () {
+    $elective = Course::create(['department_id' => $this->dept->id, 'code' => 'BIO 150', 'title' => 'Field Trip', 'credit_units' => 2, 'level' => 100]);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $elective->id, 'level' => 100, 'semester_order' => 1, 'status' => 'elective']);
+    $this->student->update(['current_level' => 200]);
+    $prev = AcademicSession::create(['name' => '2025/2026']);
+    $type = \App\Models\SemesterType::where('sort_order', 1)->first();
+    CourseResult::create(['student_id' => $this->student->id, 'course_id' => $elective->id, 'academic_session_id' => $prev->id, 'semester_type_id' => $type->id,
+        'total' => 20, 'grade' => 'F', 'points' => 0, 'is_pass' => false, 'credit_units' => 2, 'status' => 'published']);
+    $c200 = Course::create(['department_id' => $this->dept->id, 'code' => 'BIO 201', 'title' => 'Genetics', 'credit_units' => 3, 'level' => 200]);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c200->id, 'level' => 200, 'semester_order' => 1, 'status' => 'core']);
+    Setting::put('registration.min_units', '0');
+
+    regAs()->post(route('my.registration.save'), ['courses' => [$c200->id], 'submit' => 1])->assertSessionHas('error', fn ($m) => str_contains($m, 'BIO 150'));
+
+    app(\App\Support\AcademicRules::class)->save('programme', $this->programme->id, null, null, ['retake_failed_electives' => false], null);
+    $this->post(route('my.registration.save'), ['courses' => [$c200->id], 'submit' => 1])->assertSessionHas('success');
+});
+
+it('enforces the semester registration window and an optional late period', function () {
+    $reg = app(\App\Services\RegistrationService::class);
+    $this->semester->update(['registration_opens_at' => '2026-09-10 08:00:00', 'registration_closes_at' => '2026-10-10 17:00:00']);
+    $blockers = fn () => implode(' ', $reg->blockers($this->student->fresh()));
+
+    $this->travelTo(\Carbon\Carbon::parse('2026-09-01 09:00'));
+    expect($blockers())->toContain('Registration opens on');
+
+    $this->travelTo(\Carbon\Carbon::parse('2026-09-20 09:00'));
+    expect($blockers())->not->toContain('Registration opens')->not->toContain('Registration closed');
+
+    $this->travelTo(\Carbon\Carbon::parse('2026-10-15 09:00'));
+    expect($blockers())->toContain('Registration closed on');
+
+    Setting::put('session.late_registration', '1');
+    Setting::put('session.late_registration_days', '14');
+    expect($blockers())->not->toContain('Registration closed');
+
+    $this->travelTo(\Carbon\Carbon::parse('2026-11-15 09:00'));
+    expect($blockers())->toContain('Registration closed on');
+});

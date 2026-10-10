@@ -41,7 +41,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="card-title mb-0">Courses for this semester</h6>
-                        <span class="badge bg-primary-subtle text-primary fs-13"><span id="units">0</span> units · allowed {{ $limits['min'] }}–{{ $limits['max'] }}@if ($limits['exempt']) <span class="text-muted">(carry-overs not counted in the maximum)</span>@endif</span>
+                        <span class="badge bg-primary-subtle text-primary fs-13"><span id="units">0</span> units · allowed {{ $limits['min'] }}–{{ $limits['max'] }}@if (! empty($limits['probation'])) <span class="text-danger">(reduced: you are on probation)</span>@endif @if ($limits['exempt']) <span class="text-muted">(carry-overs not counted in the maximum)</span>@endif</span>
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">

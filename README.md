@@ -142,3 +142,45 @@ Run `php artisan migrate` and `php artisan db:seed`.
 **Broadsheet and corrections.** *Broadsheet* (Admissions & Students) shows a programme's published results for one level, session and semester:
 every student's score and grade per course, semester GPA and CGPA, printable. A published score can be corrected by someone with
 **Amend published results**: a reason is required and the old and new scores are written to the sheet's history, and the grade is recomputed.
+
+**Result queries and graduation.** A student can query a published result from *My Results* within the number of days set in
+*Result Settings* (default 14; 0 = no limit). Staff answer under *Result Queries* (permissions "View result complaints",
+"Respond to result complaints"); an upheld query can correct the score in the same step for someone who may amend published results.
+*Graduation Lists* checks every enrolled final-level student of a programme: all registered results published, no failed course
+outstanding (electives excepted), every core/required course taken (switchable in Result Settings) and the programme's
+"units needed to graduate". Approving a list marks the eligible students Graduated with final CGPA and class.
+
+**Academic rules.** *Academic Setup → Academic Rules* holds the credit load (min/max units, carry-over handling, prerequisites),
+results rules (whether a failed elective must be passed, CGPA by latest attempt or every attempt (TCP/TNU), probation and
+withdrawal CGPA) and graduation rules (units, elective units, minimum CGPA, core courses, maximum years). The university sets
+defaults (stored as settings); a faculty, department or programme can override any rule, and the credit load can also be set for
+one level and/or semester (table academic_rules; App\Support\AcademicRules resolves the most specific value). "Edit department
+academic rules" lets a HOD, the department's administrators (department_admins) or the faculty dean edit their own scopes.
+The programme form no longer has credit-load fields; existing values were moved into programme overrides by the migration.
+
+**Standing, advisers and the result summary.** Academic Rules has an *Academic standing* group: probation and withdrawal
+CGPA, a lower unit limit while on probation, and whether students advised to withdraw are held from registering. Course
+advisers are assigned per programme level on a programme's Academic Rules page; they see "My Advisees" and approve those
+registration forms. *Result Summary* (Admissions & Students) lists a department's students for a semester as passed /
+carry-overs / probation / advised to withdraw / results pending, printable; the department can allow a student advised to
+withdraw to register for the current session (standing_waivers).
+
+**Institution profile.** *Academic Setup → Institution Profile* (permissions "View/Edit institution profile") stores the
+institution's name, short name, motto, type, codes, address, contacts, social pages, principal officers, logo, favicon,
+registrar's signature, stamp, main colour, tagline and footer as `institution.*` settings (App\Support\Institution).
+The name replaces APP_NAME everywhere; printed documents use partials/letterhead and partials/signatory. Uploaded images
+live on the public disk, so `php artisan storage:link` must have been run.
+
+## Step 4d: Audit log and session foundation
+
+**Operation log.** Every bulk or sensitive action opens an *operation* with a short ID (`OP-XXXXXXXX`) and writes append-only events (who, what, before, after). Events cannot be edited or deleted (the model throws); a correction or undo is a new operation linked to the original. Passwords, NINs and tokens are stripped before anything is stored. Logged so far: session status changes, session copies and their undo, matric batch generation and undo, result publishing, and score amendments. Browse it at **Operation History** (filter by operation ID, module, session, person, dates).
+
+**Session lifecycle.** Sessions are Draft, Setup, Active, Closing, Closed or Archived. Moving to Active is checked first (semester exists, dates make sense, registration windows make sense, a grading scale exists, no other active session unless allowed). Closing, closing out, reopening and archiving need a reason. Every change is recorded on the session's **status** page (click the status badge in Academic Sessions). Making a session current activates it and moves the previous one to Closing. A closed or archived session cannot be current.
+
+**Registration windows.** Each semester has optional *Registration opens / closes* dates. Outside them students are told when registration opens or closed. A late period can be allowed (see rules).
+
+**Copy session setup.** Choose a source and destination session and what to copy (registration windows, school bills, course lecturers), then **Preview**, then confirm. Bills arrive switched off so they can be reviewed; dates move forward by the year difference. Nothing about students, registrations, scores, results, payments or invoices is ever copied, and the source is never touched. Running it again copies nothing new. **Undo** removes only what nothing has used since (bills not switched on and with no invoices, assignments without a score sheet, windows not edited since); the rest is kept and reported.
+
+**Session rules** (a setting each, with a default; AFUED to confirm): more than one active session (off), semester required to activate (on), closed sessions may be reopened (on), late registration (off, 14 days).
+
+Run `php artisan migrate` after updating.

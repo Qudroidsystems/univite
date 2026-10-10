@@ -10,7 +10,7 @@
             </div>
             <div class="card">
                 <div class="card-body">
-                    <div class="text-center mb-4"><h4 class="mb-0">{{ config('app.name') }}</h4><div class="text-muted">Clearance slip</div></div>
+                    @include('partials.letterhead', ['subtitle' => 'Clearance slip'])
                     <table class="table table-sm">
                         <tr><th style="width:35%">Name</th><td>{{ $student->full_name }}</td></tr>
                         <tr><th>Matric number</th><td>{{ $student->matric_label }}</td></tr>
@@ -26,6 +26,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    @include('partials.signatory', ['role' => 'registrar'])
                 </div>
             </div>
         </div>

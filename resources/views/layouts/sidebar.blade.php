@@ -4,6 +4,7 @@
 
     // [label, route name, permission, route pattern]
     $academic = [
+        ['Institution Profile', 'institution.edit',              'View institution profile', 'institution.*'],
         ['Academic Sessions', 'academics.sessions.index',    'View academic sessions',    'academics.sessions.*'],
         ['Semesters',         'academics.semesters.index',   'View semesters',   'academics.semesters.*'],
         ['Faculties',         'academics.faculties.index',   'View faculties',    'academics.faculties.*'],
@@ -19,9 +20,13 @@
         ['Custom Form Fields','academics.custom-fields.index',   'View custom fields',    'academics.custom-fields.*'],
         ['Grading Scale',     'academics.grade-bands.index',      'View grade bands',      'academics.grade-bands.*'],
         ['Classes of Degree', 'academics.degree-classes.index',   'View degree classes',   'academics.degree-classes.*'],
+        ['Academic Rules',    'academics.rules.index',            ['View academic rules', 'Edit academic rules', 'Edit department academic rules'], 'academics.rules.*'],
         ['Course Lecturers',  'academics.course-assignments.index','View course assignments','academics.course-assignments.*'],
         ['Result Approval Steps','academics.result-stages.index', 'View result stages',    'academics.result-stages.*'],
         ['Reference Lists',   'academics.lists.index',            'View reference lists',  'academics.lists.*'],
+        ['Copy Session Setup','sessions.clone',                   'Copy session setup',    'sessions.clone*'],
+        ['Session Rules',     'sessions.rules',                   'View session rules',    'sessions.rules*'],
+        ['Operation History', 'operations.index',                 'View operation history','operations.*'],
     ];
     $students = [
         ['Applicants',           'applicants.index',        'View applicants',           'applicants.index', 'applicants.show'],
@@ -33,6 +38,9 @@
         ['Registration Settings', 'registrations.settings', 'View registration settings', 'registrations.settings*'],
         ['Score Sheets',      'results.sheets.index',        'View result sheets',        'results.sheets.*', 'results.open'],
         ['Broadsheet',        'results.broadsheet',          'View student results',      'results.broadsheet'],
+        ['Result Summary',    'results.summary',             ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],
+        ['Result Queries',    'results.complaints',          'View result complaints',    'results.complaints*'],
+        ['Graduation Lists',  'graduation.index',            'View graduation lists',     'graduation.*'],
         ['Result Settings',   'results.settings',            'View result settings',      'results.settings*'],
         ['Matric Numbers',       'matric.index',            'View matric numbers',       'matric.*'],
         ['Matric Number Format', 'students.settings',       'View matric number format', 'students.settings*'],
@@ -62,8 +70,9 @@
 <div class="app-menu navbar-menu">
     <div class="navbar-brand-box">
         <a href="{{ route('dashboard') }}" class="logo">
-            <span class="logo-sm"><span class="fs-4 fw-bold text-white">U</span></span>
-            <span class="logo-lg"><span class="fs-4 fw-bold text-white">{{ config('app.name') }}</span></span>
+            @php $logo = \App\Support\Institution::image('logo'); @endphp
+            <span class="logo-sm">@if ($logo)<img src="{{ $logo }}" alt="" height="30">@else<span class="fs-4 fw-bold text-white">{{ \App\Support\Institution::initials() }}</span>@endif</span>
+            <span class="logo-lg d-inline-flex align-items-center gap-2">@if ($logo)<img src="{{ $logo }}" alt="" height="34">@endif<span class="fs-5 fw-bold text-white text-truncate" style="max-width:170px" title="{{ \App\Support\Institution::get('name') }}">{{ \App\Support\Institution::get('short_name') ?: \App\Support\Institution::get('name') }}</span></span>
         </a>
         <button type="button" class="btn btn-sm p-0 fs-3xl header-item float-end btn-vertical-sm-hover" id="vertical-hover">
             <i class="ri-record-circle-line"></i>
@@ -97,6 +106,13 @@
                         </a>
                     </li>
                 @endif
+                @if (! $u->can('View course registrations') && \App\Models\CourseAdviser::where('user_id', $u->id)->exists())
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('registrations.*') ? 'active' : '' }}" href="{{ route('registrations.index') }}">
+                            <i class="ri-team-line"></i> <span>My Advisees</span>
+                        </a>
+                    </li>
+                @endif
                 @if ($u->courseAssignments()->exists() && ! $u->can('View result sheets'))
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $on('results.*') ? 'active' : '' }}" href="{{ route('results.sheets.index') }}">
@@ -121,7 +137,7 @@
 
                 @foreach ($groups as $g)
                     @php
-                        $visible = collect($g['items'])->filter(fn ($i) => $u->can($i[2]));
+                        $visible = collect($g['items'])->filter(fn ($i) => $u->canAny((array) $i[2]));
                         $open = $visible->contains(fn ($i) => $on(...array_slice($i, 3)));
                     @endphp
                     @if ($visible->isNotEmpty())

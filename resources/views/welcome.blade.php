@@ -7,7 +7,10 @@
 <div class="row justify-content-center">
     <div class="col-lg-9">
         <div class="text-center my-4">
-            <h2 class="mb-1">{{ config('app.name') }}</h2>
+            @if (\App\Support\Institution::image('logo'))<img src="{{ \App\Support\Institution::image('logo') }}" alt="" style="height:90px" class="mb-2">@endif
+            <h2 class="mb-1">{{ \App\Support\Institution::get('name') }}</h2>
+            @if (\App\Support\Institution::get('motto'))<p class="fst-italic mb-1">{{ \App\Support\Institution::get('motto') }}</p>@endif
+            @if (\App\Support\Institution::get('about'))<p class="text-muted mx-auto" style="max-width:640px">{{ \App\Support\Institution::get('about') }}</p>@endif
             <p class="text-muted">Apply for admission, check your application, or sign in to your portal.</p>
         </div>
         <div class="row g-3">
@@ -39,4 +42,8 @@
         </div>
     </div>
 </div>
+@php $I = \App\Support\Institution::class; $c = collect([$I::addressLine(), $I::get('phone'), $I::get('support_email') ?: $I::get('email'), $I::get('website')])->filter(); @endphp
+@if ($c->isNotEmpty())
+    <p class="text-center text-muted fs-13 mt-4">{{ $c->implode(' · ') }}</p>
+@endif
 @endsection

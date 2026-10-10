@@ -52,9 +52,9 @@
                     <table class="table align-middle mb-0">
                         <thead class="table-light"><tr><th>Date</th><th>Reference</th><th class="text-end">Amount</th><th></th></tr></thead>
                         <tbody>
-                            @forelse ($invoice->payments->where('status', 'successful') as $p)
-                                <tr><td>{{ ($p->paid_at ?? $p->created_at)->format('d M Y') }}</td><td>{{ $p->reference }}</td><td class="text-end">₦{{ number_format((float) $p->amount, 2) }}</td>
-                                    <td class="text-end"><a href="{{ route('my.receipt', $p->id) }}" class="btn btn-sm btn-soft-primary">Receipt</a></td></tr>
+                            @forelse ($invoice->payments->whereIn('status', ['successful', 'reversed', 'reversal']) as $p)
+                                <tr><td>{{ ($p->paid_at ?? $p->created_at)->format('d M Y') }}</td><td>{{ $p->reference }}@if ($p->status === 'reversed')<div class="text-danger fs-12">Reversed: {{ $p->reversal_reason }}</div>@elseif ($p->status === 'reversal')<div class="text-muted fs-12">Reversal entry</div>@endif</td><td class="text-end">₦{{ number_format((float) $p->amount, 2) }}</td>
+                                    <td class="text-end">@if ($p->status !== 'reversal')<a href="{{ route('my.receipt', $p->id) }}" class="btn btn-sm btn-soft-primary">Receipt</a>@endif</td></tr>
                             @empty
                                 <tr><td colspan="4" class="text-center text-muted py-4">No payments yet.</td></tr>
                             @endforelse

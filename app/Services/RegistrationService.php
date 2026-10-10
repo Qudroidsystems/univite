@@ -294,6 +294,7 @@ class RegistrationService
             'status' => $approved ? 'approved' : 'submitted', 'submitted_at' => now(), 'note' => null,
             'decided_by' => null, 'decided_at' => $approved ? now() : null,
         ]);
+        app(DocumentMailer::class)->courseForm($form->fresh());
 
         return $form;
     }
@@ -307,14 +308,21 @@ class RegistrationService
             throw new RuntimeException('Say why the form is being returned.');
         }
         $form->update(['status' => $approve ? 'approved' : 'rejected', 'decided_by' => $userId, 'decided_at' => now(), 'note' => $note]);
+        $by = \App\Models\User::find($userId);
+        app(OperationAudit::class)->note($approve ? 'registration_approve' : 'registration_return', 'registration', $by, $approve ? 'form_approved' : 'form_returned', $form, ['status' => 'submitted'], ['status' => $form->status], $note, $form->academic_session_id);
+        if ($approve) {
+            app(DocumentMailer::class)->courseForm($form->fresh(), $by);
+        }
 
         return $form;
     }
 
     /** A student may reopen an approved form only if staff reopen it; staff do that here. */
-    public function reopen(RegistrationForm $form): RegistrationForm
+    public function reopen(RegistrationForm $form, ?\App\Models\User $by = null, ?string $reason = null): RegistrationForm
     {
+        $before = ['status' => $form->status, 'decided_by' => $form->decided_by, 'decided_at' => $form->decided_at?->toDateTimeString()];
         $form->update(['status' => 'draft', 'decided_by' => null, 'decided_at' => null]);
+        app(OperationAudit::class)->note('registration_reopen', 'registration', $by ?? auth()->user(), 'form_reopened', $form, $before, ['status' => 'draft'], $reason, $form->academic_session_id);
 
         return $form;
     }

@@ -18,7 +18,8 @@ class InvoiceController extends Controller
     public function __construct(private InvoiceService $invoices)
     {
         $this->middleware('permission:View invoices')->only(['index', 'show', 'receipt']);
-        $this->middleware('permission:Generate invoices')->only('generate');
+        $this->middleware('permission:Generate invoices')->only('generate', 'preview');
+        $this->middleware('permission:Reverse payments')->only('reverse');
         $this->middleware('permission:Record offline payments')->only('recordPayment');
         $this->middleware('permission:Cancel invoices')->only('cancel');
     }
@@ -60,6 +61,36 @@ class InvoiceController extends Controller
         return view('invoices.show', ['pagetitle' => $invoice->reference, 'invoice' => $invoice]);
     }
 
+    /** What a bulk run would do, before anything is created. */
+    public function preview(Request $request): View|RedirectResponse
+    {
+        $data = $request->validate([
+            'academic_session_id' => ['required', 'exists:academic_sessions,id'],
+            'programme_id'        => ['nullable', 'exists:programmes,id'],
+            'level'               => ['nullable', 'integer', 'min:100', 'max:800'],
+            'semester_type_id'    => ['nullable', 'exists:semester_types,id'],
+        ]);
+        $session = AcademicSession::findOrFail($data['academic_session_id']);
+
+        return view('invoices.generate-preview', [
+            'pagetitle' => 'Generate invoices', 'data' => $data, 'session' => $session,
+            'programme' => isset($data['programme_id']) ? \App\Models\Programme::find($data['programme_id']) : null,
+            'semester' => isset($data['semester_type_id']) ? \App\Models\SemesterType::find($data['semester_type_id']) : null,
+            'preview' => $this->invoices->previewBulk($session, $data['programme_id'] ?? null, $data['level'] ?? null, $data['semester_type_id'] ?? null),
+        ]);
+    }
+
+    /** Open the reversal preview of a payment. */
+    public function reverse(Payment $payment): RedirectResponse
+    {
+        $op = \App\Support\Reversals::originOf('payment_record', 'Payment', $payment->id);
+        if (! $op || $payment->status !== 'successful') {
+            return back()->with('error', 'This payment cannot be reversed' . ($payment->status === 'reversed' ? ': it already has been.' : '.'));
+        }
+
+        return redirect()->route('operations.reverse', $op);
+    }
+
     public function generate(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -71,7 +102,7 @@ class InvoiceController extends Controller
 
         $r = $this->invoices->generateBulk(AcademicSession::findOrFail($data['academic_session_id']), $data['programme_id'] ?? null, $data['level'] ?? null, auth()->id(), $data['semester_type_id'] ?? null);
 
-        $message = "{$r['created']} invoice(s) created.";
+        $message = "{$r['created']} invoice(s) created" . ($r['created'] ? " (operation {$r['operation']}; it can be reversed from the operation history while nothing has been paid)" : '') . '.';
         if ($r['existing']) {
             $message .= " {$r['existing']} student(s) already had one.";
         }
@@ -114,7 +145,7 @@ class InvoiceController extends Controller
 
     public function receipt(Payment $payment): View
     {
-        abort_unless($payment->status === 'successful', 404);
+        abort_unless(in_array($payment->status, ['successful', 'reversed'], true), 404);
 
         return view('invoices.receipt', ['pagetitle' => 'Receipt', 'payment' => $payment->load('invoice.payable.programme', 'invoice.session', 'recorder')]);
     }

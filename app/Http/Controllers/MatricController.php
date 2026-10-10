@@ -17,7 +17,7 @@ class MatricController extends Controller
     public function __construct(private MatricService $matric)
     {
         $this->middleware('permission:View matric numbers')->only('index');
-        $this->middleware('permission:Generate matric numbers')->only('generate');
+        $this->middleware('permission:Generate matric numbers')->only('generate', 'preview');
         $this->middleware('permission:Assign special matric numbers')->only('special');
         $this->middleware('permission:Import external matric numbers')->only('import');
         $this->middleware('permission:Cancel matric numbers')->only('cancel');
@@ -54,8 +54,10 @@ class MatricController extends Controller
             'counts'    => $counts,
             'students'  => $students,
             'programmes' => Programme::orderBy('name')->pluck('name', 'id')->all(),
-            'batches'   => $this->matric->batches(),
+            'batches'   => $batches = $this->matric->batches(),
+            'operations' => \App\Models\OperationBatch::whereIn('type', ['matric_generate', 'matric_import'])->get()->filter(fn ($o) => in_array($o->meta['batch'] ?? null, $batches->pluck('batch')->all(), true))->keyBy(fn ($o) => $o->meta['batch']),
             'preview'   => $this->previewNext(),
+            'pendingApproval' => \App\Models\MatricBatch::where('status', 'pending')->withCount('students')->get()->sum('students_count'),
         ]);
     }
 
@@ -64,6 +66,22 @@ class MatricController extends Controller
         $student = $this->matric->waiting()->with('programme.department.faculty', 'entrySession')->orderBy('last_name')->first();
 
         return $student ? app(\App\Services\MatricNumberGenerator::class)->preview($student->programme, $student->entrySession) : null;
+    }
+
+    /** Who would get a number, and which, before anything is issued. */
+    public function preview(Request $request): View|RedirectResponse
+    {
+        $data = $request->validate([
+            'student_ids'   => ['nullable', 'array'],
+            'student_ids.*' => ['integer', 'exists:students,id'],
+            'programme_id'  => ['nullable', 'exists:programmes,id'],
+        ]);
+        $preview = $this->matric->previewBatch($data['student_ids'] ?? null, $data['programme_id'] ?? null);
+        if (! $preview['total']) {
+            return redirect()->route('matric.index')->with('error', 'There are no cleared students waiting for a matric number' . (! empty($data['student_ids']) ? ' among those ticked.' : '.'));
+        }
+
+        return view('students.matric-preview', ['pagetitle' => 'Generate matric numbers', 'preview' => $preview, 'pattern' => \App\Services\MatricNumberGenerator::pattern()]);
     }
 
     public function generate(Request $request): RedirectResponse
@@ -80,7 +98,13 @@ class MatricController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', "{$r['issued']} matric number(s) issued in batch {$r['batch']}. Keep the batch code if you may need to undo it.");
+        if ($r['pending'] ?? false) {
+            $b = \App\Models\MatricBatch::where('code', $r['batch'])->first();
+
+            return redirect()->route('matric.approvals.show', $b)->with('success', "{$r['issued']} matric number(s) reserved in batch {$r['batch']}. They are published to the students once the batch is approved.");
+        }
+
+        return redirect()->route('matric.index', ['tab' => 'issued'])->with('success', "{$r['issued']} matric number(s) issued in batch {$r['batch']}. It can be undone or corrected from Recent batches.");
     }
 
     public function special(Request $request, $id): RedirectResponse
@@ -151,6 +175,9 @@ class MatricController extends Controller
     public function undo(Request $request): RedirectResponse
     {
         $data = $request->validate(['batch' => ['required', 'string', 'max:40']]);
+        if ($op = $this->matric->operationFor(strtoupper(trim($data['batch'])))) {
+            return redirect()->route('operations.reverse', $op);   // preview first: what changes, what is in use
+        }
 
         try {
             $n = $this->matric->undoBatch(strtoupper(trim($data['batch'])), $request->user());

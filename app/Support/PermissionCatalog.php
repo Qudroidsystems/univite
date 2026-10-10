@@ -90,9 +90,18 @@ class PermissionCatalog
             ],
 
             'Operation history' => [
-                'about' => 'A permanent log of bulk and sensitive actions (session copies, matric batches, published results). Entries are never edited or deleted.',
+                'about' => 'A permanent log of bulk and sensitive actions (payments, matric batches, published results, graduation, rule changes ...) with who, when, the records affected and their values before and after. Entries are never edited or deleted. Reversals are previewed, checked for records that depend on them, need a reason, and are recorded as new operations linked to the original. Who may reverse each kind of operation is set by that area\'s own permission (for example "Reverse payments").',
                 'permissions' => [
-                    ['View operation history', 'View', 'Search the log of bulk and sensitive actions by session, module, person, date or operation ID, and see exactly what each one changed.'],
+                    ['View operation history', 'View', 'Search the log of bulk and sensitive actions by session, module, person, date, operation ID or record, and see exactly what each one changed.'],
+                ],
+            ],
+
+            'Emailed documents' => [
+                'about' => 'Receipts, course forms, clearance and application slips, matric numbers and result notices are emailed to the person they belong to. Every attempt is logged.',
+                'permissions' => [
+                    ['View email log', 'View', 'See every emailed document, who it went to and whether it was delivered.'],
+                    ['Resend emailed documents', 'Manage', 'Send a receipt, course form or slip again from the email log.'],
+                    ['Edit email settings', 'Edit', 'Choose which documents are emailed, set up the mail server (SMTP) and send a test email.'],
                 ],
             ],
 
@@ -221,6 +230,7 @@ class PermissionCatalog
                     ['Approve results', 'Manage', 'Approve or return a score sheet waiting at your approval step (the role set on each step decides which steps are yours).'],
                     ['Approve results for any stage', 'Manage', 'Approve or return a score sheet at any step of the chain, whatever role the step asks for.'],
                     ['Amend published results', 'Manage', 'Correct a single student\'s score on a published sheet. A reason is required and the old and new scores are recorded on the sheet\'s history.'],
+                    ['Withdraw published results', 'Manage', 'Formally withdraw a published score sheet (for example when Senate sets it aside) after a preview. Scores are kept, students are emailed, and the sheet can be published again. Not allowed once a student on it has graduated.'],
                     ['Publish results', 'Manage', 'Publish an approved score sheet so students can see their results, or send an approved sheet back for correction.'],
                 ],
             ],
@@ -262,7 +272,8 @@ class PermissionCatalog
                 'permissions' => [
                     ['View graduation lists', 'View', 'See graduation lists for each programme: who is eligible, CGPA and class, and why others cannot graduate yet.'],
                     ['Generate graduation lists', 'Generate', 'Run or re-run the graduation check for a programme, and hold individual students back with a reason.'],
-                    ['Approve graduation lists', 'Approve', 'Approve a graduation list. Every eligible student on it is marked Graduated with their final CGPA and class. This cannot be undone from the portal.'],
+                    ['Approve graduation lists', 'Approve', 'Approve a graduation list. Every eligible student on it is marked Graduated with their final CGPA and class, and is emailed.'],
+                    ['Reverse graduation approvals', 'Manage', 'Reverse an approved graduation list from the operation history after a preview: students go back to their earlier status and the list to draft. The approval stays on record.'],
                 ],
             ],
 
@@ -399,7 +410,8 @@ class PermissionCatalog
                 'about' => 'Matric numbers are issued after a student is fully cleared. These permissions cover handing them out, setting special ones, bringing in numbers made elsewhere, and taking them back.',
                 'permissions' => [
                     ['View matric numbers', 'View', 'See which cleared students are waiting for a matric number, who already has one, and which numbers were cancelled.'],
-                    ['Generate matric numbers', 'Generate', 'Issue matric numbers to cleared students in a batch, using the saved matric number format. Numbers are handed out alphabetically by surname.'],
+                    ['Generate matric numbers', 'Generate', 'Issue matric numbers to cleared students in a batch, using the saved matric number format, after a preview. Numbers are handed out alphabetically by surname. When approval is switched on they are only reserved until the batch is approved.'],
+                    ['Approve matric numbers', 'Approve', 'Approve a batch of reserved matric numbers on behalf of Senate, the admissions committee or the person in charge, which publishes them to the students; or reject it with a reason, which releases the numbers. When "someone else must approve" is on, nobody can approve a batch they generated.'],
                     ['Assign special matric numbers', 'Assign', 'Type in a matric number by hand for one cleared student, for example a reserved or special number. It must not already be in use.'],
                     ['Import external matric numbers', 'Import', 'Upload a file of matric numbers made outside the portal and apply them to the matching cleared students.'],
                     ['Cancel matric numbers', 'Cancel', 'Withdraw a student\'s matric number with a reason. The number is kept on record and is never issued to anyone else.'],
@@ -412,7 +424,7 @@ class PermissionCatalog
                 'about' => 'The pattern used to generate matric numbers, for example 2025/BSC-CSC/0001.',
                 'permissions' => [
                     ['View matric number format', 'View', 'See the current matric number pattern and an example of the next number.'],
-                    ['Set the matric number format', 'Set', 'Change the pattern used for students admitted from now on. Existing matric numbers never change.'],
+                    ['Set the matric number format', 'Set', 'Change the pattern used for students admitted from now on, when numbers are issued, whether they need approval, and the last number already used for each prefix (for example the last number issued before the portal). Existing matric numbers never change.'],
                 ],
             ],
 
@@ -422,6 +434,7 @@ class PermissionCatalog
                     ['View invoices', 'View', 'See every invoice and payment: who owes what, what has been paid, and print receipts.'],
                     ['Generate invoices', 'Manage', 'Create session fee invoices for all active students (or one programme and level) from the school bills. Students who already have one are skipped, so it is safe to repeat.'],
                     ['Record offline payments', 'Manage', 'Record money received outside the portal (bank teller, transfer, POS or cash) against an invoice. This changes what a student owes, so only give it to bursary staff.'],
+                    ['Reverse payments', 'Manage', 'Formally reverse a posted payment after a preview. The original payment and receipt stay on record marked reversed, a reversal entry is added, the balance goes back on the invoice and the payer is emailed. A reason is required.'],
                     ['Cancel invoices', 'Manage', 'Cancel an invoice that has no payments, for example one raised by mistake. The student no longer owes it.'],
                 ],
             ],

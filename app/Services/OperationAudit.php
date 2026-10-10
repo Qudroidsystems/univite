@@ -29,11 +29,12 @@ class OperationAudit
         ]);
     }
 
-    public function record(OperationBatch $batch, string $action, ?Model $subject = null, ?array $before = null, ?array $after = null, ?string $note = null, ?int $corrects = null): OperationEvent
+    public function record(OperationBatch $batch, string $action, ?Model $subject = null, ?array $before = null, ?array $after = null, ?string $note = null, ?int $corrects = null, ?string $label = null): OperationEvent
     {
         return OperationEvent::create([
             'operation_batch_id' => $batch->id, 'user_id' => $batch->user_id, 'action' => $action,
             'subject_type' => $subject ? class_basename($subject) : null, 'subject_id' => $subject?->getKey(),
+            'label' => Str::limit($label ?? ($subject ? self::labelFor($subject) : ''), 185, '') ?: null,
             'before' => $before !== null ? $this->clean($before) : null, 'after' => $after !== null ? $this->clean($after) : null,
             'note' => $note ? Str::limit($note, 500, '') : null, 'corrects_event_id' => $corrects,
         ]);
@@ -60,6 +61,24 @@ class OperationAudit
         $this->record($batch, $action, $subject, $before, $after, $reason);
 
         return $this->finish($batch, 1);
+    }
+
+    /** A readable name for an affected record, kept on the event so it survives later renames. */
+    public static function labelFor(Model $m): string
+    {
+        return match (true) {
+            $m instanceof \App\Models\Student => trim($m->full_name . ($m->matric_number ? ' · ' . $m->matric_number : '')),
+            $m instanceof \App\Models\Payment => $m->reference . ' · ₦' . number_format(abs((float) $m->amount), 2),
+            $m instanceof \App\Models\Invoice => $m->reference . ' · ' . $m->title,
+            $m instanceof \App\Models\CourseResult => trim(($m->student?->full_name ?? 'Student') . ' · ' . ($m->course?->code ?? '')),
+            $m instanceof \App\Models\ResultSheet => trim(($m->course?->code ?? 'Sheet') . ' · ' . ($m->session?->name ?? '')),
+            $m instanceof \App\Models\GraduationList => 'Graduation list · ' . ($m->programme?->name ?? '') . ' · ' . ($m->session?->name ?? ''),
+            $m instanceof \App\Models\StandingWaiver => trim(($m->student?->full_name ?? 'Student') . ' · allowed to register'),
+            $m instanceof \App\Models\ResultComplaint => trim(($m->student?->full_name ?? 'Student') . ' · result query'),
+            $m instanceof \App\Models\RegistrationForm => trim(($m->student?->full_name ?? 'Student') . ' · course form'),
+            isset($m->name) && is_string($m->name) => $m->name,
+            default => class_basename($m) . ' #' . $m->getKey(),
+        };
     }
 
     private function clean(array $data): array

@@ -82,6 +82,7 @@ class ClearanceService
         $cleared = $this->isCleared($student);
         if ($cleared && ! $student->cleared_at) {
             $student->update(['cleared_at' => now()]);
+            DB::afterCommit(fn () => app(DocumentMailer::class)->clearanceSlip($student->fresh()));
             $this->notify($student, 'You are cleared', 'All your clearance items are cleared.' . (MatricNumberGenerator::issueAt() === 'clearance' ? ' Your matric number will be issued shortly.' : ''), 'success');
         } elseif (! $cleared && $student->cleared_at) {
             $student->update(['cleared_at' => null]);
@@ -195,12 +196,26 @@ class ClearanceService
                 return $student->matric_number;
             }
 
+            if ($student->provisional_matric) {
+                return $student->provisional_matric;   // already reserved, waiting for approval
+            }
+
             $student->loadMissing('programme.department.faculty', 'entrySession');
             $matric = $this->matric->next($student->programme, $student->entrySession);
+
+            if (MatricNumberGenerator::requiresApproval()) {
+                // Reserve it; it becomes the student's number when the batch is approved and published.
+                $batch ??= app(MatricApproval::class)->autoBatch($by)->code;
+                $student->update(['provisional_matric' => $matric, 'provisional_batch' => $batch]);
+                MatricEvent::create(['student_id' => $student->id, 'action' => 'proposed', 'matric_number' => $matric, 'batch' => $batch, 'performed_by' => $by?->id]);
+
+                return $matric;
+            }
 
             $this->assignMatric($student, $matric);
             MatricEvent::create(['student_id' => $student->id, 'action' => $action, 'matric_number' => $matric, 'batch' => $batch, 'performed_by' => $by?->id]);
             $this->notify($student, 'Your matric number', "Your matric number is {$matric}. You can now sign in with it.", 'success');
+            DB::afterCommit(fn () => app(DocumentMailer::class)->matricNumber($student->fresh(), 'issued', null, null, $by));
 
             return $matric;
         });

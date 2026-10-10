@@ -34,9 +34,10 @@ it('saves the institution profile with a logo and shows it across the portal', f
     auth()->logout();
     $this->get('/')->assertOk()->assertSee('Adeyemi Federal University of Education')->assertSee('Knowledge for service')->assertSee('0800 000 0000');
 
-    // a new logo replaces the old file; "remove" clears it
+    // a new logo replaces the old one (the old file is kept so the change can be reversed); "remove" clears it
     $this->actingAs($this->admin)->put(route('institution.update'), ['name' => 'AFUED Ondo', 'logo' => UploadedFile::fake()->image('new.png')]);
-    Storage::disk('public')->assertMissing($logo);
+    expect(Institution::get('logo'))->not->toBe($logo);
+    Storage::disk('public')->assertExists($logo);
     $this->put(route('institution.update'), ['name' => 'AFUED Ondo', 'remove_logo' => 1]);
     expect(Institution::get('logo'))->toBeNull();
 });

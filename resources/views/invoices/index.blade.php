@@ -80,8 +80,7 @@
 @if ($canGenerate)
 <div class="modal fade" id="generate-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{{ route('invoices.generate') }}" class="modal-content">
-            @csrf
+        <form method="GET" action="{{ route('invoices.generate.preview') }}" class="modal-content">
             <div class="modal-header bg-light"><h5 class="modal-title">Generate invoices</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <p class="text-muted">Creates an invoice for every <strong>active</strong> student who does not have one yet for the session. Amounts come from the school bills for each student's programme and level; students who entered in that session are billed as fresh, the rest as returning.</p>
@@ -101,7 +100,7 @@
                     <select name="semester_type_id" class="form-select"><option value="">The whole session (session fees)</option>@foreach (\App\Models\SemesterType::options() as $v => $n)<option value="{{ $v }}">{{ $n }} fees only</option>@endforeach</select>
                     <div class="form-text">Choose a semester to invoice the fees you set for that semester alone.</div></div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Generate</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Preview</button></div>
         </form>
     </div>
 </div>

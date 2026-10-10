@@ -75,6 +75,14 @@ class Institution
         return self::$cache;
     }
 
+    /** The stored values exactly as saved (no defaults), for change records. */
+    public static function raw(): array
+    {
+        $stored = Setting::where('key', 'like', 'institution.%')->pluck('value', 'key');
+
+        return collect(array_keys(self::FIELDS))->mapWithKeys(fn ($k) => [$k => ($stored["institution.{$k}"] ?? null) ?: null])->all();
+    }
+
     public static function get(string $key, ?string $default = null): ?string
     {
         return (self::all()[$key] ?? null) ?: $default;

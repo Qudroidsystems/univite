@@ -12,12 +12,14 @@
 
             @include('academics.partials.alerts')
 
-            <p class="text-muted">Numbers are issued after a student is fully cleared, using the <a href="{{ route('students.settings') }}">matric number format</a>. Generate them in a batch, set a special number by hand, bring in numbers made elsewhere, or cancel and undo.</p>
+            <p class="text-muted">Numbers are issued after a student is fully cleared, using the <a href="{{ route('students.settings') }}">matric number format</a>. Generate them in a batch, set a special number by hand, bring in numbers made elsewhere, or cancel and undo.
+                @if (\App\Services\MatricNumberGenerator::requiresApproval()) <strong>Approval is on:</strong> generated numbers are reserved and only published to students when their batch is approved.@endif</p>
 
             <ul class="nav nav-pills mb-3">
                 @foreach (['waiting' => 'Waiting for a number', 'issued' => 'Issued', 'cancelled' => 'Cancelled'] as $key => $label)
                     <li class="nav-item"><a class="nav-link {{ $tab === $key ? 'active' : '' }}" href="{{ route('matric.index', array_merge(request()->only('q', 'programme_id'), ['tab' => $key])) }}">{{ $label }} <span class="badge bg-light text-body ms-1">{{ $counts[$key] }}</span></a></li>
                 @endforeach
+                <li class="nav-item"><a class="nav-link" href="{{ route('matric.approvals.index') }}">Awaiting approval <span class="badge {{ $pendingApproval ? 'bg-warning' : 'bg-light text-body' }} ms-1">{{ $pendingApproval }}</span></a></li>
             </ul>
 
             <div class="row">
@@ -33,13 +35,12 @@
                         </div>
 
                         @if ($tab === 'waiting' && $u->can('Generate matric numbers'))
-                            <form method="POST" action="{{ route('matric.generate') }}" id="gen-form">
-                                @csrf
+                            <form method="GET" action="{{ route('matric.generate.preview') }}" id="gen-form">
                                 <input type="hidden" name="programme_id" value="{{ request('programme_id') }}">
                                 <div class="card-body border-bottom d-flex flex-wrap align-items-center gap-2">
                                     @if ($preview)<span class="text-muted">Next number: <code>{{ $preview }}</code></span>@endif
-                                    <button class="btn btn-primary ms-auto" type="submit" name="all" value="1" onclick="document.querySelectorAll('.pick').forEach(c => c.checked = false); return confirm('Generate numbers for everyone waiting{{ request('programme_id') ? ' in this programme' : '' }}?')"><i class="ri-magic-line me-1"></i>Generate for all waiting</button>
-                                    <button class="btn btn-soft-primary" type="submit" onclick="return document.querySelectorAll('.pick:checked').length > 0 || (alert('Tick at least one student.'), false)">Generate for ticked</button>
+                                    <button class="btn btn-primary ms-auto" type="submit" name="all" value="1" onclick="document.querySelectorAll('.pick').forEach(c => c.checked = false)"><i class="ri-magic-line me-1"></i>Preview for all waiting</button>
+                                    <button class="btn btn-soft-primary" type="submit" onclick="return document.querySelectorAll('.pick:checked').length > 0 || (alert('Tick at least one student.'), false)">Preview for ticked</button>
                                 </div>
                         @endif
 
@@ -103,18 +104,22 @@
                         <div class="card-header"><h6 class="card-title mb-0">Recent batches</h6></div>
                         <ul class="list-group list-group-flush">
                             @forelse ($batches as $b)
-                                <li class="list-group-item d-flex justify-content-between align-items-center"><span><code>{{ $b->batch }}</code><div class="text-muted fs-12">{{ \Illuminate\Support\Carbon::parse($b->at)->format('j M Y, H:i') }}</div></span><span class="badge bg-light text-body">{{ $b->total }}</span></li>
+                                @php $op = $operations[$b->batch] ?? null; @endphp
+                                <li class="list-group-item d-flex justify-content-between align-items-center gap-2"><span><code>{{ $b->batch }}</code><div class="text-muted fs-12">{{ \Illuminate\Support\Carbon::parse($b->at)->format('j M Y, H:i') }}@if ($op) · {{ $op->operation_id }}@if (in_array($op->status, ['reversed', 'corrected'], true)) · {{ $op->status }}@endif @endif</div></span>
+                                    <span class="d-flex align-items-center gap-2"><span class="badge bg-light text-body">{{ $b->total }}</span>
+                                        @if ($op && ! in_array($op->status, ['reversed', 'corrected'], true) && $u->can('Undo matric number batches'))<a href="{{ route('operations.reverse', $op) }}" class="btn btn-sm btn-soft-danger">Undo / correct</a>@endif</span></li>
                             @empty
                                 <li class="list-group-item text-muted">No batches yet.</li>
                             @endforelse
                         </ul>
                         @can('Undo matric number batches')
                             <div class="card-body border-top">
-                                <form method="POST" action="{{ route('matric.undo') }}" onsubmit="return confirm('Take back every number in this batch? Those students go back to waiting.')" class="d-flex gap-2">
+                                <form method="POST" action="{{ route('matric.undo') }}" class="d-flex gap-2">
                                     @csrf
                                     <input name="batch" class="form-control text-uppercase" placeholder="Batch code" maxlength="40" required>
-                                    <button class="btn btn-soft-danger" type="submit">Undo</button>
+                                    <button class="btn btn-soft-danger text-nowrap" type="submit">Undo / correct</button>
                                 </form>
+                                <div class="form-text">You see what would change, and whether any number is already in use, before anything is done.</div>
                             </div>
                         @endcan
                     </div>

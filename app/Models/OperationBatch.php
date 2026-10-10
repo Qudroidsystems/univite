@@ -12,6 +12,30 @@ class OperationBatch extends Model
 
     protected $casts = ['meta' => 'array'];
 
+    /** Once written, only the outcome (status and counts) may change. A batch is never deleted. */
+    private const MUTABLE = ['status', 'success_count', 'failed_count', 'skipped_count', 'updated_at'];
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $b) {
+            if (array_diff(array_keys($b->getDirty()), self::MUTABLE)) {
+                throw new \LogicException('An operation\'s record cannot be changed. Record a new operation instead.');
+            }
+        });
+        static::deleting(fn () => throw new \LogicException('Operations cannot be deleted from the history.'));
+    }
+
+    /** Operations that reverse or correct this one. */
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(self::class, 'related_operation_id')->latest('id');
+    }
+
+    public function label(): string
+    {
+        return \App\Support\Reversals::typeLabel($this->type);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

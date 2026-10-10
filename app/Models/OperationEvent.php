@@ -11,7 +11,7 @@ class OperationEvent extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['operation_batch_id', 'user_id', 'action', 'subject_type', 'subject_id', 'before', 'after', 'note', 'corrects_event_id'];
+    protected $fillable = ['operation_batch_id', 'user_id', 'action', 'subject_type', 'subject_id', 'label', 'before', 'after', 'note', 'corrects_event_id'];
 
     protected $casts = ['before' => 'array', 'after' => 'array'];
 

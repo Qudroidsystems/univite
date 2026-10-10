@@ -21,7 +21,7 @@ class MatricService
     /** Cleared students still waiting for a number, in the order numbers will be handed out. */
     public function waiting(): \Illuminate\Database\Eloquent\Builder
     {
-        return Student::query()->whereNotNull('cleared_at')->whereNull('matric_number')
+        return Student::query()->whereNotNull('cleared_at')->whereNull('matric_number')->whereNull('provisional_matric')
             ->whereDoesntHave('matricEvents', fn ($q) => $q->where('action', 'cancelled')->whereRaw('matric_events.id = (select max(id) from matric_events e2 where e2.student_id = matric_events.student_id)'));
     }
 
@@ -40,29 +40,34 @@ class MatricService
      */
     public function generateBatch(?array $studentIds, ?int $programmeId, User $by): array
     {
-        $batch = strtoupper(Str::random(8));
+        $approval = MatricNumberGenerator::requiresApproval();
+        $batch = $approval ? app(MatricApproval::class)->newBatch($by)->code : strtoupper(Str::random(8));
         $issued = 0;
         $audit = app(OperationAudit::class);
-        $op = $audit->begin('matric_generate', 'matric', $by, null, null, ['batch' => $batch, 'programme_id' => $programmeId]);
+        $op = $audit->begin($approval ? 'matric_propose' : 'matric_generate', 'matric', $by, null, null, ['batch' => $batch, 'programme_id' => $programmeId]);
 
         $this->waiting()
             ->when($studentIds, fn ($q, $ids) => $q->whereIn('id', $ids))
             ->when($programmeId, fn ($q, $p) => $q->where('programme_id', $p))
             ->orderBy('programme_id')->orderBy('academic_session_id')->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-            ->each(function (Student $student) use ($by, $batch, &$issued, $audit, $op) {
+            ->each(function (Student $student) use ($by, $batch, &$issued, $audit, $op, $approval) {
                 $this->clearance->issueMatric($student, $by, 'generated', $batch);
-                $audit->record($op, 'matric_issued', $student, null, ['matric_number' => $student->fresh()->matric_number]);
+                $student = $student->fresh();
+                $approval
+                    ? $audit->record($op, 'matric_reserved', $student, ['provisional' => null], ['provisional' => $student->provisional_matric])
+                    : $audit->record($op, 'matric_issued', $student, ['matric_number' => null], ['matric_number' => $student->matric_number]);
                 $issued++;
             });
 
         if (! $issued) {
             $audit->finish($op, 0, 0, 0);
             $op->update(['status' => 'failed']);
+            \App\Models\MatricBatch::where('code', $batch)->where('status', 'pending')->delete();
             throw new RuntimeException('There are no cleared students waiting for a matric number.');
         }
         $audit->finish($op, $issued);
 
-        return ['batch' => $batch, 'issued' => $issued];
+        return ['batch' => $batch, 'issued' => $issued, 'pending' => $approval];
     }
 
     /** Set a number by hand for one cleared student, for example a special or reserved number. */
@@ -77,6 +82,10 @@ class MatricService
         });
 
         $this->clearance->notify($student->fresh(), 'Your matric number', "Your matric number is {$matric}. You can now sign in with it.", 'success');
+        if ($action === 'special') {
+            app(OperationAudit::class)->note('matric_special', 'matric', $by, 'matric_assigned', $student->fresh(), ['matric_number' => null], ['matric_number' => $matric], $note);
+        }
+        app(DocumentMailer::class)->matricNumber($student->fresh(), 'issued', null, null, $by);
     }
 
     private function guardAssignable(Student $student, string $matric): void
@@ -107,6 +116,8 @@ class MatricService
         $applied = 0;
         $skipped = [];
         $batch = strtoupper(Str::random(8));
+        $audit = app(OperationAudit::class);
+        $op = $audit->begin('matric_import', 'matric', $by, null, null, ['batch' => $batch]);
 
         foreach ($rows as $i => [$identifier, $matric]) {
             $identifier = trim((string) $identifier);
@@ -126,10 +137,16 @@ class MatricService
             try {
                 $this->assignSpecial($student, $matric, $by, "Imported (batch {$batch})", 'external');
                 MatricEvent::where('student_id', $student->id)->latest('id')->first()?->update(['batch' => $batch]);
+                $audit->record($op, 'matric_applied', $student->fresh(), ['matric_number' => null], ['matric_number' => $matric]);
                 $applied++;
             } catch (RuntimeException $e) {
                 $skipped[] = "{$line}: " . $e->getMessage();
             }
+        }
+
+        $audit->finish($op, $applied, 0, count($skipped));
+        if (! $applied) {
+            $op->update(['status' => 'failed']);
         }
 
         return ['applied' => $applied, 'skipped' => $skipped, 'batch' => $batch];
@@ -149,6 +166,7 @@ class MatricService
         DB::transaction(function () use ($student, $number, $reason, $by) {
             MatricEvent::create(['student_id' => $student->id, 'action' => 'cancelled', 'matric_number' => $number, 'performed_by' => $by->id, 'note' => $reason]);
             $this->clearance->assignMatric($student, null);
+            app(OperationAudit::class)->note('matric_cancel', 'matric', $by, 'matric_cancelled', $student, ['matric_number' => $number], ['matric_number' => null], $reason);
         });
     }
 
@@ -166,46 +184,80 @@ class MatricService
         DB::transaction(function () use ($student, $last, $by) {
             $this->clearance->assignMatric($student, $last->matric_number);
             MatricEvent::create(['student_id' => $student->id, 'action' => 'restored', 'matric_number' => $last->matric_number, 'performed_by' => $by->id]);
+            app(OperationAudit::class)->note('matric_restore', 'matric', $by, 'matric_restored', $student->fresh(), ['matric_number' => null], ['matric_number' => $last->matric_number]);
         });
 
         return $last->matric_number;
     }
 
-    /** Take back every number a batch handed out (as long as the student still holds it) so they can be issued again. */
-    public function undoBatch(string $batch, User $by): int
+    /** The logged operation of a generate / import batch, if it was made after the operation log existed. */
+    public function operationFor(string $batch): ?OperationBatch
     {
+        return OperationBatch::whereIn('type', ['matric_generate', 'matric_import'])->where('meta->batch', $batch)->latest('id')->first();
+    }
+
+    /**
+     * Take back every number of a batch that nobody has used yet, so it can be issued again. Numbers already on a course
+     * form, result, receipt or emailed document are left alone (correct them from the operation history instead).
+     */
+    public function undoBatch(string $batch, User $by, string $reason = 'Batch undone from the matric page.'): int
+    {
+        if ($op = $this->operationFor($batch)) {
+            $handler = app(\App\Reversals\MatricBatchReversal::class);
+            $plan = $handler->plan($op, 'take_back');
+            if (! $plan->canRun()) {
+                $why = collect($plan->items)->where('outcome', '!=', 'change')->pluck('why')->unique()->take(2)->implode(' ');
+                throw new RuntimeException('None of that batch\'s numbers can be taken back. ' . ($plan->blockers[0] ?? $why));
+            }
+            $handler->run($op, $plan, $by, $reason);
+
+            return $plan->counts()['change'];
+        }
+
+        // Batches from before the operation log: take back what the students still hold.
         $events = MatricEvent::where('batch', $batch)->whereIn('action', ['generated', 'external'])->get();
         if ($events->isEmpty()) {
             throw new RuntimeException('There is no batch with that code.');
         }
-
         $undone = 0;
         $audit = app(OperationAudit::class);
-        $original = OperationBatch::where('type', 'matric_generate')->where('meta->batch', $batch)->first();
-        $op = $audit->begin('matric_undo', 'matric', $by, null, null, ['batch' => $batch], $original);
-        DB::transaction(function () use ($events, $batch, $by, &$undone, $audit, $op) {
+        $op = $audit->begin('matric_undo', 'matric', $by, null, $reason, ['batch' => $batch]);
+        DB::transaction(function () use ($events, $batch, $by, &$undone, $audit, $op, $reason) {
             foreach ($events as $event) {
                 $student = Student::find($event->student_id);
                 if (! $student || $student->matric_number !== $event->matric_number) {
-                    continue; // cancelled or changed since; leave it alone
+                    continue;
                 }
                 $this->clearance->assignMatric($student, null);
-                MatricEvent::create(['student_id' => $student->id, 'action' => 'undone', 'matric_number' => $event->matric_number, 'batch' => $batch, 'performed_by' => $by->id, 'note' => 'Batch undone']);
+                MatricEvent::create(['student_id' => $student->id, 'action' => 'undone', 'matric_number' => $event->matric_number, 'batch' => $batch, 'performed_by' => $by->id, 'note' => $reason]);
                 $this->generator->rewind($student);
                 $audit->record($op, 'matric_taken_back', $student, ['matric_number' => $event->matric_number], ['matric_number' => null]);
                 $undone++;
             }
         });
-
         $audit->finish($op, $undone, 0, $events->count() - $undone);
-        if ($undone && $original && $undone === $events->count()) {
-            $audit->markReversed($original);
-        }
         if (! $undone) {
             throw new RuntimeException('None of that batch\'s numbers could be undone: they have all been changed or cancelled since.');
         }
 
         return $undone;
+    }
+
+    /**
+     * What generating would do, without issuing anything: who is waiting and the number each would get.
+     *
+     * @return array{rows: array<int, array{0: Student, 1: string}>, total: int}
+     */
+    public function previewBatch(?array $studentIds, ?int $programmeId): array
+    {
+        $students = $this->waiting()
+            ->when($studentIds, fn ($q, $ids) => $q->whereIn('id', $ids))
+            ->when($programmeId, fn ($q, $p) => $q->where('programme_id', $p))
+            ->with('programme.department.faculty', 'entrySession')
+            ->orderBy('programme_id')->orderBy('academic_session_id')->orderBy('last_name')->orderBy('first_name')->orderBy('id')->get();
+        $numbers = $this->generator->planFor($students);
+
+        return ['rows' => $students->map(fn ($s) => [$s, $numbers[$s->id]])->all(), 'total' => $students->count()];
     }
 
     /** @return Collection<int, object> recent batches with how many numbers each still holds */

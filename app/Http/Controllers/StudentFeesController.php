@@ -39,7 +39,7 @@ class StudentFeesController extends Controller
     {
         $student = $this->student();
         $payment->load('invoice.payable.programme', 'invoice.session', 'recorder');
-        abort_unless($payment->status === 'successful' && $payment->invoice->payable_type === $student::class && $payment->invoice->payable_id === $student->id, 404);
+        abort_unless(in_array($payment->status, ['successful', 'reversed'], true) && $payment->invoice->payable_type === $student::class && $payment->invoice->payable_id === $student->id, 404);
 
         return view('invoices.receipt', ['pagetitle' => 'Receipt', 'payment' => $payment]);
     }

@@ -62,28 +62,72 @@ class InvoiceService
         });
     }
 
+    private function bulkTargets(?int $programmeId, ?int $level)
+    {
+        return Student::whereIn('status', \App\Models\StudentStatus::codesWhere('is_enrolled'))
+            ->when($programmeId, fn ($q) => $q->where('programme_id', $programmeId))
+            ->when($level, fn ($q) => $q->where('current_level', $level))
+            ->orderBy('id');
+    }
+
     /**
-     * Invoice every active student of the session who has none yet.
+     * What a bulk run would do, without creating anything.
      *
-     * @return array{created: int, existing: int, no_bills: int}
+     * @return array{create: int, existing: int, no_bills: int, amount: float, sample: array<int, array{0: string, 1: string, 2: float}>}
+     */
+    public function previewBulk(AcademicSession $session, ?int $programmeId = null, ?int $level = null, ?int $semesterTypeId = null): array
+    {
+        $out = ['create' => 0, 'existing' => 0, 'no_bills' => 0, 'amount' => 0.0, 'sample' => []];
+        $matcher = new BillMatcher();
+        $this->bulkTargets($programmeId, $level)->with('programme')->each(function (Student $student) use ($session, $semesterTypeId, $matcher, &$out) {
+            if ($this->sessionInvoice($student, $session, $semesterTypeId)) {
+                $out['existing']++;
+
+                return;
+            }
+            $bills = $matcher->forStudent($student, $session, $semesterTypeId);
+            if ($bills->isEmpty()) {
+                $out['no_bills']++;
+
+                return;
+            }
+            $total = round($bills->sum(fn ($b) => (float) $b->amount), 2);
+            $out['create']++;
+            $out['amount'] += $total;
+            if (count($out['sample']) < 15) {
+                $out['sample'][] = [$student->full_name, $student->matric_number ?: '—', $total];
+            }
+        });
+
+        return $out;
+    }
+
+    /**
+     * Invoice every active student of the session who has none yet. The run is one operation in the history, listing
+     * every invoice it created, so it can be reversed (invoices nobody has paid are cancelled).
+     *
+     * @return array{created: int, existing: int, no_bills: int, operation: ?string}
      */
     public function generateBulk(AcademicSession $session, ?int $programmeId = null, ?int $level = null, ?int $createdBy = null, ?int $semesterTypeId = null): array
     {
-        $result = ['created' => 0, 'existing' => 0, 'no_bills' => 0];
+        $result = ['created' => 0, 'existing' => 0, 'no_bills' => 0, 'operation' => null];
+        $audit = app(OperationAudit::class);
+        $op = $audit->begin('invoice_generate', 'payments', $createdBy ? \App\Models\User::find($createdBy) : null, $session->id, null, array_filter(['programme_id' => $programmeId, 'level' => $level, 'semester_type_id' => $semesterTypeId]));
 
-        Student::whereIn('status', \App\Models\StudentStatus::codesWhere('is_enrolled'))
-            ->when($programmeId, fn ($q) => $q->where('programme_id', $programmeId))
-            ->when($level, fn ($q) => $q->where('current_level', $level))
-            ->orderBy('id')
-            ->each(function (Student $student) use ($session, $createdBy, $semesterTypeId, &$result) {
+        $this->bulkTargets($programmeId, $level)
+            ->each(function (Student $student) use ($session, $createdBy, $semesterTypeId, &$result, $audit, $op) {
                 if ($this->sessionInvoice($student, $session, $semesterTypeId)) {
                     $result['existing']++;
-                } elseif ($this->generateForStudent($student, $session, $createdBy, $semesterTypeId)) {
+                } elseif ($invoice = $this->generateForStudent($student, $session, $createdBy, $semesterTypeId)) {
+                    $audit->record($op, 'invoice_created', $invoice, null, ['status' => 'unpaid', 'total' => (string) $invoice->total, 'student' => $student->full_name]);
                     $result['created']++;
                 } else {
                     $result['no_bills']++;
                 }
             });
+
+        $audit->finish($op, $result['created'], 0, $result['existing'] + $result['no_bills']);
+        $result['operation'] = $op->operation_id;
 
         return $result;
     }
@@ -162,8 +206,47 @@ class InvoiceService
             ]);
 
             $this->refreshTotals($invoice);
+            $this->paid($payment, $userId ? \App\Models\User::find($userId) : null);
 
             return $payment;
+        });
+    }
+
+    /** A payment has been confirmed: log it as an operation and email the receipt once the transaction commits. */
+    private function paid(Payment $payment, ?\App\Models\User $by): void
+    {
+        $payment->loadMissing('invoice');
+        $audit = app(OperationAudit::class);
+        $op = $audit->begin('payment_record', 'payments', $by, $payment->invoice->academic_session_id, null, ['invoice' => $payment->invoice->reference, 'gateway' => $payment->gateway]);
+        $audit->record($op, 'payment_recorded', $payment, null, ['amount' => (string) $payment->amount, 'status' => 'successful', 'invoice' => $payment->invoice->reference, 'channel' => $payment->channel, 'gateway_reference' => $payment->gateway_reference]);
+        $audit->finish($op, 1);
+        DB::afterCommit(fn () => app(DocumentMailer::class)->receipt($payment->fresh(), $by));
+    }
+
+    /**
+     * Formally reverse a successful payment. The original stays exactly as it was apart from being marked reversed; a new
+     * "reversal" payment for the negative amount records the reversal, and the invoice balance goes back up.
+     */
+    public function reversePayment(Payment $payment, string $reason, \App\Models\User $by): Payment
+    {
+        return DB::transaction(function () use ($payment, $reason, $by) {
+            $payment = Payment::lockForUpdate()->findOrFail($payment->id);
+            if ($payment->status !== 'successful') {
+                throw new RuntimeException('Only a successful payment can be reversed' . ($payment->status === 'reversed' ? '; this one already has been.' : '.'));
+            }
+            if (blank($reason)) {
+                throw new RuntimeException('Give the reason for the reversal.');
+            }
+            $reversal = Payment::create([
+                'invoice_id' => $payment->invoice_id, 'reference' => 'REV-' . strtoupper(Str::random(12)), 'gateway' => $payment->gateway,
+                'amount' => -1 * (float) $payment->amount, 'status' => 'reversal', 'channel' => $payment->channel, 'paid_at' => now(),
+                'recorded_by' => $by->id, 'note' => $reason, 'reverses_payment_id' => $payment->id,
+            ]);
+            $payment->update(['status' => 'reversed', 'reversed_at' => now(), 'reversed_by' => $by->id, 'reversal_reason' => $reason]);
+            $this->refreshTotals(Invoice::lockForUpdate()->findOrFail($payment->invoice_id));
+            DB::afterCommit(fn () => app(DocumentMailer::class)->paymentReversed($reversal->fresh(), $by));
+
+            return $reversal;
         });
     }
 
@@ -182,6 +265,7 @@ class InvoiceService
                 'payload' => $payload ?? $payment->payload,
             ]);
             $this->refreshTotals(Invoice::lockForUpdate()->findOrFail($payment->invoice_id));
+            $this->paid($payment, null);
 
             return $payment;
         });

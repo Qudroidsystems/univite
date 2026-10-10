@@ -7,11 +7,17 @@
         <div class="container-fluid" style="max-width:720px">
             <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
                 <h4 class="mb-0">Payment receipt</h4>
-                <button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>
+                <div class="d-flex gap-2">
+                    @if (auth()->user()->student && $payment->status === 'successful')<form method="POST" action="{{ route('my.documents.email', ['receipt', $payment->id]) }}">@csrf<button class="btn btn-soft-primary"><i class="ri-mail-send-line me-1"></i>Email me a copy</button></form>@endif
+                    <button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>
+                </div>
             </div>
             <div class="card">
                 <div class="card-body">
                     @include('partials.letterhead', ['subtitle' => 'Official payment receipt'])
+                    @if ($payment->status === 'reversed')
+                        <div class="alert alert-danger text-center fw-semibold">REVERSED on {{ $payment->reversed_at?->format('j M Y') }}. This receipt is no longer valid. Reason: {{ $payment->reversal_reason }}</div>
+                    @endif
                     <table class="table table-sm">
                         <tr><th style="width:35%">Receipt no.</th><td>{{ $payment->reference }}</td></tr>
                         <tr><th>Date</th><td>{{ ($payment->paid_at ?? $payment->created_at)->format('d M Y, H:i') }}</td></tr>

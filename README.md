@@ -184,3 +184,36 @@ live on the public disk, so `php artisan storage:link` must have been run.
 **Session rules** (a setting each, with a default; AFUED to confirm): more than one active session (off), semester required to activate (on), closed sessions may be reopened (on), late registration (off, 14 days).
 
 Run `php artisan migrate` after updating.
+
+## Emailed documents, previews and safe reversal
+
+**Emailed documents.** Every receipt, payment reversal notice, course form (on submission and again on approval), clearance slip, matric number (issued, withdrawn or corrected), application slip, result correction or withdrawal, result-query answer and graduation notice is emailed to the student or applicant it belongs to, with the university's letterhead, and attached as a file. A failed email never stops the operation; every attempt is listed under **Emailed Documents**, where failures show and documents can be sent again. Students can also click **Email me a copy** on a receipt or course form. Under the same page, choose which documents are emailed and set the mail server (SMTP host, port, security, username, password stored encrypted, sender), then send a test. Left on "Server default", the `MAIL_*` values in `.env` are used.
+
+**Preview before large operations.** Generating matric numbers and generating invoices in bulk now show who is affected, the numbers or amounts, and what will be skipped, before anything is created.
+
+**Operation history and reversal.** Payments, invoice runs, matric batches, imports, cancellations, published results, score corrections, result-query answers, graduation approvals, course-form decisions, academic-rule changes, institution-profile changes and standing allowances are all logged with who, when, the session, the records affected (by name) and their values before and after. From an operation's page, **Reverse / correct** opens a preview that sorts every affected record into *will change*, *skipped* (changed since) and *blocked* (something depends on it), with warnings and the expected outcome. Confirming needs a reason and a tick, is refused if anything changed after the preview, and is recorded as a new operation linked to the original. Nothing is erased:
+
+| Operation | How it is reversed |
+|---|---|
+| Matric batch | **Take back** numbers nobody has used; numbers already on a course form, result, receipt or emailed document are blocked. **Correct** gives everyone a new number in the current format; the old numbers stay on record as superseded and are never issued again. Students are emailed. |
+| Payment | A reversal entry for the negative amount is added; the original stays, marked reversed (its receipt says so); the balance returns to the invoice; the payer is emailed. Needs *Reverse payments*. |
+| Invoice run | Unpaid invoices are cancelled (kept on record); invoices with payments are blocked. |
+| Published result | Formally withdrawn: the sheet goes back to approved, scores are kept, students are emailed. Blocked once a student on it has graduated. Needs *Withdraw published results*. |
+| Score correction | Put back as a new correction; refused if the score changed again since. |
+| Graduation approval | Students return to their earlier status, the list to draft; students are emailed. Needs *Reverse graduation approvals*. |
+| Course-form approval | Back to submitted; blocked once scores are entered. |
+| Academic rules / institution profile | Earlier values put back; refused (or skipped) where changed again since. Replaced logos and signatures are kept on disk for this. |
+| Session copy | As before: only what nothing has used is removed. |
+
+Operations are never edited or deleted (only their outcome status changes, e.g. *reversed* or *corrected*). Payments recorded before this update are added to the history by the migration so they can be reversed too.
+
+Run `php artisan migrate` after updating.
+
+## Matric number approval and running numbers
+
+Under **Matric Number Format** the administrator sets the pattern, when numbers are issued (after clearance or at admission, automatically or in staff batches) and, new:
+
+- **Approval before publishing.** When on, every generated number (staff batch, or automatic on clearance/admission) is *reserved* on the student, so nobody else can get it, but the student does not see it and cannot sign in with it yet. Batches wait under **Matric Numbers → Awaiting approval**. Someone with *Approve matric numbers* (Senate, the admissions committee, the Registrar) reviews the list, which is checked for duplicates, retired numbers and students no longer enrolled, then **approves and publishes** it (students get their number, login and an email) or **rejects** it with a reason (numbers are released for re-issue). "Someone else must approve" stops the preparer approving their own batch. Approved batches can still be taken back or corrected from the operation history.
+- **Running numbers.** For each prefix the last number used is detected from numbers issued, reserved, cancelled or superseded. Enter the last number issued before the portal and it carries on from there. It cannot be set below a number in use, so a duplicate cannot be created; the database also refuses duplicate matric and reserved numbers.
+
+Run `php artisan migrate` after updating.

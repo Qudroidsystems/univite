@@ -6,7 +6,7 @@
         <div class="container-fluid" style="max-width:780px">
             <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
                 <h4 class="mb-0">Course registration form</h4>
-                <div class="d-flex gap-2"><a href="{{ url()->previous() }}" class="btn btn-light">Back</a><button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button></div>
+                <div class="d-flex gap-2"><a href="{{ url()->previous() }}" class="btn btn-light">Back</a>@if (auth()->user()->student?->id === $form->student_id)<form method="POST" action="{{ route('my.documents.email', ['course_form', $form->id]) }}">@csrf<button class="btn btn-soft-primary"><i class="ri-mail-send-line me-1"></i>Email me a copy</button></form>@endif<button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button></div>
             </div>
             <div class="card"><div class="card-body">
                 @include('partials.letterhead', ['subtitle' => 'Course registration form · ' . ($form->session->name) . ' · ' . ($form->semesterType->name)])

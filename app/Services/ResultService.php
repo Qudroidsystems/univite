@@ -263,13 +263,26 @@ class ResultService
         return $sheet;
     }
 
+    /** Formally withdraw a published sheet: it goes back to "approved" and stops counting until published again. */
+    public function withdraw(ResultSheet $sheet, User $user, string $reason): ResultSheet
+    {
+        if ($sheet->status !== 'published') {
+            throw new RuntimeException('Only a published sheet can be withdrawn.');
+        }
+        $sheet->update(['status' => 'approved', 'published_at' => null]);
+        $this->mirror($sheet);
+        $this->log($sheet, $user, 'withdrawn', null, $reason);
+
+        return $sheet;
+    }
+
     private function mirror(ResultSheet $sheet): void
     {
         $sheet->results()->update(['status' => $sheet->status === 'submitted' ? 'submitted' : $sheet->status]);
     }
 
     /** Correct one published score. The reason and the old/new values go on the sheet's history. */
-    public function amend(CourseResult $result, $ca, $exam, string $reason, User $user): CourseResult
+    public function amend(CourseResult $result, $ca, $exam, string $reason, User $user, bool $record = true): CourseResult
     {
         if ($result->status !== 'published') {
             throw new RuntimeException('Only published results are amended this way. Return the sheet to the lecturer instead.');
@@ -284,7 +297,10 @@ class ResultService
         if ($result->total === null) {
             throw new RuntimeException('Both the CA and exam scores are required.');
         }
-        app(OperationAudit::class)->note('result_amend', 'results', $user, 'score_amended', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $result->academic_session_id);
+        if ($record) {
+            app(OperationAudit::class)->note('result_amend', 'results', $user, 'score_amended', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $result->academic_session_id);
+            DB::afterCommit(fn () => app(DocumentMailer::class)->resultNotice($result->fresh(), 'amended', $before, $reason, $user));
+        }
         if ($result->result_sheet_id) {
             $this->log($result->sheet, $user, 'amended', null, "{$result->student->matric_number}: {$old} to {$result->ca}/{$result->exam} ({$result->grade}). {$reason}");
         }

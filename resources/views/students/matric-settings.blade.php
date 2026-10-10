@@ -59,6 +59,28 @@
                     </div>
                 </div>
 
+                <div class="col-12 order-last">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div><h6 class="card-title mb-0">Running numbers</h6><div class="text-muted fs-12">The last number used for each prefix is detected from numbers already issued, reserved, cancelled or superseded. If numbers were issued before the portal, set the last one here and the portal carries on after it. It cannot be set below a number in use, so duplicates are impossible.</div></div>
+                            <form method="GET" class="d-flex gap-2 align-items-center"><label class="text-muted fs-12 text-nowrap">Entry session</label><select name="seq_session" class="form-select form-select-sm" onchange="this.form.submit()">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected($seqSession?->id === $id)>{{ $n }}</option>@endforeach</select></form>
+                        </div>
+                        <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Prefix</th><th>Programmes</th><th>Last used</th><th>Next number</th>@if ($canSet)<th style="width:30%">Set last number used</th>@endif</tr></thead>
+                            <tbody>
+                            @forelse ($sequences as $q)
+                                <tr><td><code>{{ str_replace('{SEQ}', '…', $q['prefix']) }}</code></td><td class="fs-13">{{ implode(', ', $q['programmes']) }}</td><td>{{ $q['last'] }}</td><td><code>{{ $q['next'] }}</code></td>
+                                    @if ($canSet)<td><form method="POST" action="{{ route('students.settings.sequence') }}" class="d-flex gap-1">@csrf @method('PUT')
+                                        <input type="hidden" name="prefix" value="{{ $q['prefix'] }}"><input type="hidden" name="seq_session" value="{{ $seqSession?->id }}">
+                                        <input type="number" name="last" min="{{ $q['highest'] }}" value="{{ $q['last'] }}" class="form-control form-control-sm" required><button class="btn btn-sm btn-soft-primary">Set</button></form></td>@endif</tr>
+                            @empty
+                                <tr><td colspan="5" class="text-center text-muted py-3">Add an active programme and a session to see the running numbers.</td></tr>
+                            @endforelse
+                            </tbody>
+                        </table></div>
+                    </div>
+                </div>
+
                 <div class="col-lg-5">
                     <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">When is the number issued?</h6></div>
@@ -71,6 +93,18 @@
                                 @if ($canSet)<button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save</button>@endif
                             </form>
                         </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h6 class="card-title mb-0">Approval before publishing</h6></div>
+                        <form method="POST" action="{{ route('students.settings.approval') }}" class="card-body">
+                            @csrf @method('PUT')
+                            <div class="form-check form-switch mb-2"><input type="hidden" name="require_approval" value="0"><input class="form-check-input" type="checkbox" role="switch" name="require_approval" id="req-approval" value="1" @checked($approval) @disabled(! $canSet)>
+                                <label class="form-check-label" for="req-approval">Numbers need approval before students see them<div class="text-muted fs-12">Generated numbers (by staff or automatically) are reserved, so nobody else can get them, and are only published when someone with "Approve matric numbers" approves the batch, for example after Senate or the admissions committee.</div></label></div>
+                            <div class="form-check form-switch mb-3"><input type="hidden" name="separate_approver" value="0"><input class="form-check-input" type="checkbox" role="switch" name="separate_approver" id="sep-approver" value="1" @checked($separate) @disabled(! $canSet)>
+                                <label class="form-check-label" for="sep-approver">Someone else must approve<div class="text-muted fs-12">The person who generated a batch cannot approve it.</div></label></div>
+                            @if ($canSet)<button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save</button>@endif
+                            <a href="{{ route('matric.approvals.index') }}" class="btn btn-link">Batches awaiting approval</a>
+                        </form>
                     </div>
                     <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">Parts you can use</h6></div>

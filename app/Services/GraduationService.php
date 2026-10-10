@@ -158,14 +158,23 @@ class GraduationService
         }
 
         DB::transaction(function () use ($list, $user, $graduating) {
+            $audit = app(OperationAudit::class);
+            $op = $audit->begin('graduation_approve', 'graduation', $user, $list->academic_session_id, null, ['graduation_list_id' => $list->id, 'programme' => $list->programme?->name]);
             $status = StudentStatus::byCode(self::GRADUATED) ? self::GRADUATED : null;
             foreach ($graduating as $e) {
+                $before = ['status' => $e->student->status, 'graduated_at' => $e->student->graduated_at?->toDateTimeString(), 'degree_class' => $e->student->degree_class, 'final_cgpa' => $e->student->final_cgpa];
                 $e->student->update(array_filter([
                     'status' => $status, 'graduated_at' => now(), 'degree_class' => $e->degree_class, 'final_cgpa' => $e->cgpa,
                 ], fn ($v) => $v !== null));
+                $s = $e->student->fresh();
+                $audit->record($op, 'student_graduated', $s, $before, ['status' => $s->status, 'graduated_at' => $s->graduated_at?->toDateTimeString(), 'degree_class' => $s->degree_class, 'final_cgpa' => $s->final_cgpa]);
             }
+            $audit->record($op, 'list_approved', $list, ['status' => $list->status], ['status' => 'approved']);
             $list->update(['status' => 'approved', 'approved_by' => $user->id, 'approved_at' => now()]);
+            $audit->finish($op, $graduating->count());
         });
+        $mailer = app(DocumentMailer::class);
+        $graduating->each(fn ($e) => $mailer->graduation($e->student->fresh(), true, null, $user));
 
         return $graduating->count();
     }

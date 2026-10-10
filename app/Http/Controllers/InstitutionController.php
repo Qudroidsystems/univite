@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Support\Institution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /** The institution's profile: name, address, contacts, principal officers, logo and branding. */
@@ -42,22 +41,28 @@ class InstitutionController extends Controller
         $rules['name'] = ['required', 'string', 'max:255'];
         $data = $request->validate($rules, [], collect(Institution::FIELDS)->map(fn ($f) => $f[1])->all());
 
+        $before = Institution::raw();
         foreach (Institution::FIELDS as $key => [, , $type]) {
             if ($type !== 'image') {
                 Institution::put($key, isset($data[$key]) && $data[$key] !== '' ? trim((string) $data[$key]) : null);
                 continue;
             }
-            $old = Institution::get($key);
+            // Replaced images are kept on disk so the change can be reversed from the operation history.
             if ($request->hasFile($key)) {
                 Institution::put($key, $request->file($key)->store('institution', 'public'));
             } elseif ($request->boolean("remove_{$key}")) {
                 Institution::put($key, null);
-            } else {
-                continue;
             }
-            if ($old && $old !== Institution::get($key)) {
-                Storage::disk('public')->delete($old);
+        }
+        $after = Institution::raw();
+        $changed = array_keys(array_filter($after, fn ($v, $k) => ($before[$k] ?? null) !== $v, ARRAY_FILTER_USE_BOTH));
+        if ($changed) {
+            $audit = app(\App\Services\OperationAudit::class);
+            $op = $audit->begin('institution_update', 'settings', $request->user());
+            foreach ($changed as $k) {
+                $audit->record($op, 'field_changed', null, ['key' => $k, 'value' => $before[$k] ?? null], ['key' => $k, 'value' => $after[$k]], null, null, Institution::FIELDS[$k][1]);
             }
+            $audit->finish($op, count($changed));
         }
 
         return back()->with('success', 'Institution profile saved.');

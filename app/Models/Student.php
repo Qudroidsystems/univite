@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 class Student extends Model
 {
     protected $fillable = [
-        'user_id', 'applicant_id', 'matric_number', 'admission_batch',
+        'user_id', 'applicant_id', 'matric_number', 'provisional_matric', 'provisional_batch', 'admission_batch',
         'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note', 'cleared_at',
         'programme_id', 'academic_session_id', 'entry_mode', 'entry_level', 'current_level', 'status', 'photo',
         'graduated_at', 'degree_class', 'final_cgpa',

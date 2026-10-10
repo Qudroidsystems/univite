@@ -155,10 +155,21 @@ class AcademicRuleController extends Controller
             return back()->withErrors(['rules.withdrawal_cgpa' => 'The withdrawal CGPA should be below the probation CGPA.'])->withInput();
         }
 
-        if ($type === 'university' && ! $term) {
+        $base = $type === 'university' && ! $term;
+        $before = $base ? $this->rules->university() : $this->rules->own($type, $id, $level, $sem);
+        if ($base) {
             $this->rules->saveUniversity(collect(AcademicRules::DEFS)->keys()->mapWithKeys(fn ($k) => [$k => $values[$k] ?? null])->all());
         } else {
             $this->rules->save($type, $id, $level, $sem, array_map(fn ($v) => $v === '' ? null : $v, $values), $user->id);
+        }
+        $after = $base ? $this->rules->university() : $this->rules->own($type, $id, $level, $sem);
+        if ($before != $after) {
+            $scope = ['scope' => $type, 'id' => $id, 'level' => $level, 'semester_type_id' => $sem];
+            $name = collect(AcademicRules::chain($type, $id ?: null))->last()[2] . ($level ? ", {$level} level" : '') . ($sem ? ', ' . SemesterType::find($sem)?->name : '');
+            $audit = app(\App\Services\OperationAudit::class);
+            $op = $audit->begin('rules_change', 'academics', $user, null, null, $scope + ['name' => $name]);
+            $audit->record($op, 'rules_saved', null, ['rules' => $before], ['rules' => $after], null, null, $name);
+            $audit->finish($op, 1);
         }
 
         return redirect()->route('academics.rules.index', array_filter(['scope' => $type, 'id' => $id, 'level' => $level, 'semester_type_id' => $sem]))->with('success', 'Academic rules saved.');

@@ -25,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
             if ($name = \App\Models\Setting::where('key', 'institution.name')->value('value')) {
                 config(['app.name' => $name]);
             }
+            // Mail server and sender set under Emails → Settings.
+            if (! $this->app->runningUnitTests()) {
+                \App\Support\MailSettings::apply();
+            }
         } catch (\Throwable) {
             // no database yet (fresh install / migrations)
         }

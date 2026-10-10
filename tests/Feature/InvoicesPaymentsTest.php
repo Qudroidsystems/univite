@@ -93,8 +93,11 @@ it('generates invoices in bulk from the admin page and reports what happened', f
     $suspended->update(['status' => 'suspended']);
 
     $this->actingAs($this->admin);
+    // a preview first: nothing is created
+    $this->get(route('invoices.generate.preview', ['academic_session_id' => $this->s2025->id]))->assertOk()->assertSee('Create 2 invoice(s)');
+    expect(Invoice::count())->toBe(0);
     $this->post(route('invoices.generate'), ['academic_session_id' => $this->s2025->id])
-        ->assertSessionHas('success', fn ($m) => str_contains($m, '2 invoice(s) created.'));
+        ->assertSessionHas('success', fn ($m) => str_contains($m, '2 invoice(s) created'));
     expect(Invoice::count())->toBe(2);
 
     $this->post(route('invoices.generate'), ['academic_session_id' => $this->s2025->id])

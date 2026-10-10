@@ -67,8 +67,11 @@
                                             <td>{{ $p->reference }}@if ($p->gateway_reference)<div class="text-muted fs-12">{{ $p->gateway_reference }}</div>@endif</td>
                                             <td>{{ $p->gateway === 'manual' ? (\App\Models\Payment::CHANNELS[$p->channel] ?? 'Offline') : ucfirst($p->gateway) }}@if ($p->recorder)<div class="text-muted fs-12">by {{ $p->recorder->name }}</div>@endif</td>
                                             <td class="text-end">₦{{ number_format((float) $p->amount, 2) }}</td>
-                                            <td>{{ ucfirst($p->status) }}</td>
-                                            <td class="text-end">@if ($p->status === 'successful')<a href="{{ route('payments.receipt', $p->id) }}" class="btn btn-sm btn-soft-primary">Receipt</a>@endif</td>
+                                            <td>@if ($p->status === 'reversed')<span class="badge bg-danger-subtle text-danger">Reversed</span><div class="text-muted fs-12">{{ $p->reversed_at?->format('d M Y') }}: {{ $p->reversal_reason }}</div>
+                                                @elseif ($p->status === 'reversal')<span class="badge bg-secondary-subtle text-secondary">Reversal entry</span><div class="text-muted fs-12">{{ $p->note }}</div>
+                                                @else{{ ucfirst($p->status) }}@endif</td>
+                                            <td class="text-end text-nowrap">@if (in_array($p->status, ['successful', 'reversed'], true))<a href="{{ route('payments.receipt', $p->id) }}" class="btn btn-sm btn-soft-primary">Receipt</a>@endif
+                                                @if ($p->status === 'successful')@can('Reverse payments')<a href="{{ route('payments.reverse', $p->id) }}" class="btn btn-sm btn-soft-danger">Reverse…</a>@endcan @endif</td>
                                         </tr>
                                     @empty
                                         <tr><td colspan="6" class="text-center text-muted py-4">No payments yet.</td></tr>

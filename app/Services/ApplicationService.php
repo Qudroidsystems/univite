@@ -126,6 +126,7 @@ class ApplicationService
         }
 
         $applicant->update(['status' => 'pending', 'submitted_at' => now()]);
+        app(DocumentMailer::class)->applicationSlip($applicant->fresh());
     }
 
     /** Store (or replace) an uploaded document on the private disk. */

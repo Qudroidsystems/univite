@@ -165,6 +165,7 @@ Route::middleware('auth')->group(function () {
 
     // ---- Invoices & payments ----
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('invoices/generate', [InvoiceController::class, 'preview'])->name('invoices.generate.preview');
     Route::post('invoices/generate', [InvoiceController::class, 'generate'])->name('invoices.generate');
     Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
     Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'recordPayment'])->name('invoices.payments.store');
@@ -179,8 +180,15 @@ Route::middleware('auth')->group(function () {
 
     // ---- Matric numbers (after clearance) ----
     Route::get('matric', [MatricController::class, 'index'])->name('matric.index');
+    Route::get('matric/generate', [MatricController::class, 'preview'])->name('matric.generate.preview');
     Route::post('matric/generate', [MatricController::class, 'generate'])->name('matric.generate');
     Route::post('matric/import', [MatricController::class, 'import'])->name('matric.import');
+    Route::get('matric/approvals', [\App\Http\Controllers\MatricApprovalController::class, 'index'])->name('matric.approvals.index');
+    Route::get('matric/approvals/{batch}', [\App\Http\Controllers\MatricApprovalController::class, 'show'])->name('matric.approvals.show');
+    Route::post('matric/approvals/{batch}/approve', [\App\Http\Controllers\MatricApprovalController::class, 'approve'])->name('matric.approvals.approve');
+    Route::post('matric/approvals/{batch}/reject', [\App\Http\Controllers\MatricApprovalController::class, 'reject'])->name('matric.approvals.reject');
+    Route::put('students/matric-format/approval', [MatricSettingsController::class, 'updateApproval'])->name('students.settings.approval');
+    Route::put('students/matric-format/sequence', [MatricSettingsController::class, 'updateSequence'])->name('students.settings.sequence');
     Route::post('matric/undo', [MatricController::class, 'undo'])->name('matric.undo');
     Route::post('matric/{student}/special', [MatricController::class, 'special'])->name('matric.special');
     Route::post('matric/{student}/cancel', [MatricController::class, 'cancel'])->name('matric.cancel');
@@ -204,6 +212,17 @@ Route::middleware('auth')->group(function () {
     Route::post('sessions/{session}/status', [\App\Http\Controllers\SessionLifecycleController::class, 'change'])->name('sessions.lifecycle.change');
     Route::get('operations', [\App\Http\Controllers\OperationHistoryController::class, 'index'])->name('operations.index');
     Route::get('operations/{batch}', [\App\Http\Controllers\OperationHistoryController::class, 'show'])->name('operations.show');
+    Route::get('operations/{batch}/reverse', [\App\Http\Controllers\ReversalController::class, 'preview'])->name('operations.reverse');
+    Route::post('operations/{batch}/reverse', [\App\Http\Controllers\ReversalController::class, 'run'])->name('operations.reverse.run');
+    Route::get('payments/{payment}/reverse', [InvoiceController::class, 'reverse'])->name('payments.reverse');
+
+    // ---- Emailed documents ----
+    $de = \App\Http\Controllers\DocumentEmailController::class;
+    Route::get('emails', [$de, 'index'])->name('emails.index');
+    Route::put('emails/settings', [$de, 'settings'])->name('emails.settings');
+    Route::post('emails/test', [$de, 'test'])->name('emails.test');
+    Route::post('emails/{email}/resend', [$de, 'resend'])->name('emails.resend');
+    Route::post('my/documents/{type}/{id}/email', [$de, 'mine'])->name('my.documents.email');
 
     // ---- Results ----
     $rs = \App\Http\Controllers\ResultSheetController::class;

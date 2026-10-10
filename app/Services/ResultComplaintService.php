@@ -78,7 +78,9 @@ class ResultComplaintService
                 $this->results->amend($complaint->result, $ca, $exam, 'Result query upheld: ' . $response, $user);
             }
             $complaint->update(['status' => $decision, 'response' => trim($response), 'handled_by' => $user->id, 'handled_at' => now()]);
+            app(OperationAudit::class)->note('complaint_respond', 'results', $user, 'query_answered', $complaint, ['status' => 'open'], ['status' => $decision, 'response' => trim($response), 'score_corrected' => $correct], null, $complaint->result?->academic_session_id);
         });
+        app(DocumentMailer::class)->complaintAnswered($complaint->fresh(), $user);
 
         return $complaint;
     }

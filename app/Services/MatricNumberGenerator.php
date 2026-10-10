@@ -41,6 +41,18 @@ class MatricNumberGenerator
         return Setting::get('matric.auto_issue', '1') === '1';
     }
 
+    /** Numbers are reserved first and only published when a batch is approved (by Senate, a committee or the person in charge). */
+    public static function requiresApproval(): bool
+    {
+        return Setting::get('matric.require_approval', '0') === '1';
+    }
+
+    /** The person who generated a batch may not approve it. */
+    public static function separateApprover(): bool
+    {
+        return Setting::get('matric.separate_approver', '1') === '1';
+    }
+
     public static function pattern(): string
     {
         return Setting::get(self::SETTING_KEY, self::DEFAULT_PATTERN) ?: self::DEFAULT_PATTERN;
@@ -111,11 +123,39 @@ class MatricNumberGenerator
         });
     }
 
-    /** A number is taken if a student holds it, or if it was cancelled (cancelled numbers are never reused). */
+    /** Numbers that are never handed out again: cancelled ones, and ones replaced by a correction (they were printed). */
+    public const RETIRED = ['cancelled', 'superseded'];
+
+    /** A number is taken if a student holds it, or if it was cancelled or superseded. */
     public function taken(string $matric): bool
     {
-        return Student::where('matric_number', $matric)->exists()
-            || \App\Models\MatricEvent::where('action', 'cancelled')->where('matric_number', $matric)->exists();
+        return Student::where('matric_number', $matric)->orWhere('provisional_matric', $matric)->exists()
+            || \App\Models\MatricEvent::whereIn('action', self::RETIRED)->where('matric_number', $matric)->exists();
+    }
+
+    /**
+     * The numbers next() would hand these students, in this order, without reserving anything.
+     *
+     * @param iterable<Student> $students
+     * @return array<int, string> student id => number
+     */
+    public function planFor(iterable $students): array
+    {
+        $counters = [];
+        $planned = [];
+        foreach ($students as $student) {
+            $student->loadMissing('programme.department.faculty', 'entrySession');
+            [$prefixKey, $width] = $this->resolve(self::pattern(), $student->programme, $student->entrySession);
+            $number = $counters[$prefixKey] ??= (DB::table('matric_sequences')->where('key', $prefixKey)->value('last_number') ?? $this->highestExisting($prefixKey, $width));
+            do {
+                $number++;
+                $matric = $this->format($prefixKey, $number, $width);
+            } while ($this->taken($matric) || in_array($matric, $planned, true));
+            $counters[$prefixKey] = $number;
+            $planned[$student->id] = $matric;
+        }
+
+        return $planned;
     }
 
     /**
@@ -129,13 +169,63 @@ class MatricNumberGenerator
 
         $highest = $this->highestExisting($prefixKey, $width);
         $regex = '/^' . str_replace('\\{SEQ\\}', '(\\d+)', preg_quote($prefixKey, '/')) . '$/';
-        \App\Models\MatricEvent::where('action', 'cancelled')->pluck('matric_number')->each(function ($m) use ($regex, &$highest) {
+        \App\Models\MatricEvent::whereIn('action', self::RETIRED)->pluck('matric_number')->each(function ($m) use ($regex, &$highest) {
             if (preg_match($regex, (string) $m, $x)) {
                 $highest = max($highest, (int) $x[1]);
             }
         });
 
         DB::table('matric_sequences')->where('key', $prefixKey)->update(['last_number' => $highest, 'updated_at' => now()]);
+    }
+
+    /**
+     * The running numbers for every active programme in an entry session: the prefix, the last number used (from the
+     * saved sequence or, failing that, detected from numbers already issued, reserved or retired) and the next number.
+     *
+     * @return array<int, array{prefix: string, programmes: string[], last: int, highest: int, next: string}>
+     */
+    public function sequences(AcademicSession $session): array
+    {
+        $out = [];
+        foreach (Programme::with('department.faculty')->where('is_active', true)->orderBy('name')->get() as $programme) {
+            [$prefixKey, $width] = $this->resolve(self::pattern(), $programme, $session);
+            if (isset($out[$prefixKey])) {
+                $out[$prefixKey]['programmes'][] = $programme->name;
+                continue;
+            }
+            $highest = $this->highestInUse($prefixKey, $width);
+            $last = max($highest, $this->lastNumberFor($prefixKey));
+            $out[$prefixKey] = ['prefix' => $prefixKey, 'programmes' => [$programme->name], 'last' => $last, 'highest' => $highest, 'next' => $this->format($prefixKey, $last + 1, $width)];
+        }
+
+        return array_values($out);
+    }
+
+    /**
+     * Continue after a number used outside the portal (e.g. the last number issued before the portal), so the next
+     * number is $last + 1. It can never go below a number already in use, so it cannot create a duplicate.
+     */
+    public function setLastUsed(string $prefixKey, int $last): void
+    {
+        $highest = $this->highestInUse($prefixKey, 1);
+        if ($last < $highest) {
+            throw new \RuntimeException("Numbers up to {$highest} are already in use for this prefix; the last number cannot be set lower.");
+        }
+        DB::table('matric_sequences')->updateOrInsert(['key' => $prefixKey], ['last_number' => $last, 'updated_at' => now(), 'created_at' => now()]);
+    }
+
+    /** Highest number in use for a prefix: held, reserved, cancelled or superseded. */
+    private function highestInUse(string $prefixKey, int $width): int
+    {
+        $highest = $this->highestExisting($prefixKey, $width);
+        $regex = '/^' . str_replace('\\{SEQ\\}', '(\\d+)', preg_quote($prefixKey, '/')) . '$/';
+        \App\Models\MatricEvent::whereIn('action', self::RETIRED)->pluck('matric_number')->each(function ($m) use ($regex, &$highest) {
+            if (preg_match($regex, (string) $m, $x)) {
+                $highest = max($highest, (int) $x[1]);
+            }
+        });
+
+        return $highest;
     }
 
     /** @return array{0: string, 1: int} the pattern with every token filled except {SEQ}, and the SEQ width */
@@ -175,11 +265,13 @@ class MatricNumberGenerator
         [$like] = [str_replace('{SEQ}', '%', $prefixKey)];
         $max = 0;
 
-        Student::where('matric_number', 'like', $like)->pluck('matric_number')->each(function ($matric) use ($regex, &$max) {
-            if (preg_match($regex, $matric, $m)) {
-                $max = max($max, (int) $m[1]);
-            }
-        });
+        Student::where('matric_number', 'like', $like)->pluck('matric_number')
+            ->merge(Student::where('provisional_matric', 'like', $like)->pluck('provisional_matric'))
+            ->each(function ($matric) use ($regex, &$max) {
+                if (preg_match($regex, $matric, $m)) {
+                    $max = max($max, (int) $m[1]);
+                }
+            });
 
         return $max;
     }

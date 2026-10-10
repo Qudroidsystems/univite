@@ -27,6 +27,7 @@
         ['Copy Session Setup','sessions.clone',                   'Copy session setup',    'sessions.clone*'],
         ['Session Rules',     'sessions.rules',                   'View session rules',    'sessions.rules*'],
         ['Operation History', 'operations.index',                 'View operation history','operations.*'],
+        ['Emailed Documents', 'emails.index',                     'View email log',        'emails.*'],
     ];
     $students = [
         ['Applicants',           'applicants.index',        'View applicants',           'applicants.index', 'applicants.show'],

@@ -45,3 +45,11 @@ function something()
 {
     // ..
 }
+
+/** Confirm a reversal the way the preview page does: same mode, the preview's fingerprint, a reason and the tick box. */
+function confirmReversal($test, \App\Models\OperationBatch $op, ?string $mode = null, string $reason = 'Issued with the wrong format by mistake.')
+{
+    $plan = \App\Support\Reversals::for($op)->plan($op, $mode);
+
+    return $test->post(route('operations.reverse.run', $op), ['mode' => $plan->mode, 'fingerprint' => $plan->fingerprint(), 'reason' => $reason, 'confirm' => 1]);
+}

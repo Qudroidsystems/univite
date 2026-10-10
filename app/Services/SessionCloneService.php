@@ -229,6 +229,27 @@ class SessionCloneService
 
     // ---- undo -------------------------------------------------------------------------------------
 
+    /**
+     * What undoing a clone would do, without doing it.
+     *
+     * @return array<int, array{item: CloneItem, label: string, why: ?string}>
+     */
+    public function undoPreview(OperationBatch $original): array
+    {
+        $dest = AcademicSession::find($original->academic_session_id);
+        $out = [];
+        foreach (CloneItem::where('operation_batch_id', $original->id)->where('undone', false)->orderBy('id')->get() as $item) {
+            $label = match ($item->category) {
+                'bills' => 'Bill: ' . (Bill::find($item->dest_id)?->targetLabel() ?? 'removed'),
+                'assignments' => 'Course lecturer: ' . (($a = CourseAssignment::with('course', 'user')->find($item->dest_id)) ? $a->course?->code . ' · ' . $a->user?->name : 'removed'),
+                default => 'Registration window: ' . (Semester::find($item->dest_id)?->name ?? 'semester removed'),
+            };
+            $out[] = ['item' => $item, 'label' => $label, 'why' => $dest ? $this->consumed($item, $dest) : 'The session no longer exists.'];
+        }
+
+        return $out;
+    }
+
     /** Why this copy cannot be removed, or null when nothing has used it. */
     private function consumed(CloneItem $item, AcademicSession $dest): ?string
     {

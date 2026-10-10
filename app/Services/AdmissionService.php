@@ -48,7 +48,8 @@ class AdmissionService
 
         return DB::transaction(function () use ($applicant, $batch) {
             // By default the matric number comes later, after clearance. Until then the application number is the login name.
-            $matric = MatricNumberGenerator::issueAt() === 'admission' ? $this->matric->next($applicant->programme, $applicant->session) : null;
+            $atAdmission = MatricNumberGenerator::issueAt() === 'admission';
+            $matric = $atAdmission && ! MatricNumberGenerator::requiresApproval() ? $this->matric->next($applicant->programme, $applicant->session) : null;
             $chosen = $applicant->getAttributes()['password'] ?? null;   // already hashed
             $plain  = $chosen ? null : Str::password(10, symbols: false);
 
@@ -92,6 +93,11 @@ class AdmissionService
             app(ClearanceService::class)->refresh($student);
 
             $applicant->update(['status' => 'admitted', 'decided_at' => now(), 'admission_batch' => $batch ?? $applicant->admission_batch]);
+
+            // With approval switched on, the number is reserved now and published when its batch is approved.
+            if ($atAdmission && ! $matric) {
+                app(ClearanceService::class)->issueMatric($student);
+            }
 
             return [$student, $plain];
         });

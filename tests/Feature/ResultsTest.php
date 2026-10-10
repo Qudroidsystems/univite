@@ -413,3 +413,74 @@ it('lets a course adviser approve the registration forms of the level they advis
     $this->post(route('registrations.decide', $form->id), ['decision' => 'approve'])->assertForbidden();
     $this->get(route('registrations.show', $form->id))->assertForbidden();
 });
+
+it('reverses a score correction as a new correction, and refuses once the score changed again', function () {
+    \Illuminate\Support\Facades\Mail::fake();
+    publishSheet($this, [[20, 40], [10, 20]]);
+    $row = CourseResult::where('student_id', $this->students[1]->id)->first();
+    $this->post(route('results.amend', $row->id), ['ca' => 25, 'exam' => 60, 'reason' => 'Mis-keyed exam score'])->assertSessionHas('success');
+    \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\DocumentMail::class, fn ($m) => $m->hasTo('b@example.com') && str_contains($m->body, 'Result correction notice'));
+
+    $op = \App\Models\OperationBatch::where('type', 'result_amend')->firstOrFail();
+    $this->get(route('operations.reverse', $op))->assertOk()->assertSee('25 + 60 (A)')->assertSee('10 + 20 (F)');
+    confirmReversal($this, $op)->assertSessionHas('success');
+    expect($row->fresh()->total)->toBe(30.0)->and($op->fresh()->status)->toBe('reversed')
+        ->and(\App\Models\OperationBatch::where('type', 'result_amend_reverse')->value('related_operation_id'))->toBe($op->id);
+
+    // a second correction, then a later one: the earlier cannot be reversed any more
+    $this->post(route('results.amend', $row->id), ['ca' => 20, 'exam' => 30, 'reason' => 'Second marking']);
+    $second = \App\Models\OperationBatch::where('type', 'result_amend')->latest('id')->first();
+    $this->post(route('results.amend', $row->id), ['ca' => 21, 'exam' => 30, 'reason' => 'Third marking']);
+    $plan = \App\Support\Reversals::for($second)->plan($second);
+    expect($plan->canRun())->toBeFalse()->and($plan->blockers[0])->toContain('changed again');
+});
+
+it('withdraws a published sheet formally, and refuses once a student on it has graduated', function () {
+    \Illuminate\Support\Facades\Mail::fake();
+    publishSheet($this, [[25, 50], [10, 20]]);
+    $op = \App\Models\OperationBatch::where('type', 'result_publish')->firstOrFail();
+
+    // permission
+    $clerk = User::factory()->create();
+    $clerk->givePermissionTo('View operation history');
+    $this->actingAs($clerk)->get(route('operations.reverse', $op))->assertForbidden();
+
+    // reason is required
+    $this->actingAs($this->admin)->post(route('operations.reverse.run', $op), ['mode' => 'withdraw', 'fingerprint' => 'x', 'reason' => '', 'confirm' => 1])->assertSessionHasErrors('reason');
+
+    $this->students[0]->update(['graduated_at' => now()]);
+    $this->get(route('operations.reverse', $op))->assertOk()->assertSee('have graduated');
+    expect(\App\Support\Reversals::for($op)->plan($op)->canRun())->toBeFalse();
+
+    $this->students[0]->update(['graduated_at' => null]);
+    confirmReversal($this, $op, 'withdraw', 'Senate set the BIO 101 result aside.')->assertSessionHas('success');
+    expect($this->sheet->fresh()->status)->toBe('approved')
+        ->and(CourseResult::where('result_sheet_id', $this->sheet->id)->pluck('status')->unique()->all())->toBe(['approved'])
+        ->and(CourseResult::whereNotNull('total')->count())->toBe(2);   // scores are kept
+    \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\DocumentMail::class, fn ($m) => str_contains($m->body, 'withdrawn for review'));
+
+    // it can be published again normally
+    $this->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'publish']);
+    expect($this->sheet->fresh()->status)->toBe('published');
+});
+
+it('reverses a graduation approval back to the students\' earlier status and keeps the record', function () {
+    \Illuminate\Support\Facades\Mail::fake();
+    $this->programme->update(['duration_years' => 1]);
+    publishSheet($this, [[25, 50], [10, 20]]);
+    $this->students->each->update(['current_level' => 100, 'status' => 'active']);
+    $this->actingAs($this->admin)->post(route('graduation.run'), ['programme_id' => $this->programme->id, 'academic_session_id' => $this->session->id]);
+    $list = \App\Models\GraduationList::firstOrFail();
+    $this->post(route('graduation.approve', $list->id))->assertSessionHas('success');
+    \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\DocumentMail::class, fn ($m) => $m->hasTo('a@example.com') && str_contains($m->body, 'Graduation notice'));
+
+    $op = \App\Models\OperationBatch::where('type', 'graduation_approve')->firstOrFail();
+    expect($op->events()->where('action', 'student_graduated')->first()->before['status'])->toBe('active');
+    confirmReversal($this, $op, null, 'Approved before the Senate meeting.')->assertSessionHas('success');
+
+    $s0 = $this->students[0]->fresh();
+    expect($s0->status)->toBe('active')->and($s0->graduated_at)->toBeNull()->and($s0->degree_class)->toBeNull()
+        ->and($list->fresh()->status)->toBe('draft')->and($op->fresh()->status)->toBe('reversed')
+        ->and($op->events()->count())->toBe(2);   // the original events (one student + the list) are untouched
+    $this->get(route('operations.show', $op))->assertOk()->assertSee('Graduation approval reversed')->assertSee('Approved before the Senate meeting.');
+});

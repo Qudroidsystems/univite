@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Results\Score;
 use App\Models\Course;
 use App\Models\ResultSheet;
 use App\Services\RegistrationService;
@@ -36,7 +37,7 @@ class ResultSheetController extends Controller
         $user = auth()->user();
         $ctx = $this->registration->context();
         $mine = $ctx ? $user->courseAssignments()->with('course')
-            ->where('academic_session_id', $ctx['session']->id)->where('semester_type_id', $ctx['type']->id)->get() : collect();
+            ->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
 
         $sheets = ResultSheet::with('course', 'session', 'semesterType', 'stage')->withCount('results');
         $status = $request->query('status', 'submitted');
@@ -57,7 +58,7 @@ class ResultSheetController extends Controller
     public function open(Course $course): RedirectResponse
     {
         $ctx = $this->registration->context() ?? abort(404, 'No semester is running.');
-        $sheet = $this->results->sheet($course->id, $ctx['session']->id, $ctx['type']->id);
+        $sheet = $this->results->sheet($course->id, $ctx->session->id, $ctx->type->id);
         $this->authorizeEntry($sheet);
 
         return redirect()->route('results.sheets.show', $sheet->id);
@@ -89,7 +90,7 @@ class ResultSheetController extends Controller
         $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable']]);
 
         try {
-            $problems = $this->results->saveScores($sheet, $data['scores'], $request->user());
+            $problems = $this->results->saveScores($sheet, Score::many($data['scores']), $request->user());
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -110,10 +111,10 @@ class ResultSheetController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        $msg = $out['saved'] . ' row(s) read.';
+        $msg = $out->saved . ' row(s) read.';
 
-        return $out['problems']
-            ? back()->with('warning', $msg . ' Not saved: ' . implode(' ', array_slice($out['problems'], 0, 8)) . (count($out['problems']) > 8 ? ' (and ' . (count($out['problems']) - 8) . ' more)' : ''))
+        return $out->problems
+            ? back()->with('warning', $msg . ' Not saved: ' . $out->summary())
             : back()->with('success', $msg . ' Scores saved.');
     }
 

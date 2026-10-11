@@ -101,7 +101,9 @@ it('admits an applicant: matric number, login, student role and flashed password
 
 it('lets an admitted student sign in with the temporary password and see the student page', function () {
     $applicant = makeApplicant();
-    [$student, $password] = app(AdmissionService::class)->admit($applicant);
+    $admission = app(AdmissionService::class)->admit($applicant);
+    $student = $admission->student;
+    $password = $admission->temporaryPassword;
     auth()->logout();
 
     $this->post('/login', ['email' => 'ada@example.com', 'password' => $password])->assertRedirect('/dashboard');
@@ -120,7 +122,7 @@ it('numbers students in sequence per programme and entry year', function () {
         makeApplicant(['email' => 'b@example.com']),
         makeApplicant(['email' => 'c@example.com', 'programme_id' => $other->id]),
         makeApplicant(['email' => 'd@example.com', 'academic_session_id' => $next->id]),
-    ])->map(fn ($a) => $service->admit($a)[0]->matric_number)->all();
+    ])->map(fn ($a) => $service->admit($a)->student->matric_number)->all();
 
     expect($matrics)->toBe(['2025/BSC-CSC/0001', '2025/BSC-CSC/0002', '2025/BSC-PHY/0001', '2026/BSC-CSC/0001']);
 });
@@ -130,13 +132,13 @@ it('uses the configured matric pattern and continues after existing numbers', fu
     $service = app(AdmissionService::class);
 
     // a student already holding CSC/25/007 (e.g. migrated) is respected
-    [$first] = $service->admit(makeApplicant(['email' => 'first@example.com']));
+    $first = $service->admit(makeApplicant(['email' => 'first@example.com']))->student;
     expect($first->matric_number)->toBe('CSC/25/001');
 
     $first->update(['matric_number' => 'CSC/25/007']);
     \Illuminate\Support\Facades\DB::table('matric_sequences')->delete();
 
-    [$second] = $service->admit(makeApplicant(['email' => 'second@example.com']));
+    $second = $service->admit(makeApplicant(['email' => 'second@example.com']))->student;
     expect($second->matric_number)->toBe('CSC/25/008');
 });
 
@@ -244,7 +246,9 @@ it('uploads a passport photo and replaces the old one', function () {
 });
 
 it('blocks suspended and withdrawn students from signing in', function () {
-    [$student, $password] = app(AdmissionService::class)->admit(makeApplicant());
+    $admission = app(AdmissionService::class)->admit(makeApplicant());
+    $student = $admission->student;
+    $password = $admission->temporaryPassword;
 
     $this->actingAs($this->admin)->post(route('students.status', $student->id), ['status' => 'suspended'])->assertSessionHas('success');
     expect($student->user->fresh()->is_disabled)->toBeTrue();
@@ -257,7 +261,9 @@ it('blocks suspended and withdrawn students from signing in', function () {
 });
 
 it('resets a student password', function () {
-    [$student, $old] = app(AdmissionService::class)->admit(makeApplicant());
+    $admission = app(AdmissionService::class)->admit(makeApplicant());
+    $student = $admission->student;
+    $old = $admission->temporaryPassword;
 
     $this->actingAs($this->admin)->post(route('students.reset-password', $student->id))
         ->assertSessionHas('generated_password', fn ($p) => $p['password'] !== $old);
@@ -281,7 +287,7 @@ it('enforces the separate admissions permissions', function () {
     $this->get(route('students.settings'))->assertForbidden();
 
     $clerk->givePermissionTo('View students');
-    $student = app(AdmissionService::class)->admit($applicant)[0];
+    $student = app(AdmissionService::class)->admit($applicant)->student;
     $this->get(route('students.show', $student->id))->assertOk();
     $this->post(route('students.status', $student->id), ['status' => 'deferred'])->assertForbidden();
     $this->post(route('students.reset-password', $student->id))->assertForbidden();
@@ -290,7 +296,7 @@ it('enforces the separate admissions permissions', function () {
 });
 
 it('refuses to delete a user who is a student', function () {
-    [$student] = app(AdmissionService::class)->admit(makeApplicant());
+    $student = app(AdmissionService::class)->admit(makeApplicant())->student;
 
     $this->actingAs($this->admin)->delete(route('users.destroy', $student->user_id))->assertSessionHas('error');
     expect(User::find($student->user_id))->not->toBeNull();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Matric\MatricSelection;
 use App\Models\MatricEvent;
 use App\Models\Programme;
 use App\Models\Student;
@@ -14,7 +15,7 @@ use RuntimeException;
 /** Matric numbers after clearance: who is waiting, who has one, and the generate / special / import / cancel / restore / undo tools. */
 class MatricController extends Controller
 {
-    public function __construct(private MatricService $matric)
+    public function __construct(private MatricService $matric, private \App\Services\MatricNumberGenerator $generator)
     {
         $this->middleware('permission:View matric numbers')->only('index');
         $this->middleware('permission:Generate matric numbers')->only('generate', 'preview');
@@ -65,7 +66,7 @@ class MatricController extends Controller
     {
         $student = $this->matric->waiting()->with('programme.department.faculty', 'entrySession')->orderBy('last_name')->first();
 
-        return $student ? app(\App\Services\MatricNumberGenerator::class)->preview($student->programme, $student->entrySession) : null;
+        return $student ? $this->generator->preview($student->programme, $student->entrySession) : null;
     }
 
     /** Who would get a number, and which, before anything is issued. */
@@ -76,8 +77,8 @@ class MatricController extends Controller
             'student_ids.*' => ['integer', 'exists:students,id'],
             'programme_id'  => ['nullable', 'exists:programmes,id'],
         ]);
-        $preview = $this->matric->previewBatch($data['student_ids'] ?? null, $data['programme_id'] ?? null);
-        if (! $preview['total']) {
+        $preview = $this->matric->previewBatch(MatricSelection::fromArray($data));
+        if (! $preview->total()) {
             return redirect()->route('matric.index')->with('error', 'There are no cleared students waiting for a matric number' . (! empty($data['student_ids']) ? ' among those ticked.' : '.'));
         }
 
@@ -93,18 +94,18 @@ class MatricController extends Controller
         ]);
 
         try {
-            $r = $this->matric->generateBatch($data['student_ids'] ?? null, $data['programme_id'] ?? null, $request->user());
+            $r = $this->matric->generateBatch(MatricSelection::fromArray($data), $request->user());
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        if ($r['pending'] ?? false) {
-            $b = \App\Models\MatricBatch::where('code', $r['batch'])->first();
+        if ($r->pendingApproval) {
+            $b = \App\Models\MatricBatch::where('code', $r->batch)->first();
 
-            return redirect()->route('matric.approvals.show', $b)->with('success', "{$r['issued']} matric number(s) reserved in batch {$r['batch']}. They are published to the students once the batch is approved.");
+            return redirect()->route('matric.approvals.show', $b)->with('success', "{$r->issued} matric number(s) reserved in batch {$r->batch}. They are published to the students once the batch is approved.");
         }
 
-        return redirect()->route('matric.index', ['tab' => 'issued'])->with('success', "{$r['issued']} matric number(s) issued in batch {$r['batch']}. It can be undone or corrected from Recent batches.");
+        return redirect()->route('matric.index', ['tab' => 'issued'])->with('success', "{$r->issued} matric number(s) issued in batch {$r->batch}. It can be undone or corrected from Recent batches.");
     }
 
     public function special(Request $request, $id): RedirectResponse
@@ -143,9 +144,9 @@ class MatricController extends Controller
         }
 
         $r = $this->matric->importExternal($rows, $request->user());
-        $message = "{$r['applied']} matric number(s) applied" . ($r['applied'] ? " (batch {$r['batch']})" : '') . '.';
+        $message = "{$r->applied} matric number(s) applied" . ($r->applied ? " (batch {$r->batch})" : '') . '.';
 
-        return back()->with($r['applied'] ? 'success' : 'error', $message . ($r['skipped'] ? ' Skipped: ' . implode(' | ', array_slice($r['skipped'], 0, 8)) . (count($r['skipped']) > 8 ? ' …and ' . (count($r['skipped']) - 8) . ' more.' : '') : ''));
+        return back()->with($r->applied ? 'success' : 'error', $message . ($r->skipped ? ' Skipped: ' . implode(' | ', array_slice($r->skipped, 0, 8)) . (count($r->skipped) > 8 ? ' …and ' . (count($r->skipped) - 8) . ' more.' : '') : ''));
     }
 
     public function cancel(Request $request, $id): RedirectResponse

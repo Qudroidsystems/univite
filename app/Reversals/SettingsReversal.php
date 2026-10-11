@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Http\Controllers\Academics\AcademicRuleController;
 use App\Models\OperationBatch;
 use App\Models\User;
@@ -14,6 +15,11 @@ use App\Support\Institution;
  */
 class SettingsReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private AcademicRules $rules)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return $op->type === 'rules_change' ? 'Put back the earlier academic rules' : 'Put back the earlier profile values';
@@ -29,7 +35,7 @@ class SettingsReversal extends BaseReversal
     private function rulesNow(OperationBatch $op): array
     {
         $m = $op->meta;
-        $rules = app(AcademicRules::class);
+        $rules = $this->rules;
         $rules->flush();
 
         return ($m['scope'] === 'university' && ! $m['level'] && ! $m['semester_type_id'])
@@ -89,7 +95,7 @@ class SettingsReversal extends BaseReversal
             $e = $op->events()->first();
             $m = $op->meta;
             $new = $this->begin($op, 'rules_restore', $by, $reason, $m);
-            $rules = app(AcademicRules::class);
+            $rules = $this->rules;
             ($m['scope'] === 'university' && ! $m['level'] && ! $m['semester_type_id'])
                 ? $rules->saveUniversity(collect(AcademicRules::DEFS)->keys()->mapWithKeys(fn ($k) => [$k => $e->before['rules'][$k] ?? null])->all())
                 : $rules->save($m['scope'], (int) $m['id'], $m['level'], $m['semester_type_id'], $e->before['rules'] ?? [], $by->id);

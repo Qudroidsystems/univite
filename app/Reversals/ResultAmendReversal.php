@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Models\CourseResult;
 use App\Models\OperationBatch;
 use App\Models\User;
@@ -11,6 +12,11 @@ use App\Services\ResultService;
 /** Put a corrected score back to what it was, as a new correction. Refused if the score has changed again since. */
 class ResultAmendReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private ResultService $results, private DocumentMailer $mailer)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Reverse this score correction';
@@ -55,12 +61,12 @@ class ResultAmendReversal extends BaseReversal
         $result = CourseResult::findOrFail($event->subject_id);
         $before = ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade];
         $new = $this->begin($op, 'result_amend_reverse', $by, $reason);
-        app(ResultService::class)->amend($result, $event->before['ca'], $event->before['exam'], 'Correction ' . $op->operation_id . ' reversed: ' . $reason, $by, record: false);
+        $this->results->amend($result, $event->before['ca'], $event->before['exam'], 'Correction ' . $op->operation_id . ' reversed: ' . $reason, $by, record: false);
         $result->refresh();
         $this->audit->record($new, 'score_restored', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $event->id);
         $this->audit->finish($new, 1);
         $this->audit->markReversed($op);
-        app(DocumentMailer::class)->resultNotice($result, 'restored', $before, $reason, $by);
+        $this->mailer->resultNotice($result, 'restored', $before, $reason, $by);
 
         return $new;
     }

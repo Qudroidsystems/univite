@@ -20,7 +20,7 @@ use Illuminate\View\View;
  */
 class ResultSummaryController extends Controller
 {
-    public function __construct(private ResultService $results)
+    public function __construct(private ResultService $results, private \App\Services\OperationAudit $audit, private \App\Services\RegistrationService $registration)
     {
     }
 
@@ -58,8 +58,8 @@ class ResultSummaryController extends Controller
         $d = $request->validate(['note' => ['required', 'string', 'max:500']]);
         $session = AcademicSession::current() ?? abort(422, 'No session is current.');
         $waiver = StandingWaiver::updateOrCreate(['student_id' => $student->id, 'academic_session_id' => $session->id], ['note' => $d['note'], 'granted_by' => $request->user()->id]);
-        app(\App\Services\OperationAudit::class)->note('standing_waiver', 'results', $request->user(), 'registration_allowed', $waiver, null,
-            ['student' => $student->full_name, 'session' => $session->name, 'standing' => app(\App\Services\RegistrationService::class)->standing($student)], $d['note'], $session->id);
+        $this->audit->note('standing_waiver', 'results', $request->user(), 'registration_allowed', $waiver, null,
+            ['student' => $student->full_name, 'session' => $session->name, 'standing' => $this->registration->standing($student)], $d['note'], $session->id);
 
         return back()->with('success', "{$student->full_name} may register in {$session->name}.");
     }

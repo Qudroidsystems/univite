@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Fees\InvoiceTarget;
 use App\Models\AcademicSession;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -76,7 +77,7 @@ class InvoiceController extends Controller
             'pagetitle' => 'Generate invoices', 'data' => $data, 'session' => $session,
             'programme' => isset($data['programme_id']) ? \App\Models\Programme::find($data['programme_id']) : null,
             'semester' => isset($data['semester_type_id']) ? \App\Models\SemesterType::find($data['semester_type_id']) : null,
-            'preview' => $this->invoices->previewBulk($session, $data['programme_id'] ?? null, $data['level'] ?? null, $data['semester_type_id'] ?? null),
+            'preview' => $this->invoices->previewBulk(InvoiceTarget::fromArray($data)),
         ]);
     }
 
@@ -100,17 +101,9 @@ class InvoiceController extends Controller
             'semester_type_id'    => ['nullable', 'exists:semester_types,id'],
         ]);
 
-        $r = $this->invoices->generateBulk(AcademicSession::findOrFail($data['academic_session_id']), $data['programme_id'] ?? null, $data['level'] ?? null, auth()->id(), $data['semester_type_id'] ?? null);
+        $r = $this->invoices->generateBulk(InvoiceTarget::fromArray($data), $request->user());
 
-        $message = "{$r['created']} invoice(s) created" . ($r['created'] ? " (operation {$r['operation']}; it can be reversed from the operation history while nothing has been paid)" : '') . '.';
-        if ($r['existing']) {
-            $message .= " {$r['existing']} student(s) already had one.";
-        }
-        if ($r['no_bills']) {
-            $message .= " {$r['no_bills']} student(s) skipped because no school bills match them (programme, level, nationality, fresh or returning) in that session.";
-        }
-
-        return back()->with($r['created'] || $r['existing'] ? 'success' : 'error', $r['created'] || $r['existing'] ? $message : ($r['no_bills'] ? $message : 'There are no active students to invoice.'));
+        return back()->with($r->succeeded() ? 'success' : 'error', $r->message());
     }
 
     public function recordPayment(Request $request, Invoice $invoice): RedirectResponse

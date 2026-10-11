@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Models\OperationBatch;
 use App\Models\Payment;
 use App\Models\RegistrationForm;
@@ -15,6 +16,11 @@ use App\Services\InvoiceService;
  */
 class PaymentReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private InvoiceService $invoices)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Reverse this payment';
@@ -65,7 +71,7 @@ class PaymentReversal extends BaseReversal
     {
         $payment = Payment::findOrFail($plan->changes()[0]['key']);
         $new = $this->begin($op, 'payment_reverse', $by, $reason, ['invoice' => $payment->invoice?->reference]);
-        $reversal = app(InvoiceService::class)->reversePayment($payment, $reason, $by);
+        $reversal = $this->invoices->reversePayment($payment, $reason, $by);
         $this->audit->record($new, 'payment_reversed', $payment->fresh(), ['status' => 'successful'], ['status' => 'reversed'], $reason);
         $this->audit->record($new, 'reversal_entry_added', $reversal, null, ['amount' => (string) $reversal->amount, 'reverses' => $payment->reference]);
         $this->audit->finish($new, 1);

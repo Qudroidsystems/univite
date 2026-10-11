@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Models\GraduationList;
 use App\Models\OperationBatch;
 use App\Models\Student;
@@ -12,6 +13,11 @@ use Illuminate\Support\Facades\DB;
 /** Reverse an approved graduation list: the students go back to what they were before and the list back to draft. */
 class GraduationReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private DocumentMailer $mailer)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Reverse this graduation approval';
@@ -66,7 +72,7 @@ class GraduationReversal extends BaseReversal
         $c = $plan->counts();
         $this->audit->finish($new, count($ids), 0, $c['skip'] + $c['blocked']);
         $this->audit->markReversed($op);
-        $mailer = app(DocumentMailer::class);
+        $mailer = $this->mailer;
         Student::whereIn('id', $ids)->get()->each(fn ($s) => $mailer->graduation($s, false, $reason, $by));
 
         return $new;

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\Graduation\GraduationCheck;
 use App\Models\CourseRegistration;
 use App\Models\CourseResult;
 use App\Models\GraduationEntry;
@@ -23,7 +24,7 @@ class GraduationService
 {
     public const GRADUATED = 'graduated';   // student status code given on approval
 
-    public function __construct(private ResultService $results)
+    public function __construct(private ResultService $results, private AcademicRules $rules, private OperationAudit $audit, private DocumentMailer $mailer)
     {
     }
 
@@ -43,12 +44,11 @@ class GraduationService
     /**
      * Check one student. Returns CGPA, units passed, class and the reasons they cannot graduate yet (empty = eligible).
      *
-     * @return array{cgpa: float, units_passed: int, degree_class: ?string, problems: string[]}
      */
-    public function check(Student $student): array
+    public function check(Student $student): GraduationCheck
     {
         $programme = $student->programme;
-        $rules = app(AcademicRules::class)->forProgramme($programme);
+        $rules = $this->rules->forProgramme($programme);
         $t = $this->results->transcript($student);
         $problems = [];
 
@@ -85,8 +85,8 @@ class GraduationService
             }
         }
 
-        if ($rules['graduation_units'] && $t['earned'] < $rules['graduation_units']) {
-            $problems[] = "Passed {$t['earned']} of the {$rules['graduation_units']} units needed.";
+        if ($rules['graduation_units'] && $t->earned < $rules['graduation_units']) {
+            $problems[] = "Passed {$t->earned} of the {$rules['graduation_units']} units needed.";
         }
         if ($rules['min_elective_units']) {
             $electiveUnits = (int) $latest->filter(fn ($r) => $r->is_pass && $electives->has($r->course_id))->sum('credit_units');
@@ -94,14 +94,14 @@ class GraduationService
                 $problems[] = "Passed {$electiveUnits} of the {$rules['min_elective_units']} elective units needed.";
             }
         }
-        if ($rules['min_graduation_cgpa'] !== null && $latest->isNotEmpty() && $t['cgpa'] < $rules['min_graduation_cgpa']) {
-            $problems[] = 'CGPA ' . number_format($t['cgpa'], 2) . ' is below the ' . number_format($rules['min_graduation_cgpa'], 2) . ' needed to graduate.';
+        if ($rules['min_graduation_cgpa'] !== null && $latest->isNotEmpty() && $t->cgpa < $rules['min_graduation_cgpa']) {
+            $problems[] = 'CGPA ' . number_format($t->cgpa, 2) . ' is below the ' . number_format($rules['min_graduation_cgpa'], 2) . ' needed to graduate.';
         }
         if ($rules['max_years'] && ($years = self::yearsUsed($student)) > $rules['max_years']) {
             $problems[] = "Has spent {$years} sessions on the programme; the limit is {$rules['max_years']}. Needs approval to continue.";
         }
 
-        return ['cgpa' => $t['cgpa'], 'units_passed' => $t['earned'], 'degree_class' => $t['class'], 'problems' => $problems];
+        return new GraduationCheck($t->cgpa, $t->earned, $t->class, $problems);
     }
 
     /** Sessions in which the student registered for courses. */
@@ -124,8 +124,8 @@ class GraduationService
             foreach ($students as $s) {
                 $c = $this->check($s);
                 GraduationEntry::updateOrCreate(['graduation_list_id' => $list->id, 'student_id' => $s->id], [
-                    'cgpa' => $c['cgpa'], 'units_passed' => $c['units_passed'], 'degree_class' => $c['degree_class'],
-                    'is_eligible' => empty($c['problems']), 'problems' => $c['problems'],
+                    'cgpa' => $c->cgpa, 'units_passed' => $c->unitsPassed, 'degree_class' => $c->degreeClass,
+                    'is_eligible' => $c->eligible(), 'problems' => $c->problems,
                 ]);
             }
             $list->update(['checked_at' => now()]);
@@ -158,7 +158,7 @@ class GraduationService
         }
 
         DB::transaction(function () use ($list, $user, $graduating) {
-            $audit = app(OperationAudit::class);
+            $audit = $this->audit;
             $op = $audit->begin('graduation_approve', 'graduation', $user, $list->academic_session_id, null, ['graduation_list_id' => $list->id, 'programme' => $list->programme?->name]);
             $status = StudentStatus::byCode(self::GRADUATED) ? self::GRADUATED : null;
             foreach ($graduating as $e) {
@@ -173,7 +173,7 @@ class GraduationService
             $list->update(['status' => 'approved', 'approved_by' => $user->id, 'approved_at' => now()]);
             $audit->finish($op, $graduating->count());
         });
-        $mailer = app(DocumentMailer::class);
+        $mailer = $this->mailer;
         $graduating->each(fn ($e) => $mailer->graduation($e->student->fresh(), true, null, $user));
 
         return $graduating->count();

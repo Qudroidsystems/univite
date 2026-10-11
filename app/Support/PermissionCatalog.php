@@ -235,6 +235,13 @@ class PermissionCatalog
                 ],
             ],
 
+            'Legacy results' => [
+                'about' => 'Results from before the portal: course-by-course results from old records, and each student\'s previous cumulative totals (TCP and TNU) carried into their CGPA. Imports are checked before anything is saved and a whole import can be undone from the operation history.',
+                'permissions' => [
+                    ['Import legacy results', 'Import', 'Upload old results or previous TCP/TNU totals from a spreadsheet, match its columns, check it and import it. Can also undo an import.'],
+                ],
+            ],
+
             'Student results' => [
                 'about' => 'Published results, GPA and CGPA for individual students.',
                 'permissions' => [
@@ -425,6 +432,65 @@ class PermissionCatalog
                 'permissions' => [
                     ['View matric number format', 'View', 'See the current matric number pattern and an example of the next number.'],
                     ['Set the matric number format', 'Set', 'Change the pattern used for students admitted from now on, when numbers are issued, whether they need approval, and the last number already used for each prefix (for example the last number issued before the portal). Existing matric numbers never change.'],
+                ],
+            ],
+
+            'Venues' => [
+                'about' => 'The register of lecture halls, classrooms, laboratories and examination halls that both timetables use, with closures, faults and one-off bookings.',
+                'permissions' => [
+                    ['View venues', 'View', 'See every venue with its capacity, facilities, seat map, status, closures, faults, bookings and how much it is used, and find free venues for a date and time.'],
+                    ['Create venues', 'Create', 'Add a venue to the register: its type, location, installed, teaching and examination capacity, facilities, seat map and what it may be used for.'],
+                    ['Edit venues', 'Edit', 'Change a venue\'s details, capacities, facilities, seat map, blocked and accessible seats, and its status (available, reserved, under maintenance, closed).'],
+                    ['Delete venues', 'Delete', 'Delete a venue that no timetable or seating plan uses. Marking it inactive keeps its history instead.'],
+                    ['Set venue closures', 'Set', 'Close a venue for a range of dates (repairs, an event) and lift a closure. Timetables stop using it on those dates and the affected classes and papers are listed with replacement rooms.'],
+                    ['Record venue faults', 'Record', 'Report a fault, inspection finding or unsafe condition in a venue. A fault marked "venue cannot be used" blocks it from new allocations until it is resolved.'],
+                    ['Clear venue faults', 'Clear', 'Mark a reported venue fault as being fixed or resolved, with what was done. Resolving a blocking fault makes the venue available again.'],
+                    ['Create venue bookings', 'Create', 'Book a venue for a meeting, seminar or event on a date and time. The booking is refused if the venue is closed or already used then.'],
+                    ['Cancel venue bookings', 'Cancel', 'Cancel anyone\'s venue booking. People can always cancel their own bookings.'],
+                ],
+            ],
+
+            'Timetables' => [
+                'about' => 'Lecture and examination timetables: the committee prepares and generates them, someone approves them, and publishing shows them to students and staff.',
+                'permissions' => [
+                    ['View timetables', 'View', 'See every timetable, including drafts and ones awaiting approval, with their conflicts, explanations and invigilation duties.'],
+                    ['Create timetables', 'Create', 'Prepare timetables as a committee member: set periods, dates, rules and priorities, choose what is scheduled, generate, move entries by hand (every move is checked) and run what-if tests. When a timetable names its committee, only those members can change it.'],
+                    ['Approve timetables', 'Approve', 'Approve a timetable sent by the committee, or return it with a note. A timetable that breaks any hard rule cannot be approved.'],
+                    ['Publish timetables', 'Publish', 'Publish an approved timetable so students and staff see it in their portals and are notified, replacing the previous version. Also start a revision of a published timetable.'],
+                    ['Set staff availability', 'Set', 'Record when lecturers and invigilators cannot be scheduled (a weekday, or a range of dates, all day or between times).'],
+                ],
+            ],
+
+            'Examination seating' => [
+                'about' => 'Which candidate sits where for every paper, keeping candidates of the same paper apart; students see their seat numbers once it is published.',
+                'permissions' => [
+                    ['View exam seating', 'View', 'See seating plans, hall maps, candidate lists for invigilators and any rule the arrangement could not keep.'],
+                    ['Generate exam seating', 'Generate', 'Generate (or regenerate) the seating plan for an examination timetable using the chosen separation rules, buffer seats and accessible seats.'],
+                    ['Approve exam seating', 'Approve', 'Approve a generated seating plan after checking it.'],
+                    ['Publish exam seating', 'Publish', 'Publish an approved seating plan so each student sees their hall, seat number, date and time, and is notified.'],
+                    ['Assign exam seats', 'Assign', 'Move a candidate to another free seat (a controlled reassignment with a reason), or seat a candidate who registered after the plan was made. The student is told.'],
+                    ['Record exam attendance', 'Record', 'Check candidates in at the hall, or mark them absent, on the invigilator\'s list.'],
+                ],
+            ],
+
+            'Staff leave' => [
+                'about' => 'Leave applications, approvals, balances and resumption. Every member of staff can apply and see their own leave without any permission.',
+                'permissions' => [
+                    ['View leave applications', 'View', 'See every leave application, its approval trail and documents (except confidential medical documents), the leave calendar and who is away.'],
+                    ['Approve leave for any staff', 'Approve', 'Act on any leave application at any approval step, for example as the HR or Registry officer, even when it is waiting for someone else. Every decision is recorded with the name of who made it.'],
+                    ['View confidential leave documents', 'View', 'Open confidential supporting documents such as medical certificates. Approvers without this see only that a document was provided.'],
+                    ['Set leave policy', 'Set', 'Set up leave types, entitlement rules (by category, grade, appointment and years of service), approval routes, reminders, escalation and the holiday calendar.'],
+                    ['Change leave balances', 'Change', 'Add or remove days on a member of staff\'s balance with a reason, and carry unused days into the new leave year.'],
+                    ['Record staff resumption', 'Record', 'Record the date a member of staff actually resumed. A late return is flagged and an early one gives back the unused days.'],
+                    ['Edit staff profiles', 'Edit', 'Set each member of staff\'s staff number, department, category, grade, appointment type, first appointment date, supervisor and whether their role must be covered.'],
+                ],
+            ],
+
+            'Messaging' => [
+                'about' => 'SMS and WhatsApp notices, the provider they go through, and the log of what was sent.',
+                'permissions' => [
+                    ['View message log', 'View', 'See the log of SMS and WhatsApp messages: who they went to, when, through which provider and whether they were delivered to the provider.'],
+                    ['Edit messaging settings', 'Edit', 'Choose the SMS and WhatsApp provider, enter its credentials (stored encrypted), and choose which notices go by SMS or WhatsApp.'],
                 ],
             ],
 

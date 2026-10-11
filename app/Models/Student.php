@@ -43,6 +43,12 @@ class Student extends Model
         return $this->belongsTo(AcademicSession::class, 'academic_session_id');
     }
 
+    /** Cumulative totals carried over from the old records system, if any. */
+    public function legacyBalance(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LegacyBalance::class);
+    }
+
     public function invoices(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
         return $this->morphMany(Invoice::class, 'payable');

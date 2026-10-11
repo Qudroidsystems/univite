@@ -23,7 +23,7 @@ class SessionController extends CrudController
     protected string $intro = 'An academic session is one school year, e.g. 2025/2026. Only one session is current at a time.';
     protected array $searchable = ['name'];
 
-    public function __construct()
+    public function __construct(private SessionLifecycle $lifecycle)
     {
         parent::__construct();
         $this->middleware('permission:Set the current academic session')->only('makeCurrent');
@@ -99,7 +99,7 @@ class SessionController extends CrudController
 
         if ($request->boolean('make_current')) {
             try {
-                app(SessionLifecycle::class)->makeCurrent($record, $request->user());
+                $this->lifecycle->makeCurrent($record, $request->user());
             } catch (RuntimeException $e) {
                 session()->flash('error', $record->name . ' was saved but could not be made current: ' . $e->getMessage());
             }
@@ -109,7 +109,7 @@ class SessionController extends CrudController
     public function makeCurrent($session): RedirectResponse
     {
         try {
-            app(SessionLifecycle::class)->makeCurrent(AcademicSession::findOrFail($session), request()->user());
+            $this->lifecycle->makeCurrent(AcademicSession::findOrFail($session), request()->user());
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

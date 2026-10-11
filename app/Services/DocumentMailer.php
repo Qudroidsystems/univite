@@ -36,6 +36,7 @@ class DocumentMailer
         'result_notice'      => ['Result corrections', 'When one of a student\'s published results is corrected, restored or withdrawn.', false],
         'complaint_response' => ['Result query responses', 'When a student\'s result query is answered.', true],
         'graduation'         => ['Graduation notices', 'When a graduation list is approved, or an approval is reversed.', false],
+        'leave_letter'       => ['Leave letters', 'When staff leave is applied for, approved, not approved, returned, cancelled, or the person resumes.', false],
     ];
 
     public static function enabled(string $type): bool
@@ -236,6 +237,13 @@ class DocumentMailer
         ], null, $by);
     }
 
+    public function leaveLetter(\App\Models\LeaveRequest $r, string $kind, ?User $by = null): int
+    {
+        $doc = \App\Support\LeaveLetters::doc($r, $kind);
+
+        return $this->send('leave_letter', $r, $this->recipients($r->user), $doc['title'] . ' · ' . $r->reference, $doc, str_replace('/', '-', $r->reference) . '-' . $kind . '.html', $by);
+    }
+
     /** Send again from the email log, rebuilt from the record as it is now. */
     public function resend(DocumentEmail $email, User $by): int
     {
@@ -293,6 +301,7 @@ class DocumentMailer
         $emails = match (true) {
             $person instanceof Student => [$person->user?->email],
             $person instanceof Applicant => [$person->email],
+            $person instanceof User => [$person->email],
             default => [],
         };
 

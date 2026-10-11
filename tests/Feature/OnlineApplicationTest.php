@@ -393,7 +393,9 @@ it('does not let draft applicants be admitted one by one either', function () {
 
 it('still admits admin-entered applicants with a generated password', function () {
     $applicant = Applicant::create(['first_name' => 'Walk', 'last_name' => 'In', 'email' => 'walkin@example.com', 'programme_id' => $this->programme->id, 'academic_session_id' => $this->session->id, 'entry_mode' => 'utme', 'entry_level' => 100, 'status' => 'pending']);
-    [$student, $password] = app(AdmissionService::class)->admit($applicant);
+    $admission = app(AdmissionService::class)->admit($applicant);
+    $student = $admission->student;
+    $password = $admission->temporaryPassword;
 
     expect($password)->toBeString()->and($student->user->must_change_password)->toBeTrue();
 });

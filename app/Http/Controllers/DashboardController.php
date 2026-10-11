@@ -14,7 +14,7 @@ use App\Models\User;
 
 class DashboardController extends Controller
 {
-    public function __construct()
+    public function __construct(private \App\Services\OnboardingService $onboarding)
     {
         $this->middleware('auth');
     }
@@ -25,7 +25,7 @@ class DashboardController extends Controller
 
         // Students have no staff permissions; they get their own landing page.
         if (! $user->can('View dashboard') && ($student = $user->student()->with('programme')->first())) {
-            return view('student-home', ['pagetitle' => 'Welcome', 'student' => $student, 'checklist' => $student->needs_onboarding ? app(\App\Services\OnboardingService::class)->checklist($student) : null]);
+            return view('student-home', ['pagetitle' => 'Welcome', 'student' => $student, 'checklist' => $student->needs_onboarding ? $this->onboarding->checklist($student) : null]);
         }
 
         return view('dashboard', [

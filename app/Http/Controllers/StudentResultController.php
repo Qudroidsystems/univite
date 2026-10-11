@@ -9,7 +9,7 @@ use Illuminate\View\View;
 /** Published results, GPA and CGPA: a student's own, or any student's for staff with permission. */
 class StudentResultController extends Controller
 {
-    public function __construct(private ResultService $results)
+    public function __construct(private ResultService $results, private \App\Services\ResultComplaintService $complaints)
     {
     }
 
@@ -50,7 +50,7 @@ class StudentResultController extends Controller
         return view('results.transcript', [
             'pagetitle' => $title, 'student' => $student->load('programme.department.faculty', 'entrySession'),
             'mine' => $mine, 't' => $this->results->transcript($student), 'complaints' => $complaints,
-            'canQuery' => $mine ? fn ($r) => app(\App\Services\ResultComplaintService::class)->blocker($student, $r) === null : fn () => false,
+            'canQuery' => $mine ? fn ($r) => $this->complaints->blocker($student, $r) === null : fn () => false,
         ]);
     }
 }

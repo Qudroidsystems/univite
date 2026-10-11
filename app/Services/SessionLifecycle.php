@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\Sessions\StatusCheck;
 use App\Models\AcademicSession;
 use App\Models\CourseResult;
 use App\Models\GradeBand;
@@ -58,10 +59,8 @@ class SessionLifecycle
 
     /**
      * What stops (problems) or deserves a look (warnings) before a session moves to the given status.
-     *
-     * @return array{problems: string[], warnings: string[]}
      */
-    public function check(AcademicSession $session, string $to): array
+    public function check(AcademicSession $session, string $to): StatusCheck
     {
         $problems = [];
         $warnings = [];
@@ -107,7 +106,7 @@ class SessionLifecycle
             }
         }
 
-        return ['problems' => $problems, 'warnings' => $warnings];
+        return new StatusCheck($problems, $warnings, $this->needsReason($session->status, $to));
     }
 
     public function transition(AcademicSession $session, string $to, User $by, ?string $reason = null): AcademicSession
@@ -124,8 +123,8 @@ class SessionLifecycle
             throw new RuntimeException('Give a reason for this change.');
         }
         $check = $this->check($session, $to);
-        if ($check['problems']) {
-            throw new RuntimeException(implode(' ', $check['problems']));
+        if (! $check->allowed()) {
+            throw new RuntimeException(implode(' ', $check->problems));
         }
 
         DB::transaction(function () use ($session, $from, $to, $by, $reason) {

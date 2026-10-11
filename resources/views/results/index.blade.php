@@ -9,7 +9,7 @@
 
             @if ($mine->isNotEmpty() || $mySheets->isNotEmpty())
                 <div class="card">
-                    <div class="card-header"><h6 class="card-title mb-0">My courses{{ $ctx ? ' · ' . $ctx['session']->name . ' ' . $ctx['type']->name : '' }}</h6></div>
+                    <div class="card-header"><h6 class="card-title mb-0">My courses{{ $ctx ? ' · ' . $ctx->session->name . ' ' . $ctx->type->name : '' }}</h6></div>
                     <ul class="list-group list-group-flush">
                         @foreach ($mine as $a)
                             <li class="list-group-item d-flex justify-content-between align-items-center">

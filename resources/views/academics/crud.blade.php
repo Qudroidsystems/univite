@@ -2,9 +2,10 @@
 
 @section('content')
 @php
-    $canCreate = in_array('create', $actions) && auth()->user()->can('Create ' . $permission);
-    $canUpdate = in_array('edit', $actions) && auth()->user()->can('Edit ' . $permission);
-    $canDelete = in_array('delete', $actions) && auth()->user()->can('Delete ' . $permission);
+    // A page guarded by one permission (rather than View/Create/Edit/Delete {noun}) passes $abilities.
+    $canCreate = in_array('create', $actions) && ($abilities['create'] ?? auth()->user()->can('Create ' . $permission));
+    $canUpdate = in_array('edit', $actions) && ($abilities['edit'] ?? auth()->user()->can('Edit ' . $permission));
+    $canDelete = in_array('delete', $actions) && ($abilities['delete'] ?? auth()->user()->can('Delete ' . $permission));
     $hasOld    = old('_form_mode') !== null;
     $colspan   = count($columns) + 1;
 @endphp

@@ -16,6 +16,22 @@ class MatricBatch extends Model
 
     protected $casts = ['decided_at' => 'datetime'];
 
+    /** A new pending batch with an unused code. "auto" batches collect numbers reserved on clearance or admission. */
+    public static function open(?User $by, string $source = 'generated'): self
+    {
+        do {
+            $code = ($source === 'auto' ? 'A' : '') . strtoupper(\Illuminate\Support\Str::random($source === 'auto' ? 7 : 8));
+        } while (self::where('code', $code)->exists() || MatricEvent::where('batch', $code)->exists());
+
+        return self::create(['code' => $code, 'source' => $source, 'status' => 'pending', 'created_by' => $by?->id]);
+    }
+
+    /** Numbers reserved automatically collect in one open batch until it is decided. */
+    public static function openAuto(?User $by = null): self
+    {
+        return self::where('source', 'auto')->where('status', 'pending')->latest('id')->first() ?? self::open($by, 'auto');
+    }
+
     public function students(): HasMany
     {
         return $this->hasMany(Student::class, 'provisional_batch', 'code');

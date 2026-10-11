@@ -41,6 +41,7 @@
         ['Broadsheet',        'results.broadsheet',          'View student results',      'results.broadsheet'],
         ['Result Summary',    'results.summary',             ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],
         ['Result Queries',    'results.complaints',          'View result complaints',    'results.complaints*'],
+        ['Legacy Results',    'legacy.index',                'Import legacy results',     'legacy.*'],
         ['Graduation Lists',  'graduation.index',            'View graduation lists',     'graduation.*'],
         ['Result Settings',   'results.settings',            'View result settings',      'results.settings*'],
         ['Matric Numbers',       'matric.index',            'View matric numbers',       'matric.*'],
@@ -59,11 +60,32 @@
         ['Permissions', 'permissions.index', 'View permissions', 'permissions.*'],
     ];
 
+    $planning = [
+        ['Venues',             'venues.index',              'View venues',           'venues.index', 'venues.show', 'venues.create', 'venues.edit'],
+        ['Venue Availability', 'venues.availability',       'View venues',           'venues.availability'],
+        ['Venue Usage',        'venues.usage',              'View venues',           'venues.usage'],
+        ['Timetables',         'timetables.index',          'View timetables',       'timetables.*', 'seating.*'],
+        ['Staff Availability', 'staff-availability.index',  'Set staff availability', 'staff-availability.*'],
+    ];
+    $leave = [
+        ['Leave Register',     'leave.register',            ['View leave applications', 'Approve leave for any staff', 'Record staff resumption'], 'leave.register'],
+        ['Leave Balances',     'leave.balances',            ['View leave applications', 'Change leave balances'], 'leave.balances*'],
+        ['Staff Profiles',     'leave.staff.index',         ['Edit staff profiles', 'View leave applications'], 'leave.staff.*'],
+        ['Leave Settings',     'leave.settings',            'Set leave policy',      'leave.settings', 'leave.types.*', 'leave.entitlements.*'],
+        ['Holiday Calendar',   'leave.holidays.index',      ['Set leave policy', 'Create timetables'], 'leave.holidays.*'],
+    ];
+    $messaging = [
+        ['Messaging Settings', 'messaging.settings',        'Edit messaging settings', 'messaging.settings*'],
+        ['Message Log',        'messaging.log',             'View message log',      'messaging.log'],
+    ];
     $groups = [
         ['id' => 'sidebarAcademic', 'label' => 'Academic Setup', 'icon' => 'ri-graduation-cap-line', 'items' => $academic],
         ['id' => 'sidebarStudents', 'label' => 'Admissions & Students', 'icon' => 'ri-user-star-line', 'items' => $students],
         ['id' => 'sidebarBills',    'label' => 'School Bills',   'icon' => 'ri-bill-line',           'items' => $bills],
         ['id' => 'sidebarFees',     'label' => 'Fees & Payments', 'icon' => 'ri-wallet-3-line', 'items' => $fees],
+        ['id' => 'sidebarPlanning', 'label' => 'Venues & Timetables', 'icon' => 'ri-calendar-schedule-line', 'items' => $planning],
+        ['id' => 'sidebarLeave',    'label' => 'Staff Leave',    'icon' => 'ri-suitcase-line',       'items' => $leave],
+        ['id' => 'sidebarMessaging','label' => 'Messaging',      'icon' => 'ri-message-3-line',      'items' => $messaging],
         ['id' => 'sidebarAccess',   'label' => 'Users & Access', 'icon' => 'ri-shield-user-line',    'items' => $access],
     ];
 @endphp
@@ -135,6 +157,39 @@
                         </a>
                     </li>
                 @endif
+                @if ($u->student && (! $u->student->needs_onboarding || $u->student->cleared_at))
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.timetable') ? 'active' : '' }}" href="{{ route('my.timetable') }}">
+                            <i class="ri-calendar-2-line"></i> <span>My Timetable</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.exams*') ? 'active' : '' }}" href="{{ route('my.exams') }}">
+                            <i class="ri-file-edit-line"></i> <span>My Examinations</span>
+                        </a>
+                    </li>
+                @endif
+                @unless ($u->student)
+                    @if ($u->courseAssignments()->exists() || \App\Models\TimetableInvigilator::where('user_id', $u->id)->exists())
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ $on('my.teaching') ? 'active' : '' }}" href="{{ route('my.teaching') }}">
+                                <i class="ri-presentation-line"></i> <span>My Teaching &amp; Duties</span>
+                            </a>
+                        </li>
+                    @endif
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('leave.index', 'leave.create', 'leave.edit', 'leave.show', 'leave.calendar') ? 'active' : '' }}" href="{{ route('leave.index') }}">
+                            <i class="ri-suitcase-line"></i> <span>My Leave</span>
+                        </a>
+                    </li>
+                    @if ($u->can('Approve leave for any staff') || \App\Models\Department::where('hod_id', $u->id)->exists() || \App\Models\Faculty::where('dean_id', $u->id)->exists() || \App\Models\StaffProfile::where('supervisor_id', $u->id)->exists() || ($u->roles->isNotEmpty() && \App\Models\LeaveApprovalStep::whereIn('role_name', $u->roles->pluck('name'))->exists()))
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ $on('leave.approvals') ? 'active' : '' }}" href="{{ route('leave.approvals') }}">
+                                <i class="ri-inbox-line"></i> <span>Leave Approvals</span>
+                            </a>
+                        </li>
+                    @endif
+                @endunless
 
                 @foreach ($groups as $g)
                     @php

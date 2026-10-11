@@ -2,6 +2,11 @@
 
 namespace App\Services;
 
+use App\Data\Results\BroughtForward;
+use App\Data\Results\Score;
+use App\Data\Results\ScoreImport;
+use App\Data\Results\Transcript;
+use App\Data\Results\TranscriptTerm;
 use App\Models\CourseResult;
 use App\Models\RegistrationForm;
 use App\Models\ResultSheet;
@@ -19,6 +24,14 @@ use RuntimeException;
 /** Score entry, upload, the approval chain and publishing for course score sheets. */
 class ResultService
 {
+    public function __construct(
+        private OperationAudit $audit,
+        private DocumentMailer $mailer,
+        private \App\Support\AcademicRules $rules,
+        private \App\Support\SpreadsheetReader $reader,
+    ) {
+    }
+
     public static function caMax(): float
     {
         return (float) Setting::get('results.ca_max', '30');
@@ -86,8 +99,8 @@ class ResultService
     }
 
     /**
-     * @param  array<int, array{ca?: mixed, exam?: mixed}>  $scores  keyed by student id
-     * @return string[] problems, keyed messages; valid rows are still saved
+     * @param  array<int, Score>  $scores  keyed by student id
+     * @return string[] problems; valid rows are still saved
      */
     public function saveScores(ResultSheet $sheet, array $scores, ?User $user = null, string $action = 'saved'): array
     {
@@ -104,7 +117,7 @@ class ResultService
                     continue;
                 }
                 try {
-                    $this->apply($row, $s['ca'] ?? null, $s['exam'] ?? null);
+                    $this->apply($row, $s->ca, $s->exam);
                 } catch (RuntimeException $e) {
                     $problems[] = $row->student->matric_number . ': ' . $e->getMessage();
                 }
@@ -118,9 +131,8 @@ class ResultService
     /**
      * Read a CSV or Excel upload (columns: matric number, CA, exam; first row is the header) and save the scores.
      *
-     * @return array{saved: int, problems: string[]}
      */
-    public function import(ResultSheet $sheet, UploadedFile $file, ?User $user = null): array
+    public function import(ResultSheet $sheet, UploadedFile $file, ?User $user = null): ScoreImport
     {
         $table = $this->readTable($file);
         $head = array_map(fn ($h) => strtolower(preg_replace('/[^a-z0-9]/i', '', (string) $h)), array_shift($table) ?? []);
@@ -145,43 +157,18 @@ class ResultService
                 $problems[] = 'Row ' . ($n + 2) . ": {$matric} is not registered for this course.";
                 continue;
             }
-            $scores[$row->student_id] = [
-                'ca'   => $ca !== null ? ($line[$ca] ?? null) : $row->ca,
-                'exam' => $ex !== null ? ($line[$ex] ?? null) : $row->exam,
-            ];
+            $scores[$row->student_id] = new Score(
+                $ca !== null ? ($line[$ca] ?? null) : $row->ca,
+                $ex !== null ? ($line[$ex] ?? null) : $row->exam,
+            );
         }
 
-        $problems = array_merge($problems, $this->saveScores($sheet, $scores, $user, 'imported'));
-
-        return ['saved' => count($scores), 'problems' => $problems];
+        return new ScoreImport(count($scores), array_merge($problems, $this->saveScores($sheet, $scores, $user, 'imported')));
     }
 
     private function readTable(UploadedFile $file): array
     {
-        $ext = strtolower($file->getClientOriginalExtension());
-        if (in_array($ext, ['xlsx', 'xls'], true)) {
-            if (! class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)) {
-                throw new RuntimeException('Excel files are not supported on this server yet. Save the sheet as CSV and upload that.');
-            }
-            $rows = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath())->getActiveSheet()->toArray(null, true, true, false);
-
-            return array_values(array_filter($rows, fn ($r) => collect($r)->filter(fn ($c) => $c !== null && $c !== '')->isNotEmpty()));
-        }
-
-        $rows = [];
-        $h = fopen($file->getRealPath(), 'r');
-        while (($line = fgetcsv($h)) !== false) {
-            if (count($line) === 1 && $line[0] === null) {
-                continue;
-            }
-            $rows[] = $line;
-        }
-        fclose($h);
-        if ($rows) {
-            $rows[0][0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $rows[0][0]);   // BOM
-        }
-
-        return $rows;
+        return $this->reader->read($file->getRealPath(), $file->getClientOriginalExtension());
     }
 
     /** Rows that still lack a CA or exam score. */
@@ -258,7 +245,7 @@ class ResultService
         $sheet->update(['status' => 'published', 'published_at' => now()]);
         $this->mirror($sheet);
         $this->log($sheet, $user, 'published');
-        app(OperationAudit::class)->note('result_publish', 'results', $user, 'published', $sheet, ['status' => 'approved'], ['status' => 'published', 'course_id' => $sheet->course_id], null, $sheet->academic_session_id);
+        $this->audit->note('result_publish', 'results', $user, 'published', $sheet, ['status' => 'approved'], ['status' => 'published', 'course_id' => $sheet->course_id], null, $sheet->academic_session_id);
 
         return $sheet;
     }
@@ -298,8 +285,8 @@ class ResultService
             throw new RuntimeException('Both the CA and exam scores are required.');
         }
         if ($record) {
-            app(OperationAudit::class)->note('result_amend', 'results', $user, 'score_amended', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $result->academic_session_id);
-            DB::afterCommit(fn () => app(DocumentMailer::class)->resultNotice($result->fresh(), 'amended', $before, $reason, $user));
+            $this->audit->note('result_amend', 'results', $user, 'score_amended', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $result->academic_session_id);
+            DB::afterCommit(fn () => $this->mailer->resultNotice($result->fresh(), 'amended', $before, $reason, $user));
         }
         if ($result->result_sheet_id) {
             $this->log($result->sheet, $user, 'amended', null, "{$result->student->matric_number}: {$old} to {$result->ca}/{$result->exam} ({$result->grade}). {$reason}");
@@ -327,7 +314,7 @@ class ResultService
         $rows = $students->map(function (Student $s) use ($term) {
             $mine = $term->get($s->id, collect());
 
-            return ['student' => $s, 'results' => $mine->keyBy('course_id'), 'units' => (int) $mine->sum('credit_units'), 'gpa' => GradeScale::gpa($mine)] + array_intersect_key($this->transcript($s), ['cgpa' => 1, 'standing' => 1]);
+            return ['student' => $s, 'results' => $mine->keyBy('course_id'), 'units' => (int) $mine->sum('credit_units'), 'gpa' => GradeScale::gpa($mine)] + (fn ($t) => ['cgpa' => $t->cgpa, 'standing' => $t->standing])($this->transcript($s));
         });
 
         return ['courses' => $courses, 'rows' => $rows];
@@ -353,11 +340,11 @@ class ResultService
             $passed = CourseResult::where('student_id', $s->id)->where('status', 'published')->where('is_pass', true)->pluck('course_id')->flip();
             $outstanding = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')->where('is_pass', false)->get()
                 ->reject(fn ($r) => $passed->has($r->course_id))->pluck('course.code')->unique()->sort()->values();
-            $bucket = $term->isEmpty() ? 'pending' : match ($t['standing']) {
+            $bucket = $term->isEmpty() ? 'pending' : match ($t->standing) {
                 'Advised to withdraw' => 'withdraw', 'On probation' => 'probation', default => $outstanding->isNotEmpty() ? 'carryover' : 'pass',
             };
 
-            return ['student' => $s, 'level' => (int) $f->level, 'gpa' => GradeScale::gpa($term), 'cgpa' => $t['cgpa'], 'standing' => $t['standing'],
+            return ['student' => $s, 'level' => (int) $f->level, 'gpa' => GradeScale::gpa($term), 'cgpa' => $t->cgpa, 'standing' => $t->standing,
                 'outstanding' => $outstanding, 'bucket' => $bucket, 'pending' => $f->courses()->count() - $term->count()];
         })->sortBy(fn ($r) => $r['student']->matric_number)
             ->groupBy(fn ($r) => $r['student']->programme_id . '-' . $r['level'])
@@ -372,27 +359,37 @@ class ResultService
      * By default each course counts once in the CGPA (its latest published attempt); under the "every attempt" rule
      * (TCP / TNU) every attempt counts. Standing (probation / withdrawal) follows the programme's rules.
      *
-     * @return array{terms: Collection, cgpa: float, units: int, earned: int, class: ?string, standing: ?string, method: string}
      */
-    public function transcript(Student $student): array
+    public function transcript(Student $student): Transcript
     {
         $all = CourseResult::with('course', 'session', 'semesterType')->where('student_id', $student->id)->where('status', 'published')
             ->get()->sortBy(fn ($r) => [$r->session->name, $r->semesterType->sort_order, $r->id])->values();   // session names sort chronologically (2025/2026 < 2026/2027)
 
-        $terms = $all->groupBy(fn ($r) => $r->academic_session_id . '-' . $r->semester_type_id)->map(fn ($rows) => [
-            'session' => $rows->first()->session, 'semester' => $rows->first()->semesterType, 'results' => $rows->sortBy('course.code')->values(),
-            'units' => $rows->sum('credit_units'), 'gpa' => GradeScale::gpa($rows),
-        ])->values();
+        $terms = $all->groupBy(fn ($r) => $r->academic_session_id . '-' . $r->semester_type_id)->map(fn ($rows) => new TranscriptTerm(
+            $rows->first()->session, $rows->first()->semesterType, $rows->sortBy('course.code')->values(), (int) $rows->sum('credit_units'), (float) GradeScale::gpa($rows),
+        ))->values();
 
-        $rules = app(\App\Support\AcademicRules::class)->forStudent($student);
+        $rules = $this->rules->forStudent($student);
         $latest = $all->groupBy('course_id')->map->last()->values();
         $counted = $rules['cgpa_method'] === 'all' ? $all : $latest;
-        $cgpa = GradeScale::gpa($counted);
 
-        return [
-            'terms' => $terms, 'cgpa' => $cgpa, 'units' => (int) $counted->sum('credit_units'),
-            'earned' => (int) $latest->where('is_pass', true)->sum('credit_units'), 'class' => $latest->isEmpty() ? null : GradeScale::classOf($cgpa),
-            'standing' => \App\Support\AcademicRules::standing($rules, $cgpa, $latest->isNotEmpty()), 'method' => $rules['cgpa_method'],
-        ];
+        // Totals brought forward from the old records system count as if they were results here.
+        $bf = $student->legacyBalance;
+        $units = (int) $counted->filter(fn ($r) => $r->grade !== null && $r->points !== null)->sum('credit_units') + (int) ($bf?->tnu ?? 0);
+        $points = $counted->filter(fn ($r) => $r->grade !== null && $r->points !== null)->sum(fn ($r) => $r->points * $r->credit_units) + (float) ($bf?->tcp ?? 0);
+        $cgpa = $units > 0 ? round($points / $units, 2) : 0.0;
+        $has = $latest->isNotEmpty() || $bf;
+
+        return new Transcript(
+            terms: $terms,
+            cgpa: $cgpa,
+            units: (int) $counted->sum('credit_units') + (int) ($bf?->tnu ?? 0),
+            tcp: round($points, 2),
+            earned: (int) $latest->where('is_pass', true)->sum('credit_units') + (int) ($bf?->units_passed ?? 0),
+            class: $has ? GradeScale::classOf($cgpa) : null,
+            standing: \App\Support\AcademicRules::standing($rules, $cgpa, (bool) $has),
+            method: $rules['cgpa_method'],
+            broughtForward: $bf ? BroughtForward::fromBalance($bf) : null,
+        );
     }
 }

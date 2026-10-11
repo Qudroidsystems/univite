@@ -12,7 +12,7 @@ class User extends Authenticatable
     use HasFactory, HasRoles, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'username', 'phone_number', 'gender', 'date_of_birth',
+        'name', 'email', 'username', 'phone_number', 'whatsapp_number', 'notify_sms', 'notify_whatsapp', 'gender', 'date_of_birth',
         'avatar', 'password', 'must_change_password', 'is_disabled', 'last_login_at',
     ];
 
@@ -27,6 +27,8 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'is_disabled'          => 'boolean',
             'last_login_at'        => 'datetime',
+            'notify_sms'           => 'boolean',
+            'notify_whatsapp'      => 'boolean',
         ];
     }
 
@@ -50,6 +52,11 @@ class User extends Authenticatable
     public function courseAssignments(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(CourseAssignment::class);
+    }
+
+    public function staffProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(StaffProfile::class);
     }
 
     public function student(): \Illuminate\Database\Eloquent\Relations\HasOne

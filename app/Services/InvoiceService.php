@@ -2,17 +2,26 @@
 
 namespace App\Services;
 
+use App\Data\Fees\BulkInvoicePreview;
+use App\Data\Fees\BulkInvoiceResult;
+use App\Data\Fees\InvoiceTarget;
+use App\Events\StudentProgressChanged;
 use App\Models\AcademicSession;
 use App\Models\Bill;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Student;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 
 class InvoiceService
 {
+    public function __construct(private OperationAudit $audit, private DocumentMailer $mailer, private BillMatcher $matcher)
+    {
+    }
+
     /**
      * Build a student's fees for a session from the school bills: every active bill for their programme
      * and level that applies to them (fresh = entered in this session, otherwise returning).
@@ -26,20 +35,19 @@ class InvoiceService
             return $existing;
         }
 
-        $matcher = new BillMatcher();
-        $bills = $matcher->forStudent($student, $session, $semesterTypeId);
+        $bills = $this->matcher->forStudent($student, $session, $semesterTypeId);
 
         if ($bills->isEmpty()) {
             return null;
         }
 
         $semester = $semesterTypeId ? \App\Models\SemesterType::find($semesterTypeId) : null;
-        [$opens, $closes] = $matcher->window($bills);
+        [$opens, $closes] = $this->matcher->window($bills);
 
-        return DB::transaction(function () use ($student, $session, $bills, $createdBy, $matcher, $semester, $opens, $closes) {
+        return DB::transaction(function () use ($student, $session, $bills, $createdBy, $semester, $opens, $closes) {
             $invoice = Invoice::create([
                 'semester_type_id'    => $semester?->id,
-                'installment_plan'    => $matcher->plan($bills),
+                'installment_plan'    => $this->matcher->plan($bills),
                 'opens_at'            => $opens,
                 'closes_at'           => $closes,
                 'payable_type'        => Student::class,
@@ -70,33 +78,23 @@ class InvoiceService
             ->orderBy('id');
     }
 
-    /**
-     * What a bulk run would do, without creating anything.
-     *
-     * @return array{create: int, existing: int, no_bills: int, amount: float, sample: array<int, array{0: string, 1: string, 2: float}>}
-     */
-    public function previewBulk(AcademicSession $session, ?int $programmeId = null, ?int $level = null, ?int $semesterTypeId = null): array
+    /** What a bulk run would do, without creating anything. */
+    public function previewBulk(InvoiceTarget $target): BulkInvoicePreview
     {
-        $out = ['create' => 0, 'existing' => 0, 'no_bills' => 0, 'amount' => 0.0, 'sample' => []];
-        $matcher = new BillMatcher();
-        $this->bulkTargets($programmeId, $level)->with('programme')->each(function (Student $student) use ($session, $semesterTypeId, $matcher, &$out) {
-            if ($this->sessionInvoice($student, $session, $semesterTypeId)) {
-                $out['existing']++;
+        $out = new BulkInvoicePreview();
+        $this->bulkTargets($target->programmeId, $target->level)->with('programme')->each(function (Student $student) use ($target, $out) {
+            if ($this->sessionInvoice($student, $target->session, $target->semesterTypeId)) {
+                $out->existing++;
 
                 return;
             }
-            $bills = $matcher->forStudent($student, $session, $semesterTypeId);
+            $bills = $this->matcher->forStudent($student, $target->session, $target->semesterTypeId);
             if ($bills->isEmpty()) {
-                $out['no_bills']++;
+                $out->noBills++;
 
                 return;
             }
-            $total = round($bills->sum(fn ($b) => (float) $b->amount), 2);
-            $out['create']++;
-            $out['amount'] += $total;
-            if (count($out['sample']) < 15) {
-                $out['sample'][] = [$student->full_name, $student->matric_number ?: '—', $total];
-            }
+            $out->add($student->full_name, $student->matric_number ?: '—', round($bills->sum(fn ($b) => (float) $b->amount), 2));
         });
 
         return $out;
@@ -105,31 +103,27 @@ class InvoiceService
     /**
      * Invoice every active student of the session who has none yet. The run is one operation in the history, listing
      * every invoice it created, so it can be reversed (invoices nobody has paid are cancelled).
-     *
-     * @return array{created: int, existing: int, no_bills: int, operation: ?string}
      */
-    public function generateBulk(AcademicSession $session, ?int $programmeId = null, ?int $level = null, ?int $createdBy = null, ?int $semesterTypeId = null): array
+    public function generateBulk(InvoiceTarget $target, ?User $by = null): BulkInvoiceResult
     {
-        $result = ['created' => 0, 'existing' => 0, 'no_bills' => 0, 'operation' => null];
-        $audit = app(OperationAudit::class);
-        $op = $audit->begin('invoice_generate', 'payments', $createdBy ? \App\Models\User::find($createdBy) : null, $session->id, null, array_filter(['programme_id' => $programmeId, 'level' => $level, 'semester_type_id' => $semesterTypeId]));
+        $created = $existing = $noBills = 0;
+        $op = $this->audit->begin('invoice_generate', 'payments', $by, $target->session->id, null, $target->filters());
 
-        $this->bulkTargets($programmeId, $level)
-            ->each(function (Student $student) use ($session, $createdBy, $semesterTypeId, &$result, $audit, $op) {
-                if ($this->sessionInvoice($student, $session, $semesterTypeId)) {
-                    $result['existing']++;
-                } elseif ($invoice = $this->generateForStudent($student, $session, $createdBy, $semesterTypeId)) {
-                    $audit->record($op, 'invoice_created', $invoice, null, ['status' => 'unpaid', 'total' => (string) $invoice->total, 'student' => $student->full_name]);
-                    $result['created']++;
+        $this->bulkTargets($target->programmeId, $target->level)
+            ->each(function (Student $student) use ($target, $by, $op, &$created, &$existing, &$noBills) {
+                if ($this->sessionInvoice($student, $target->session, $target->semesterTypeId)) {
+                    $existing++;
+                } elseif ($invoice = $this->generateForStudent($student, $target->session, $by?->id, $target->semesterTypeId)) {
+                    $this->audit->record($op, 'invoice_created', $invoice, null, ['status' => 'unpaid', 'total' => (string) $invoice->total, 'student' => $student->full_name]);
+                    $created++;
                 } else {
-                    $result['no_bills']++;
+                    $noBills++;
                 }
             });
 
-        $audit->finish($op, $result['created'], 0, $result['existing'] + $result['no_bills']);
-        $result['operation'] = $op->operation_id;
+        $this->audit->finish($op, $created, 0, $existing + $noBills);
 
-        return $result;
+        return new BulkInvoiceResult($created, $existing, $noBills, $op->operation_id);
     }
 
     /** A student's live (not cancelled) invoice for a session, if any. */
@@ -153,7 +147,7 @@ class InvoiceService
             return $existing;
         }
 
-        $bills = (new BillMatcher())->forStudent($student, $student->entrySession, null, true, $itemId, (int) $student->entry_level);
+        $bills = $this->matcher->forStudent($student, $student->entrySession, null, true, $itemId, (int) $student->entry_level);
 
         if ($bills->isEmpty()) {
             return null;
@@ -216,11 +210,11 @@ class InvoiceService
     private function paid(Payment $payment, ?\App\Models\User $by): void
     {
         $payment->loadMissing('invoice');
-        $audit = app(OperationAudit::class);
+        $audit = $this->audit;
         $op = $audit->begin('payment_record', 'payments', $by, $payment->invoice->academic_session_id, null, ['invoice' => $payment->invoice->reference, 'gateway' => $payment->gateway]);
         $audit->record($op, 'payment_recorded', $payment, null, ['amount' => (string) $payment->amount, 'status' => 'successful', 'invoice' => $payment->invoice->reference, 'channel' => $payment->channel, 'gateway_reference' => $payment->gateway_reference]);
         $audit->finish($op, 1);
-        DB::afterCommit(fn () => app(DocumentMailer::class)->receipt($payment->fresh(), $by));
+        DB::afterCommit(fn () => $this->mailer->receipt($payment->fresh(), $by));
     }
 
     /**
@@ -244,7 +238,7 @@ class InvoiceService
             ]);
             $payment->update(['status' => 'reversed', 'reversed_at' => now(), 'reversed_by' => $by->id, 'reversal_reason' => $reason]);
             $this->refreshTotals(Invoice::lockForUpdate()->findOrFail($payment->invoice_id));
-            DB::afterCommit(fn () => app(DocumentMailer::class)->paymentReversed($reversal->fresh(), $by));
+            DB::afterCommit(fn () => $this->mailer->paymentReversed($reversal->fresh(), $by));
 
             return $reversal;
         });
@@ -291,7 +285,7 @@ class InvoiceService
 
         // Paying fees can complete a student's clearance.
         if ($invoice->payable_type === Student::class && ($student = Student::find($invoice->payable_id))) {
-            app(ClearanceService::class)->refresh($student);
+            StudentProgressChanged::dispatch($student);
         }
     }
 }

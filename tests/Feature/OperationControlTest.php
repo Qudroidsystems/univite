@@ -49,7 +49,7 @@ function ocStudent(string $last, string $jamb, bool $cleared = true): Student
         'entry_level' => 100, 'status' => 'pending', 'password' => 'secret-pass',
     ]);
     $a->update(['application_no' => 'APP/2026/' . str_pad((string) $a->id, 4, '0', STR_PAD_LEFT)]);
-    $s = app(AdmissionService::class)->admit($a->fresh())[0];
+    $s = app(AdmissionService::class)->admit($a->fresh())->student;
     if ($cleared) {
         $s->update(['cleared_at' => now()]);
     }

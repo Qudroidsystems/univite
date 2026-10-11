@@ -19,12 +19,21 @@
                     @endif
                 </table>
 
-                @forelse ($t['terms'] as $term)
-                    <h6 class="mt-4">{{ $term['session']->name }} · {{ $term['semester']->name }}</h6>
+                @if ($bf = $t->broughtForward)
+                    <h6 class="mt-4">Brought forward from earlier records{{ $bf->asOf ? ' (to the end of ' . $bf->asOf . ')' : '' }}</h6>
+                    <table class="table table-sm"><tbody>
+                        <tr><th style="width:25%">Total units (TNU)</th><td>{{ $bf->tnu }}</td><th style="width:25%">Total credit points (TCP)</th><td>{{ rtrim(rtrim(number_format($bf->tcp, 2), '0'), '.') }}</td></tr>
+                        <tr><th>CGPA at that point</th><td>{{ number_format($bf->cgpa, 2) }}</td><th>Units passed</th><td>{{ $bf->unitsPassed ?? '—' }}</td></tr>
+                        @if ($bf->note)<tr><th>Note</th><td colspan="3">{{ $bf->note }}</td></tr>@endif
+                    </tbody></table>
+                @endif
+
+                @forelse ($t->terms as $term)
+                    <h6 class="mt-4">{{ $term->session->name }} · {{ $term->semester->name }}</h6>
                     <table class="table table-sm">
                         <thead class="table-light"><tr><th>Code</th><th>Title</th><th class="text-end">Units</th><th class="text-end">Score</th><th>Grade</th><th class="text-end">Points</th>@if ($mine)<th class="d-print-none"></th>@endif</tr></thead>
                         <tbody>
-                        @foreach ($term['results'] as $r)
+                        @foreach ($term->results as $r)
                             <tr><td>{{ $r->course->code }}</td><td>{{ $r->course->title }}</td><td class="text-end">{{ $r->credit_units }}</td><td class="text-end">{{ $r->total }}</td><td>{{ $r->grade }}</td><td class="text-end">{{ rtrim(rtrim(number_format($r->points, 2), '0'), '.') }}</td>
                                 @if ($mine)
                                     @php $q = $complaints->get($r->id)?->first(); @endphp
@@ -48,19 +57,20 @@
                             @endif
                         @endforeach
                         </tbody>
-                        <tfoot><tr><th colspan="2" class="text-end">Semester GPA</th><th class="text-end">{{ $term['units'] }}</th><th colspan="3" class="text-end">{{ number_format($term['gpa'], 2) }}</th>@if ($mine)<th class="d-print-none"></th>@endif</tr></tfoot>
+                        <tfoot><tr><th colspan="2" class="text-end">Semester GPA</th><th class="text-end">{{ $term->units }}</th><th colspan="3" class="text-end">{{ number_format($term->gpa, 2) }}</th>@if ($mine)<th class="d-print-none"></th>@endif</tr></tfoot>
                     </table>
                 @empty
-                    <p class="text-center text-muted my-5">No results have been published yet.</p>
+                    @unless ($t->broughtForward)<p class="text-center text-muted my-5">No results have been published yet.</p>@endunless
                 @endforelse
 
-                @if ($t['terms']->isNotEmpty())
+                @if ($t->hasRecords())
                     <div class="border rounded p-3 bg-light d-flex flex-wrap gap-4">
-                        <div><div class="text-muted fs-12">CGPA</div><div class="fs-4 fw-semibold">{{ number_format($t['cgpa'], 2) }}</div></div>
-                        <div><div class="text-muted fs-12">{{ $t['method'] === 'all' ? 'TNU (all attempts)' : 'Units attempted' }}</div><div class="fs-4 fw-semibold">{{ $t['units'] }}</div></div>
-                        <div><div class="text-muted fs-12">Units passed</div><div class="fs-4 fw-semibold">{{ $t['earned'] }}</div></div>
-                        @if ($t['class'])<div><div class="text-muted fs-12">Class</div><div class="fs-4 fw-semibold">{{ $t['class'] }}</div></div>@endif
-                        @if ($t['standing'])<div><div class="text-muted fs-12">Academic standing</div><div class="fs-4 fw-semibold text-danger">{{ $t['standing'] }}</div></div>@endif
+                        <div><div class="text-muted fs-12">CGPA</div><div class="fs-4 fw-semibold">{{ number_format($t->cgpa, 2) }}</div></div>
+                        <div><div class="text-muted fs-12">{{ $t->method === 'all' ? 'TNU (all attempts)' : 'Units attempted' }}</div><div class="fs-4 fw-semibold">{{ $t->units }}</div></div>
+                        <div><div class="text-muted fs-12">TCP</div><div class="fs-4 fw-semibold">{{ rtrim(rtrim(number_format($t->tcp, 2), '0'), '.') }}</div></div>
+                        <div><div class="text-muted fs-12">Units passed</div><div class="fs-4 fw-semibold">{{ $t->earned }}</div></div>
+                        @if ($t->class)<div><div class="text-muted fs-12">Class</div><div class="fs-4 fw-semibold">{{ $t->class }}</div></div>@endif
+                        @if ($t->standing)<div><div class="text-muted fs-12">Academic standing</div><div class="fs-4 fw-semibold text-danger">{{ $t->standing }}</div></div>@endif
                     </div>
                 @endif
                 @unless ($mine)@include('partials.signatory', ['role' => 'registrar'])@endunless

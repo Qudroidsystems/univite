@@ -17,7 +17,7 @@ use Illuminate\View\View;
  */
 class CurriculumController extends Controller
 {
-    public function __construct()
+    public function __construct(private \App\Support\AcademicRules $rules)
     {
         $this->middleware('permission:View programme curriculum')->only('index');
         $this->middleware('permission:Edit programme curriculum')->only(['store', 'update', 'destroy']);
@@ -38,7 +38,7 @@ class CurriculumController extends Controller
                 ->sortBy(fn ($e) => $e->course->code);
 
             $types = \App\Models\SemesterType::pluck('id', 'sort_order');
-            $rules = app(\App\Support\AcademicRules::class);
+            $rules = $this->rules;
             foreach ($programme->levels() as $level) {
                 foreach (\App\Models\SemesterType::options() as $order => $label) {
                     $rows = $entries->where('level', $level)->where('semester_order', $order)->values();

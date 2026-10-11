@@ -43,7 +43,7 @@ beforeEach(function () {
         $a = Applicant::create(['first_name' => $d[0], 'last_name' => $d[1], 'email' => $d[2], 'jamb_reg_no' => $d[3], 'jamb_score' => 200, 'programme_id' => $this->programme->id,
             'academic_session_id' => $this->session->id, 'entry_mode' => 'utme', 'entry_level' => 100, 'status' => 'pending', 'password' => 'my-secret-pw']);
         $a->update(['application_no' => 'APP/2026/000' . ($i + 1)]);
-        $s = app(AdmissionService::class)->admit($a->fresh(), 'First Batch')[0];
+        $s = app(AdmissionService::class)->admit($a->fresh(), 'First Batch')->student;
         $s->update(['needs_onboarding' => false, 'matric_number' => $d[4]]);
         RegistrationForm::create(['student_id' => $s->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id, 'level' => 100, 'status' => 'approved', 'total_units' => 3])
             ->courses()->create(['student_id' => $s->id, 'course_id' => $this->course->id, 'credit_units' => 3]);
@@ -166,9 +166,9 @@ it('shows a student their published results with semester GPA and CGPA, and coun
     $make($this->course2, $this->session, 10, 'approved');   // not published: invisible
 
     $t = app(ResultService::class)->transcript($s);
-    expect($t['terms'])->toHaveCount(2)->and($t['units'])->toBe(5)
-        ->and($t['cgpa'])->toBe(4.6)            // (5*3 + 4*2) / 5 : the re-sit replaces the fail
-        ->and($t['terms'][0]['gpa'])->toBe(1.6); // (0*3 + 4*2) / 5
+    expect($t->terms)->toHaveCount(2)->and($t->units)->toBe(5)
+        ->and($t->cgpa)->toBe(4.6)            // (5*3 + 4*2) / 5 : the re-sit replaces the fail
+        ->and($t->terms[0]->gpa)->toBe(1.6); // (0*3 + 4*2) / 5
 
     $this->actingAs($s->user->fresh())->get(route('my.results'))->assertOk()->assertSee('4.60')->assertSee('2025/2026');
     $this->actingAs($this->admin)->get(route('students.transcript', $s->id))->assertOk()->assertSee('Academic transcript');
@@ -322,11 +322,11 @@ it('stops graduation while registered results are unpublished or compulsory cour
     $this->students->each->update(['current_level' => 100, 'status' => 'active']);
 
     $c = app(\App\Services\GraduationService::class)->check($this->students[0]->fresh());
-    expect(implode(' ', $c['problems']))->toContain('Results not yet published for: BIO 101')->toContain('never taken: BIO 102');
+    expect(implode(' ', $c->problems))->toContain('Results not yet published for: BIO 101')->toContain('never taken: BIO 102');
 
     Setting::put('graduation.require_core', '0');
     $c = app(\App\Services\GraduationService::class)->check($this->students[0]->fresh());
-    expect(implode(' ', $c['problems']))->not->toContain('never taken');
+    expect(implode(' ', $c->problems))->not->toContain('never taken');
 });
 
 it('applies the programme\'s graduation rules: failed electives, elective units, minimum CGPA and years of study', function () {
@@ -341,7 +341,7 @@ it('applies the programme\'s graduation rules: failed electives, elective units,
     $mk($this->course, 50);    // C in BIO 101 (core)
     $mk($this->course2, 20);   // F in BIO 102 (elective)
     $rules = app(\App\Support\AcademicRules::class);
-    $check = fn () => implode(' ', app(\App\Services\GraduationService::class)->check($s->fresh())['problems']);
+    $check = fn () => implode(' ', app(\App\Services\GraduationService::class)->check($s->fresh())->problems);
 
     expect($check())->toContain('Failed and not yet passed: BIO 102');
     $rules->save('department', $this->programme->department_id, null, null, ['retake_failed_electives' => false], null);
@@ -362,12 +362,12 @@ it('counts every attempt under the TCP/TNU rule and shows probation from the pro
             'ca' => 0, 'exam' => $total, 'total' => $total, 'grade' => \App\Support\GradeScale::grade($total)['grade'], 'points' => \App\Support\GradeScale::grade($total)['points'],
             'is_pass' => \App\Support\GradeScale::grade($total)['is_pass'], 'status' => 'published']);
     }
-    expect(app(ResultService::class)->transcript($s)['cgpa'])->toBe(5.0);
+    expect(app(ResultService::class)->transcript($s)->cgpa)->toBe(5.0);
 
     $rules = app(\App\Support\AcademicRules::class);
     $rules->save('programme', $this->programme->id, null, null, ['cgpa_method' => 'all', 'probation_cgpa' => 3.0], null);
     $t = app(ResultService::class)->transcript($s);
-    expect($t['cgpa'])->toBe(2.5)->and($t['units'])->toBe(6)->and($t['standing'])->toBe('On probation');
+    expect($t->cgpa)->toBe(2.5)->and($t->units)->toBe(6)->and($t->standing)->toBe('On probation');
     $this->actingAs($s->user->fresh())->get(route('my.results'))->assertSee('On probation')->assertSee('TNU');
 });
 
@@ -378,7 +378,7 @@ it('puts weak students on probation or advises withdrawal, limits or holds their
     $rules->save('department', $this->programme->department_id, null, null, ['probation_cgpa' => 5.5, 'withdrawal_cgpa' => 1.0, 'probation_max_units' => 3], null);
     $reg = app(\App\Services\RegistrationService::class);
 
-    expect($reg->standing($good))->toBe('On probation')->and($reg->limits($good, $reg->context())['max'])->toBe(3)
+    expect($reg->standing($good))->toBe('On probation')->and($reg->limits($good, $reg->context())->max)->toBe(3)
         ->and($reg->standing($weak))->toBe('Advised to withdraw')
         ->and(implode(' ', $reg->blockers($weak)))->toContain('advised to withdraw');
 

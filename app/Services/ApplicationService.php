@@ -15,6 +15,10 @@ use RuntimeException;
 class ApplicationService
 {
     /** Create the application (not yet submitted) and the screening-fee invoice. */
+    public function __construct(private DocumentMailer $mailer)
+    {
+    }
+
     public function register(array $data): Applicant
     {
         $session = ApplicationSettings::session() ?? throw new RuntimeException('Applications are closed.');
@@ -126,7 +130,7 @@ class ApplicationService
         }
 
         $applicant->update(['status' => 'pending', 'submitted_at' => now()]);
-        app(DocumentMailer::class)->applicationSlip($applicant->fresh());
+        $this->mailer->applicationSlip($applicant->fresh());
     }
 
     /** Store (or replace) an uploaded document on the private disk. */

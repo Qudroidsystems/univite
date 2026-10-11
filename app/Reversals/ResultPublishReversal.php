@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Models\OperationBatch;
 use App\Models\ResultComplaint;
 use App\Models\ResultSheet;
@@ -16,6 +17,11 @@ use App\Services\ResultService;
  */
 class ResultPublishReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private ResultService $results, private DocumentMailer $mailer)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Withdraw this published result';
@@ -67,7 +73,7 @@ class ResultPublishReversal extends BaseReversal
     {
         $sheet = $this->subject($op, ResultSheet::class);
         $new = $this->begin($op, 'result_withdraw', $by, $reason, ['course' => $sheet->course?->code]);
-        app(ResultService::class)->withdraw($sheet, $by, $reason);
+        $this->results->withdraw($sheet, $by, $reason);
         $this->audit->record($new, 'sheet_withdrawn', $sheet, ['status' => 'published'], ['status' => 'approved'], $reason);
         $results = $sheet->results()->with('student')->get();
         foreach ($results as $r) {
@@ -75,8 +81,7 @@ class ResultPublishReversal extends BaseReversal
         }
         $this->audit->finish($new, $results->count());
         $this->audit->markReversed($op);
-        $mailer = app(DocumentMailer::class);
-        $results->each(fn ($r) => $mailer->resultNotice($r, 'withdrawn', null, $reason, $by));
+        $results->each(fn ($r) => $this->mailer->resultNotice($r, 'withdrawn', null, $reason, $by));
 
         return $new;
     }

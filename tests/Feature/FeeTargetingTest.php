@@ -38,7 +38,7 @@ function enrol(string $email = 'a@example.com', string $nationality = 'Nigerian'
         'academic_session_id' => test()->session->id, 'entry_mode' => 'utme', 'entry_level' => 100, 'nationality' => $nationality,
     ]);
 
-    return app(AdmissionService::class)->admit($a)[0];
+    return app(AdmissionService::class)->admit($a)->student;
 }
 
 function bill(array $over): Bill

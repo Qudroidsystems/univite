@@ -49,7 +49,7 @@ function applicantStudent(string $email = 'tola@example.com', string $jamb = '12
         $applicant->documents()->create(['type' => $type, 'path' => $path, 'original_name' => $name, 'size' => 10240]);
     }
 
-    return app(AdmissionService::class)->admit($applicant->fresh(), 'First Batch')[0];
+    return app(AdmissionService::class)->admit($applicant->fresh(), 'First Batch')->student;
 }
 
 /** Accept, biodata, documents, then physical verification. */

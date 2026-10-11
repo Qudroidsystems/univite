@@ -289,4 +289,125 @@ Route::middleware('auth')->group(function () {
         Route::post('copy', [BillController::class, 'copy'])->name('copy');
         Route::resource('structure', BillController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['structure' => 'bill']);
     });
+    // ---- Venues: halls, classrooms and laboratories ----
+    Route::prefix('venues')->name('venues.')->controller(\App\Http\Controllers\VenueController::class)->group(function () {
+        Route::get('availability', 'availability')->name('availability');
+        Route::get('usage', 'usage')->name('usage');
+        Route::post('{venue}/closures', 'close')->name('closures.store');
+        Route::post('{venue}/closures/{closure}/lift', 'lift')->name('closures.lift');
+        Route::post('{venue}/issues', 'report')->name('issues.store');
+        Route::post('{venue}/issues/{issue}/resolve', 'resolve')->name('issues.resolve');
+        Route::post('{venue}/bookings', 'book')->name('bookings.store');
+        Route::post('{venue}/bookings/{booking}/cancel', 'cancelBooking')->name('bookings.cancel');
+    });
+    Route::resource('venues', \App\Http\Controllers\VenueController::class);
+
+    // ---- Lecture and examination timetables ----
+    Route::get('timetables/staff-availability', [\App\Http\Controllers\StaffAvailabilityController::class, 'index'])->name('staff-availability.index');
+    Route::post('timetables/staff-availability', [\App\Http\Controllers\StaffAvailabilityController::class, 'store'])->name('staff-availability.store');
+    Route::delete('timetables/staff-availability/{row}', [\App\Http\Controllers\StaffAvailabilityController::class, 'destroy'])->name('staff-availability.destroy');
+    Route::prefix('timetables')->name('timetables.')->controller(\App\Http\Controllers\TimetableController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{timetable}', 'show')->name('show');
+        Route::get('{timetable}/print', 'print')->name('print');
+        Route::get('{timetable}/settings', 'settings')->name('settings');
+        Route::put('{timetable}/settings', 'updateSettings')->name('settings.update');
+        Route::get('{timetable}/items', 'items')->name('items');
+        Route::put('{timetable}/items/{item}', 'updateItem')->name('items.update');
+        Route::post('{timetable}/items', 'addItem')->name('items.add');
+        Route::post('{timetable}/items/sync', 'syncItems')->name('items.sync');
+        Route::post('{timetable}/generate', 'generate')->name('generate');
+        Route::get('{timetable}/what-if', 'whatIf')->name('whatif');
+        Route::get('{timetable}/invigilators', 'invigilators')->name('invigilators');
+        Route::post('{timetable}/invigilators', 'replan')->name('replan');
+        Route::post('{timetable}/submit', 'submit')->name('submit');
+        Route::post('{timetable}/approve', 'approve')->name('approve');
+        Route::post('{timetable}/return', 'returnIt')->name('return');
+        Route::post('{timetable}/publish', 'publish')->name('publish');
+        Route::post('{timetable}/revise', 'revise')->name('revise');
+        Route::delete('{timetable}', 'destroy')->name('destroy');
+        Route::get('{timetable}/entries/{unit}', 'entry')->name('entry');
+        Route::post('{timetable}/entries/{unit}/move', 'move')->name('move');
+        Route::post('{timetable}/entries/{unit}/unlock', 'unlock')->name('unlock');
+    });
+
+    // ---- Examination seating ----
+    Route::prefix('seating')->name('seating.')->controller(\App\Http\Controllers\SeatingController::class)->group(function () {
+        Route::get('timetable/{timetable}', 'show')->name('show');
+        Route::post('timetable/{timetable}/generate', 'generate')->name('generate');
+        Route::get('timetable/{timetable}/hall/{slot}/{venue}', 'hall')->name('hall');
+        Route::post('seats/{seat}/move', 'move')->name('move');
+        Route::post('seats/{seat}/attendance', 'attendance')->name('attendance');
+        Route::post('plans/{plan}/late', 'seatLate')->name('late');
+        Route::post('plans/{plan}/release', 'release')->name('release');
+        Route::post('plans/{plan}/approve', 'approve')->name('approve');
+        Route::post('plans/{plan}/publish', 'publish')->name('publish');
+    });
+    Route::get('seating/verify/{code}', [\App\Http\Controllers\MyScheduleController::class, 'verify'])->name('seating.verify');
+    Route::post('seating/verify/{code}', [\App\Http\Controllers\MyScheduleController::class, 'checkIn'])->name('seating.verify.mark');
+
+    // ---- A student's or lecturer's own timetable, papers and duties ----
+    Route::get('my/timetable', [\App\Http\Controllers\MyScheduleController::class, 'timetable'])->name('my.timetable');
+    Route::get('my/examinations', [\App\Http\Controllers\MyScheduleController::class, 'exams'])->name('my.exams');
+    Route::get('my/examinations/slip', [\App\Http\Controllers\MyScheduleController::class, 'slip'])->name('my.exams.slip');
+    Route::get('my/teaching', [\App\Http\Controllers\MyScheduleController::class, 'teaching'])->name('my.teaching');
+
+    // ---- Staff leave ----
+    Route::prefix('leave')->name('leave.')->group(function () {
+        Route::controller(\App\Http\Controllers\LeaveAdminController::class)->group(function () {
+            Route::get('register', 'register')->name('register');
+            Route::get('settings', 'settings')->name('settings');
+            Route::put('settings', 'updateSettings')->name('settings.update');
+            Route::put('routes', 'updateRoute')->name('routes.update');
+            Route::get('balances', 'balances')->name('balances');
+            Route::post('balances/adjust', 'adjust')->name('balances.adjust');
+            Route::post('balances/carry-over', 'carryOver')->name('balances.carryover');
+        });
+        Route::resource('types', \App\Http\Controllers\Leave\LeaveTypeController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('entitlements', \App\Http\Controllers\Leave\LeaveEntitlementController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('holidays', \App\Http\Controllers\Leave\HolidayController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('staff', \App\Http\Controllers\Leave\StaffProfileController::class)->only(['index', 'store', 'update']);
+        Route::controller(\App\Http\Controllers\LeaveController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('apply', 'create')->name('create');
+            Route::get('check', 'check')->name('check');
+            Route::post('/', 'store')->name('store');
+            Route::get('approvals', 'approvals')->name('approvals');
+            Route::get('calendar', 'calendar')->name('calendar');
+            Route::get('documents/{document}', 'document')->name('document');
+            Route::get('{leave}', 'show')->name('show');
+            Route::get('{leave}/edit', 'edit')->name('edit');
+            Route::put('{leave}', 'update')->name('update');
+            Route::post('{leave}/decide', 'decide')->name('decide');
+            Route::post('{leave}/acting', 'acting')->name('acting');
+            Route::post('{leave}/cancel', 'cancel')->name('cancel');
+            Route::post('{leave}/resume', 'resume')->name('resume');
+            Route::get('{leave}/letters/{kind}', 'letter')->name('letter');
+        });
+    });
+
+    // ---- Messaging and notifications ----
+    Route::get('messaging/settings', [\App\Http\Controllers\MessagingController::class, 'settings'])->name('messaging.settings');
+    Route::put('messaging/settings', [\App\Http\Controllers\MessagingController::class, 'update'])->name('messaging.settings.update');
+    Route::post('messaging/test', [\App\Http\Controllers\MessagingController::class, 'test'])->name('messaging.test');
+    Route::get('messaging/log', [\App\Http\Controllers\MessagingController::class, 'log'])->name('messaging.log');
+    Route::post('messaging/retry', [\App\Http\Controllers\MessagingController::class, 'retry'])->name('messaging.retry');
+    Route::get('notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('notifications/settings', [\App\Http\Controllers\NotificationController::class, 'preferences'])->name('notifications.preferences');
+    Route::put('notifications/settings', [\App\Http\Controllers\NotificationController::class, 'savePreferences'])->name('notifications.preferences.save');
+    Route::get('notifications/{id}', [\App\Http\Controllers\NotificationController::class, 'open'])->name('notifications.open');
+    // ---- Results from before the portal ----
+    Route::prefix('legacy-results')->name('legacy.')->controller(\App\Http\Controllers\LegacyImportController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('templates/{kind}', 'template')->name('template');
+        Route::get('{import}', 'show')->name('show');
+        Route::post('{import}/check', 'check')->name('check');
+        Route::post('{import}/import', 'import')->name('import');
+        Route::get('{import}/problems', 'problems')->name('problems');
+        Route::delete('{import}', 'destroy')->name('destroy');
+    });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Models\CourseResult;
 use App\Models\DocumentEmail;
 use App\Models\MatricEvent;
@@ -27,6 +28,11 @@ use Illuminate\Support\Facades\DB;
  */
 class MatricBatchReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private ClearanceService $clearance, private MatricNumberGenerator $generator, private DocumentMailer $mailer)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Take back or correct these matric numbers';
@@ -96,7 +102,7 @@ class MatricBatchReversal extends BaseReversal
             $held[] = [$student, $event, $uses];
         }
 
-        $proposed = $mode === 'correct' ? app(MatricNumberGenerator::class)->planFor(array_map(fn ($h) => $h[0], $held)) : [];
+        $proposed = $mode === 'correct' ? $this->generator->planFor(array_map(fn ($h) => $h[0], $held)) : [];
         $sameShape = 0;
         foreach ($held as [$student, $event, $uses]) {
             $to = $mode === 'correct' ? ($proposed[$student->id] ?? null) : null;
@@ -126,8 +132,8 @@ class MatricBatchReversal extends BaseReversal
     {
         $correct = $plan->mode === 'correct';
         $new = $this->begin($op, $correct ? 'matric_correct' : 'matric_undo', $by, $reason, ['batch' => $op->meta['batch'] ?? null, 'mode' => $plan->mode]);
-        $clearance = app(ClearanceService::class);
-        $generator = app(MatricNumberGenerator::class);
+        $clearance = $this->clearance;
+        $generator = $this->generator;
         $code = $correct ? 'C' . strtoupper(\Illuminate\Support\Str::random(7)) : null;
         $done = [];
 
@@ -159,7 +165,7 @@ class MatricBatchReversal extends BaseReversal
             $op->update(['status' => $correct ? 'corrected' : 'reversed']);
         }
 
-        $mailer = app(DocumentMailer::class);
+        $mailer = $this->mailer;
         foreach ($done as [$id, $old]) {
             $mailer->matricNumber(Student::find($id), $correct ? 'corrected' : 'taken_back', $old, $reason, $by);
         }

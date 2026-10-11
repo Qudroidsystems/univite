@@ -10,7 +10,7 @@ use Illuminate\View\View;
 /** The institution's profile: name, address, contacts, principal officers, logo and branding. */
 class InstitutionController extends Controller
 {
-    public function __construct()
+    public function __construct(private \App\Services\OperationAudit $audit)
     {
         $this->middleware('permission:View institution profile')->only('edit');
         $this->middleware('permission:Edit institution profile')->only('update');
@@ -57,7 +57,7 @@ class InstitutionController extends Controller
         $after = Institution::raw();
         $changed = array_keys(array_filter($after, fn ($v, $k) => ($before[$k] ?? null) !== $v, ARRAY_FILTER_USE_BOTH));
         if ($changed) {
-            $audit = app(\App\Services\OperationAudit::class);
+            $audit = $this->audit;
             $op = $audit->begin('institution_update', 'settings', $request->user());
             foreach ($changed as $k) {
                 $audit->record($op, 'field_changed', null, ['key' => $k, 'value' => $before[$k] ?? null], ['key' => $k, 'value' => $after[$k]], null, null, Institution::FIELDS[$k][1]);

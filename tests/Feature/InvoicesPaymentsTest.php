@@ -53,7 +53,7 @@ function newStudent(string $email = 'ada@example.com', string $mode = 'utme', in
         'academic_session_id' => test()->s2025->id, 'entry_mode' => $mode, 'entry_level' => $level,
     ]);
 
-    return app(AdmissionService::class)->admit($applicant)[0];
+    return app(AdmissionService::class)->admit($applicant)->student;
 }
 
 it('bills a fresh student for the all + fresh bills and skips inactive bill items', function () {

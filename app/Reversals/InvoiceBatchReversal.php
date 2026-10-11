@@ -2,6 +2,7 @@
 
 namespace App\Reversals;
 
+use App\Services\OperationAudit;
 use App\Models\Invoice;
 use App\Models\OperationBatch;
 use App\Models\User;
@@ -10,6 +11,11 @@ use App\Services\InvoiceService;
 /** Cancel the invoices a bulk run created. An invoice with any payment on it is kept. */
 class InvoiceBatchReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private InvoiceService $invoices)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Take back the invoices this run created';
@@ -47,7 +53,7 @@ class InvoiceBatchReversal extends BaseReversal
         $done = 0;
         foreach ($plan->changes() as $item) {
             $invoice = Invoice::find($item['key']);
-            app(InvoiceService::class)->cancel($invoice);
+            $this->invoices->cancel($invoice);
             $this->audit->record($new, 'invoice_cancelled', $invoice, ['status' => 'unpaid'], ['status' => 'cancelled'], $reason);
             $done++;
         }

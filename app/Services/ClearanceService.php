@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ClearanceItem;
+use App\Models\MatricBatch;
 use App\Models\MatricEvent;
 use App\Models\Student;
 use App\Models\StudentClearance;
@@ -19,7 +20,7 @@ use RuntimeException;
  */
 class ClearanceService
 {
-    public function __construct(private OnboardingService $onboarding, private MatricNumberGenerator $matric)
+    public function __construct(private OnboardingService $onboarding, private MatricNumberGenerator $matric, private DocumentMailer $mailer)
     {
     }
 
@@ -82,7 +83,7 @@ class ClearanceService
         $cleared = $this->isCleared($student);
         if ($cleared && ! $student->cleared_at) {
             $student->update(['cleared_at' => now()]);
-            DB::afterCommit(fn () => app(DocumentMailer::class)->clearanceSlip($student->fresh()));
+            DB::afterCommit(fn () => $this->mailer->clearanceSlip($student->fresh()));
             $this->notify($student, 'You are cleared', 'All your clearance items are cleared.' . (MatricNumberGenerator::issueAt() === 'clearance' ? ' Your matric number will be issued shortly.' : ''), 'success');
         } elseif (! $cleared && $student->cleared_at) {
             $student->update(['cleared_at' => null]);
@@ -205,7 +206,7 @@ class ClearanceService
 
             if (MatricNumberGenerator::requiresApproval()) {
                 // Reserve it; it becomes the student's number when the batch is approved and published.
-                $batch ??= app(MatricApproval::class)->autoBatch($by)->code;
+                $batch ??= MatricBatch::openAuto($by)->code;
                 $student->update(['provisional_matric' => $matric, 'provisional_batch' => $batch]);
                 MatricEvent::create(['student_id' => $student->id, 'action' => 'proposed', 'matric_number' => $matric, 'batch' => $batch, 'performed_by' => $by?->id]);
 
@@ -215,7 +216,7 @@ class ClearanceService
             $this->assignMatric($student, $matric);
             MatricEvent::create(['student_id' => $student->id, 'action' => $action, 'matric_number' => $matric, 'batch' => $batch, 'performed_by' => $by?->id]);
             $this->notify($student, 'Your matric number', "Your matric number is {$matric}. You can now sign in with it.", 'success');
-            DB::afterCommit(fn () => app(DocumentMailer::class)->matricNumber($student->fresh(), 'issued', null, null, $by));
+            DB::afterCommit(fn () => $this->mailer->matricNumber($student->fresh(), 'issued', null, null, $by));
 
             return $matric;
         });

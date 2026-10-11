@@ -22,7 +22,7 @@ use Illuminate\View\View;
  */
 class AcademicRuleController extends Controller
 {
-    public function __construct(private AcademicRules $rules)
+    public function __construct(private AcademicRules $rules, private \App\Services\OperationAudit $audit)
     {
     }
 
@@ -166,7 +166,7 @@ class AcademicRuleController extends Controller
         if ($before != $after) {
             $scope = ['scope' => $type, 'id' => $id, 'level' => $level, 'semester_type_id' => $sem];
             $name = collect(AcademicRules::chain($type, $id ?: null))->last()[2] . ($level ? ", {$level} level" : '') . ($sem ? ', ' . SemesterType::find($sem)?->name : '');
-            $audit = app(\App\Services\OperationAudit::class);
+            $audit = $this->audit;
             $op = $audit->begin('rules_change', 'academics', $user, null, null, $scope + ['name' => $name]);
             $audit->record($op, 'rules_saved', null, ['rules' => $before], ['rules' => $after], null, null, $name);
             $audit->finish($op, 1);

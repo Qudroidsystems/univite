@@ -51,7 +51,7 @@ function admitted(string $email = 'tola@example.com', string $jamb = '12345678AB
         $applicant->documents()->create(['type' => $type, 'path' => $path, 'original_name' => $name, 'size' => 10240]);
     }
 
-    return app(AdmissionService::class)->admit($applicant, 'First Batch')[0];
+    return app(AdmissionService::class)->admit($applicant, 'First Batch')->student;
 }
 
 function useAcceptanceFee(): void

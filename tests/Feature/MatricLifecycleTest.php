@@ -36,7 +36,7 @@ function clearedStudent(string $last, string $jamb): Student
         'entry_level' => 100, 'status' => 'pending', 'password' => 'secret-pass',
     ]);
     $applicant->update(['application_no' => 'APP/2026/' . str_pad((string) $applicant->id, 4, '0', STR_PAD_LEFT)]);
-    $student = app(AdmissionService::class)->admit($applicant->fresh())[0];
+    $student = app(AdmissionService::class)->admit($applicant->fresh())->student;
     $student->update(['cleared_at' => now()]);   // clearance itself is tested elsewhere
 
     return $student->fresh();

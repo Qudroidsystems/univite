@@ -56,6 +56,26 @@
                 <div class="d-flex align-items-center">
                     <span id="uv-net" class="uv-net uv-net--unknown" role="status" aria-live="polite" title="Checking connection…"><i></i><i></i><i></i><i></i><span class="uv-net-label d-none d-md-inline">…</span></span>
                     @php($authUser = auth()->user())
+                    @php($unread = $authUser->unreadNotifications()->latest()->limit(6)->get())
+                    @php($unreadCount = $authUser->unreadNotifications()->count())
+                    <div class="dropdown header-item ms-1">
+                        <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                            <i class="ri-notification-3-line fs-22"></i>
+                            @if ($unreadCount)<span class="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-danger">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>@endif
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0" style="width:340px">
+                            <div class="p-3 border-bottom d-flex justify-content-between align-items-center"><h6 class="m-0">Notifications</h6><a href="{{ route('notifications.index') }}" class="fs-12">See all</a></div>
+                            @forelse ($unread as $n)
+                                <a href="{{ route('notifications.open', $n->id) }}" class="dropdown-item py-2 border-bottom text-wrap">
+                                    <div class="fw-medium fs-13">{{ $n->data['title'] ?? 'Notice' }}</div>
+                                    <div class="text-muted fs-12">{{ \Illuminate\Support\Str::limit($n->data['body'] ?? '', 110) }}</div>
+                                    <div class="text-muted fs-11">{{ $n->created_at->diffForHumans() }}</div>
+                                </a>
+                            @empty
+                                <div class="p-3 text-muted fs-13 text-center">You are all caught up.</div>
+                            @endforelse
+                        </div>
+                    </div>
                     <div class="dropdown ms-sm-3 header-item topbar-user">
                         <button type="button" class="btn shadow-none" data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="d-flex align-items-center gap-2">
@@ -68,6 +88,7 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end">
                             <h6 class="dropdown-header">{{ $authUser->email }}</h6>
+                            <a class="dropdown-item" href="{{ route('notifications.preferences') }}"><i class="ri-notification-badge-line me-2"></i>Notification settings</a>
                             <form method="POST" action="{{ route('logout') }}" data-no-ajax>
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger"><i class="mdi mdi-logout me-2"></i>Logout</button>

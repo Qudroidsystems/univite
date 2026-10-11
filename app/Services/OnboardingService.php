@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\StudentProgressChanged;
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
 use App\Models\Invoice;
@@ -25,7 +26,7 @@ class OnboardingService
     /** Clearance depends on these steps, so re-check it whenever one changes. */
     public function refreshClearance(Student $student): void
     {
-        app(ClearanceService::class)->refresh($student->fresh());
+        StudentProgressChanged::dispatch($student);
     }
 
     public function acceptOffer(Student $student): void

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\Admissions\Admission;
 use App\Models\Applicant;
 use App\Models\Student;
 use App\Models\User;
@@ -14,17 +15,15 @@ use Spatie\Permission\Models\Role;
 
 class AdmissionService
 {
-    public function __construct(private MatricNumberGenerator $matric)
+    public function __construct(private MatricNumberGenerator $matric, private ClearanceService $clearance)
     {
     }
 
     /**
      * Turn an applicant into a student: reserve a matric number, create the login and the student record.
      *
-     * @return array{0: Student, 1: string|null} the student and the temporary password (shown to the admin once).
-     *         The password is null for applicants who applied online: they keep the password they chose.
      */
-    public function admit(Applicant $applicant, ?string $batch = null): array
+    public function admit(Applicant $applicant, ?string $batch = null): Admission
     {
         if ($applicant->status === 'admitted') {
             throw new RuntimeException('This applicant has already been admitted.');
@@ -90,16 +89,16 @@ class AdmissionService
                 $student->update(['photo' => $photo]);
             }
 
-            app(ClearanceService::class)->refresh($student);
+            $this->clearance->refresh($student);
 
             $applicant->update(['status' => 'admitted', 'decided_at' => now(), 'admission_batch' => $batch ?? $applicant->admission_batch]);
 
             // With approval switched on, the number is reserved now and published when its batch is approved.
             if ($atAdmission && ! $matric) {
-                app(ClearanceService::class)->issueMatric($student);
+                $this->clearance->issueMatric($student);
             }
 
-            return [$student, $plain];
+            return new Admission($student, $plain);
         });
     }
 }

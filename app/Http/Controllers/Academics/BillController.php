@@ -30,7 +30,7 @@ class BillController extends CrudController
     protected int $perPage = 30;
     protected ?string $extraView = 'academics.partials.bill-extra';
 
-    public function __construct()
+    public function __construct(private \App\Services\BillMatcher $matcher)
     {
         parent::__construct();
         $this->middleware('permission:Copy school bills to another session')->only('copy');
@@ -172,7 +172,7 @@ class BillController extends CrudController
             ['Session', fn ($r) => $r->session->name],
             ['Bill item', fn ($r) => new HtmlString('<span class="fw-semibold">' . e($r->item->name) . '</span>' . ($r->item->is_compulsory ? '' : ' <span class="badge bg-info-subtle text-info">Optional</span>'))],
             ['Applies to', fn ($r) => $r->targetLabel()],
-            ['Amount', fn ($r) => new HtmlString('<span class="fw-semibold">₦' . number_format((float) $r->amount, 2) . '</span>' . ($r->installments > 1 ? '<div class="text-muted fs-12">' . $r->installments . ' instalments (' . implode(' / ', (new \App\Services\BillMatcher())->percents($r)) . '%)</div>' : ''))],
+            ['Amount', fn ($r) => new HtmlString('<span class="fw-semibold">₦' . number_format((float) $r->amount, 2) . '</span>' . ($r->installments > 1 ? '<div class="text-muted fs-12">' . $r->installments . ' instalments (' . implode(' / ', $this->matcher->percents($r)) . '%)</div>' : ''))],
             ['Payment window', fn ($r) => $r->opens_at || $r->closes_at ? ($r->opens_at?->format('j M Y H:i') ?? 'Now') . ' to ' . ($r->closes_at?->format('j M Y H:i') ?? 'no deadline') : 'Always open'],
             ['Status', fn ($r) => new HtmlString($r->is_active ? '<span class="badge bg-success-subtle text-success">Active</span>' : '<span class="badge bg-secondary-subtle text-secondary">Inactive</span>')],
         ];

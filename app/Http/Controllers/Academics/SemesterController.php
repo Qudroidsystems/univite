@@ -23,7 +23,7 @@ class SemesterController extends CrudController
     protected string $intro = 'Each session is split into semesters (First, Second ...). Setting a semester as current also makes its session current.';
     protected array $searchable = ['name'];
 
-    public function __construct()
+    public function __construct(private SessionLifecycle $lifecycle)
     {
         parent::__construct();
         $this->middleware('permission:Set the current semester')->only('makeCurrent');
@@ -110,7 +110,7 @@ class SemesterController extends CrudController
     {
         if ($request->boolean('make_current')) {
             try {
-                app(SessionLifecycle::class)->makeCurrent($record->session, $request->user());
+                $this->lifecycle->makeCurrent($record->session, $request->user());
                 $record->makeCurrent();
             } catch (RuntimeException $e) {
                 session()->flash('error', $record->name . ' was saved but could not be made current: ' . $e->getMessage());
@@ -122,7 +122,7 @@ class SemesterController extends CrudController
     {
         $semester = Semester::with('session')->findOrFail($semester);
         try {
-            app(SessionLifecycle::class)->makeCurrent($semester->session, request()->user());
+            $this->lifecycle->makeCurrent($semester->session, request()->user());
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

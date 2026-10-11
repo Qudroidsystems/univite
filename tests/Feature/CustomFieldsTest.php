@@ -41,7 +41,7 @@ function studentRecord(): Student
     ]);
     $a->update(['application_no' => 'APP/2026/0001']);
 
-    return app(AdmissionService::class)->admit($a->fresh(), 'First Batch')[0];
+    return app(AdmissionService::class)->admit($a->fresh(), 'First Batch')->student;
 }
 
 it('lets an admin create a field through the builder, with a generated key and parsed choices', function () {

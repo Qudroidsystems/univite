@@ -18,23 +18,19 @@ use RuntimeException;
  */
 class MatricApproval
 {
-    public function __construct(private ClearanceService $clearance, private MatricNumberGenerator $generator, private OperationAudit $audit)
+    public function __construct(private ClearanceService $clearance, private MatricNumberGenerator $generator, private OperationAudit $audit, private DocumentMailer $mailer)
     {
     }
 
     public function newBatch(?User $by, string $source = 'generated'): MatricBatch
     {
-        do {
-            $code = ($source === 'auto' ? 'A' : '') . strtoupper(Str::random($source === 'auto' ? 7 : 8));
-        } while (MatricBatch::where('code', $code)->exists() || MatricEvent::where('batch', $code)->exists());
-
-        return MatricBatch::create(['code' => $code, 'source' => $source, 'status' => 'pending', 'created_by' => $by?->id]);
+        return MatricBatch::open($by, $source);
     }
 
     /** Numbers reserved automatically (on clearance or admission) collect in one open batch until it is decided. */
     public function autoBatch(?User $by = null): MatricBatch
     {
-        return MatricBatch::where('source', 'auto')->where('status', 'pending')->latest('id')->first() ?? $this->newBatch($by, 'auto');
+        return MatricBatch::openAuto($by);
     }
 
     /**
@@ -92,7 +88,7 @@ class MatricApproval
         });
         $this->audit->finish($op, count($published), 0, count($released));
 
-        $mailer = app(DocumentMailer::class);
+        $mailer = $this->mailer;
         foreach (Student::whereIn('id', $published)->get() as $s) {
             $this->clearance->notify($s, 'Your matric number', "Your matric number is {$s->matric_number}. You can now sign in with it.", 'success');
             $mailer->matricNumber($s, 'issued', null, null, $by);

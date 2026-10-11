@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Data\Registration\CreditLimits;
+use App\Data\Registration\RegistrationContext;
 use App\Models\AcademicSession;
 use App\Models\Course;
 use App\Models\CourseRegistration;
@@ -20,8 +22,17 @@ use RuntimeException;
 /** Who may register, which courses they are offered, and the draft -> submitted -> approved life of a registration form. */
 class RegistrationService
 {
+    public function __construct(
+        private ResultService $results,
+        private InvoiceService $invoices,
+        private AcademicRules $rules,
+        private OperationAudit $audit,
+        private DocumentMailer $mailer,
+    ) {
+    }
+
     /** The session and semester type registration is happening in, or null when no semester is current. */
-    public function context(): ?array
+    public function context(): ?RegistrationContext
     {
         $semester = Semester::current();
         if (! $semester) {
@@ -29,11 +40,11 @@ class RegistrationService
         }
         $type = SemesterType::where('sort_order', $semester->sort_order)->first();
 
-        return $type ? ['session' => $semester->session, 'type' => $type, 'semester' => $semester] : null;
+        return $type ? new RegistrationContext($semester->session, $type, $semester) : null;
     }
 
     /** Reasons this student cannot register right now. Empty = may register. @return string[] */
-    public function blockers(Student $student, ?array $ctx = null): array
+    public function blockers(Student $student, ?RegistrationContext $ctx = null): array
     {
         $ctx ??= $this->context();
         $why = [];
@@ -44,11 +55,11 @@ class RegistrationService
         if (! RegistrationSettings::on('open')) {
             $why[] = 'Course registration is closed.';
         }
-        if ($windowReason = $this->windowBlocker($ctx['semester'])) {
+        if ($windowReason = $this->windowBlocker($ctx->semester)) {
             $why[] = $windowReason;
         }
-        if (! $ctx['type']->is_teaching) {
-            $why[] = $ctx['type']->name . ' is not a teaching semester, so there is nothing to register.';
+        if (! $ctx->type->is_teaching) {
+            $why[] = $ctx->type->name . ' is not a teaching semester, so there is nothing to register.';
         }
         if (! (StudentStatus::byCode($student->status)?->can_register)) {
             $why[] = 'Your status (' . StudentStatus::label($student->status) . ') does not allow course registration.';
@@ -69,16 +80,16 @@ class RegistrationService
     /** "On probation" / "Advised to withdraw" / null, from the student's CGPA and their programme's rules. */
     public function standing(Student $student): ?string
     {
-        return app(ResultService::class)->transcript($student)['standing'];
+        return $this->results->transcript($student)->standing;
     }
 
-    private function standingBlocker(Student $student, array $ctx): ?string
+    private function standingBlocker(Student $student, RegistrationContext $ctx): ?string
     {
         $rules = $this->rules($student, $ctx);
         if (! $rules['withdrawal_blocks_registration'] || $this->standing($student) !== 'Advised to withdraw') {
             return null;
         }
-        if (\App\Models\StandingWaiver::where('student_id', $student->id)->where('academic_session_id', $ctx['session']->id)->exists()) {
+        if (\App\Models\StandingWaiver::where('student_id', $student->id)->where('academic_session_id', $ctx->session->id)->exists()) {
             return null;
         }
 
@@ -102,14 +113,14 @@ class RegistrationService
         return null;
     }
 
-    private function feeBlocker(Student $student, array $ctx): ?string
+    private function feeBlocker(Student $student, RegistrationContext $ctx): ?string
     {
         $rule = RegistrationSettings::get('fee_rule');
         if ($rule === 'none') {
             return null;
         }
-        $invoice = app(InvoiceService::class)->sessionInvoice($student, $ctx['session'], $ctx['type']->id)
-            ?? app(InvoiceService::class)->sessionInvoice($student, $ctx['session']);
+        $invoice = $this->invoices->sessionInvoice($student, $ctx->session, $ctx->type->id)
+            ?? $this->invoices->sessionInvoice($student, $ctx->session);
         if (! $invoice) {
             return null;   // nothing has been billed, so nothing is owed
         }
@@ -143,9 +154,9 @@ class RegistrationService
      *
      * @return Collection<int, array{course: Course, status: string, carryover: bool, blocked: ?string}>
      */
-    public function offered(Student $student, array $ctx): Collection
+    public function offered(Student $student, RegistrationContext $ctx): Collection
     {
-        $order = $ctx['type']->sort_order;
+        $order = $ctx->type->sort_order;
         $passed = $this->passed($student);
         $failed = $this->failed($student);
 
@@ -175,25 +186,24 @@ class RegistrationService
     }
 
     /** The academic rules for this student in a semester (credit load, carry-overs ...). */
-    public function rules(Student $student, ?array $ctx, ?int $level = null): array
+    public function rules(Student $student, ?RegistrationContext $ctx, ?int $level = null): array
     {
-        return app(AcademicRules::class)->forStudent($student, $level ?? $student->current_level, $ctx['type']->id ?? null);
+        return $this->rules->forStudent($student, $level ?? $student->current_level, $ctx?->type->id);
     }
 
-    /** @return array{min: int, max: int, exempt: bool} */
-    public function limits(Student $student, ?array $ctx, ?int $level = null): array
+    public function limits(Student $student, ?RegistrationContext $ctx, ?int $level = null): CreditLimits
     {
         $r = $this->rules($student, $ctx, $level);
         $max = (int) $r['max_units'];
         $probation = $r['probation_max_units'] !== null && $this->standing($student) === 'On probation';
 
-        return ['min' => (int) $r['min_units'], 'max' => $probation ? min($max, (int) $r['probation_max_units']) : $max, 'exempt' => (bool) $r['carryover_exempt'], 'probation' => $probation];
+        return new CreditLimits((int) $r['min_units'], $probation ? min($max, (int) $r['probation_max_units']) : $max, (bool) $r['carryover_exempt'], $probation);
     }
 
-    public function form(Student $student, array $ctx): RegistrationForm
+    public function form(Student $student, RegistrationContext $ctx): RegistrationForm
     {
         return RegistrationForm::firstOrCreate(
-            ['student_id' => $student->id, 'academic_session_id' => $ctx['session']->id, 'semester_type_id' => $ctx['type']->id],
+            ['student_id' => $student->id, 'academic_session_id' => $ctx->session->id, 'semester_type_id' => $ctx->type->id],
             ['level' => $student->current_level, 'status' => 'draft']
         );
     }
@@ -203,7 +213,7 @@ class RegistrationService
      *
      * @param  int[]  $courseIds
      */
-    public function select(RegistrationForm $form, array $courseIds, array $ctx): RegistrationForm
+    public function select(RegistrationForm $form, array $courseIds, RegistrationContext $ctx): RegistrationForm
     {
         if (! $form->isEditable()) {
             throw new RuntimeException('This form has been submitted and can no longer be changed.');
@@ -239,7 +249,7 @@ class RegistrationService
     }
 
     /** Problems that stop this form being submitted (unit limits, missing carry-overs/required courses). @return string[] */
-    public function problems(RegistrationForm $form, array $ctx): array
+    public function problems(RegistrationForm $form, RegistrationContext $ctx): array
     {
         $form->loadMissing('courses');
         $problems = [];
@@ -247,8 +257,8 @@ class RegistrationService
         $rules = $this->rules($form->student, $ctx, $form->level);
         $countable = $rules['carryover_exempt'] ? (int) $form->courses->where('is_carryover', false)->sum('credit_units') : $units;
         $limits = $this->limits($form->student, $ctx, $form->level);
-        $min = $limits['min'];
-        $max = $limits['max'];
+        $min = $limits->min;
+        $max = $limits->max;
 
         if ($form->courses->isEmpty()) {
             return ['Choose at least one course.'];
@@ -257,7 +267,7 @@ class RegistrationService
             $problems[] = "You have chosen {$units} units; the minimum is {$min}.";
         }
         if ($countable > $max) {
-            $problems[] = "You have chosen {$countable} units; the maximum is {$max}" . ($limits['probation'] ? ' while you are on probation' : '') . ($rules['carryover_exempt'] ? ' (not counting carry-overs).' : '.');
+            $problems[] = "You have chosen {$countable} units; the maximum is {$max}" . ($limits->probation ? ' while you are on probation' : '') . ($rules['carryover_exempt'] ? ' (not counting carry-overs).' : '.');
         }
 
         $offered = $this->offered($form->student, $ctx);
@@ -277,7 +287,7 @@ class RegistrationService
         return $problems;
     }
 
-    public function submit(RegistrationForm $form, array $ctx): RegistrationForm
+    public function submit(RegistrationForm $form, RegistrationContext $ctx): RegistrationForm
     {
         if (! $form->isEditable()) {
             throw new RuntimeException('This form has already been submitted.');
@@ -294,7 +304,7 @@ class RegistrationService
             'status' => $approved ? 'approved' : 'submitted', 'submitted_at' => now(), 'note' => null,
             'decided_by' => null, 'decided_at' => $approved ? now() : null,
         ]);
-        app(DocumentMailer::class)->courseForm($form->fresh());
+        $this->mailer->courseForm($form->fresh());
 
         return $form;
     }
@@ -309,9 +319,9 @@ class RegistrationService
         }
         $form->update(['status' => $approve ? 'approved' : 'rejected', 'decided_by' => $userId, 'decided_at' => now(), 'note' => $note]);
         $by = \App\Models\User::find($userId);
-        app(OperationAudit::class)->note($approve ? 'registration_approve' : 'registration_return', 'registration', $by, $approve ? 'form_approved' : 'form_returned', $form, ['status' => 'submitted'], ['status' => $form->status], $note, $form->academic_session_id);
+        $this->audit->note($approve ? 'registration_approve' : 'registration_return', 'registration', $by, $approve ? 'form_approved' : 'form_returned', $form, ['status' => 'submitted'], ['status' => $form->status], $note, $form->academic_session_id);
         if ($approve) {
-            app(DocumentMailer::class)->courseForm($form->fresh(), $by);
+            $this->mailer->courseForm($form->fresh(), $by);
         }
 
         return $form;
@@ -322,7 +332,7 @@ class RegistrationService
     {
         $before = ['status' => $form->status, 'decided_by' => $form->decided_by, 'decided_at' => $form->decided_at?->toDateTimeString()];
         $form->update(['status' => 'draft', 'decided_by' => null, 'decided_at' => null]);
-        app(OperationAudit::class)->note('registration_reopen', 'registration', $by ?? auth()->user(), 'form_reopened', $form, $before, ['status' => 'draft'], $reason, $form->academic_session_id);
+        $this->audit->note('registration_reopen', 'registration', $by ?? auth()->user(), 'form_reopened', $form, $before, ['status' => 'draft'], $reason, $form->academic_session_id);
 
         return $form;
     }

@@ -13,7 +13,7 @@ use RuntimeException;
 /** Students querying a published result, and staff answering (and, when upheld, correcting the score). */
 class ResultComplaintService
 {
-    public function __construct(private ResultService $results)
+    public function __construct(private ResultService $results, private OperationAudit $audit, private DocumentMailer $mailer)
     {
     }
 
@@ -28,6 +28,9 @@ class ResultComplaintService
     {
         if ($result->student_id !== $student->id || $result->status !== 'published') {
             return 'You can only query your own published results.';
+        }
+        if ($result->legacy_import_id) {
+            return 'Results from the old records system are queried with the examinations office.';
         }
         if (ResultComplaint::where('course_result_id', $result->id)->where('status', 'open')->exists()) {
             return 'You already have a query on this result awaiting review.';
@@ -78,9 +81,9 @@ class ResultComplaintService
                 $this->results->amend($complaint->result, $ca, $exam, 'Result query upheld: ' . $response, $user);
             }
             $complaint->update(['status' => $decision, 'response' => trim($response), 'handled_by' => $user->id, 'handled_at' => now()]);
-            app(OperationAudit::class)->note('complaint_respond', 'results', $user, 'query_answered', $complaint, ['status' => 'open'], ['status' => $decision, 'response' => trim($response), 'score_corrected' => $correct], null, $complaint->result?->academic_session_id);
+            $this->audit->note('complaint_respond', 'results', $user, 'query_answered', $complaint, ['status' => 'open'], ['status' => $decision, 'response' => trim($response), 'score_corrected' => $correct], null, $complaint->result?->academic_session_id);
         });
-        app(DocumentMailer::class)->complaintAnswered($complaint->fresh(), $user);
+        $this->mailer->complaintAnswered($complaint->fresh(), $user);
 
         return $complaint;
     }

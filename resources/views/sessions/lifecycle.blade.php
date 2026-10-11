@@ -14,14 +14,14 @@
                 <div class="card-body">
                     <p class="text-muted">Draft → Setup → Active → Closing → Closed → Archived. A session is checked before it goes live, and every change is logged.</p>
                     @forelse ($options as $to => $o)
-                        <form method="POST" action="{{ route('sessions.lifecycle.change', $session) }}" class="border rounded p-3 mb-3" @if ($o['reason']) data-confirm="Change {{ $session->name }} to {{ $lifecycle->label($to) }}?" @endif>
+                        <form method="POST" action="{{ route('sessions.lifecycle.change', $session) }}" class="border rounded p-3 mb-3" @if ($o->needsReason) data-confirm="Change {{ $session->name }} to {{ $lifecycle->label($to) }}?" @endif>
                             @csrf <input type="hidden" name="to" value="{{ $to }}">
                             <div class="d-flex align-items-center justify-content-between mb-2"><strong>Move to {{ $lifecycle->label($to) }}</strong>
-                                @can('Change session status')<button class="btn btn-sm btn-primary" type="submit" @disabled($o['problems'])>{{ $lifecycle->label($to) }}</button>@endcan</div>
-                            @foreach ($o['problems'] as $p)<div class="text-danger small"><i class="ri-close-circle-line me-1"></i>{{ $p }}</div>@endforeach
-                            @foreach ($o['warnings'] as $w)<div class="text-warning small"><i class="ri-error-warning-line me-1"></i>{{ $w }}</div>@endforeach
-                            @if (! $o['problems'] && ! $o['warnings'])<div class="text-success small"><i class="ri-checkbox-circle-line me-1"></i>All checks passed.</div>@endif
-                            @if ($o['reason'])<input type="text" name="reason" class="form-control form-control-sm mt-2" placeholder="Reason (required)" maxlength="500" required>@endif
+                                @can('Change session status')<button class="btn btn-sm btn-primary" type="submit" @disabled(! $o->allowed())>{{ $lifecycle->label($to) }}</button>@endcan</div>
+                            @foreach ($o->problems as $p)<div class="text-danger small"><i class="ri-close-circle-line me-1"></i>{{ $p }}</div>@endforeach
+                            @foreach ($o->warnings as $w)<div class="text-warning small"><i class="ri-error-warning-line me-1"></i>{{ $w }}</div>@endforeach
+                            @if ($o->clean())<div class="text-success small"><i class="ri-checkbox-circle-line me-1"></i>All checks passed.</div>@endif
+                            @if ($o->needsReason)<input type="text" name="reason" class="form-control form-control-sm mt-2" placeholder="Reason (required)" maxlength="500" required>@endif
                         </form>
                     @empty
                         <p class="mb-0 text-muted">There is nowhere further to move this session.</p>

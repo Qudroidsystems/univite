@@ -45,7 +45,7 @@ beforeEach(function () {
         'status' => 'pending', 'password' => 'my-secret-pw',
     ]);
     $a->update(['application_no' => 'APP/2026/0001']);
-    $this->student = app(AdmissionService::class)->admit($a->fresh(), 'First Batch')[0];
+    $this->student = app(AdmissionService::class)->admit($a->fresh(), 'First Batch')->student;
     $this->student->update(['needs_onboarding' => false, 'matric_number' => '2026/BED/0001']);
 });
 
@@ -213,7 +213,8 @@ it('uses the department\'s credit load for the student\'s level and semester', f
     $this->post(route('my.registration.save'), ['courses' => ids(1, 2), 'submit' => 1])->assertSessionHas('success');
 
     // another level is untouched: the university's 15 still applies there
-    expect(app(\App\Services\RegistrationService::class)->limits($this->student->fresh(), ['type' => $type], 200)['min'])->toBe(15);
+    $reg = app(\App\Services\RegistrationService::class);
+    expect($reg->limits($this->student->fresh(), $reg->context(), 200)->min)->toBe(15);
 });
 
 it('only forces a failed elective back when the rules say so', function () {

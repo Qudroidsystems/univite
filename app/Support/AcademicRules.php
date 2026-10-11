@@ -18,7 +18,7 @@ use Illuminate\Support\Collection;
  * rules can also be overridden for one level and/or one semester. The most specific value wins:
  * university < faculty < department < programme, and within each of those: all levels < one level < one semester < both.
  *
- * Use app(AcademicRules::class) (one cache per request).
+ * Inject AcademicRules where needed; it is scoped, so each request shares one cache.
  */
 class AcademicRules
 {

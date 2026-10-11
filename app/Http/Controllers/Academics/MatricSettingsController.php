@@ -13,7 +13,7 @@ use Illuminate\View\View;
 
 class MatricSettingsController extends Controller
 {
-    public function __construct(private MatricNumberGenerator $generator)
+    public function __construct(private MatricNumberGenerator $generator, private \App\Services\OperationAudit $audit)
     {
         $this->middleware('permission:View matric number format')->only('edit');
         $this->middleware('permission:Set the matric number format')->only(['update', 'updateIssue', 'updateApproval', 'updateSequence']);
@@ -75,7 +75,7 @@ class MatricSettingsController extends Controller
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
-        $op = app(\App\Services\OperationAudit::class)->note('matric_sequence', 'matric', $request->user(), 'sequence_set', null, null, ['prefix' => $d['prefix'], 'last' => (int) $d['last']]);
+        $op = $this->audit->note('matric_sequence', 'matric', $request->user(), 'sequence_set', null, null, ['prefix' => $d['prefix'], 'last' => (int) $d['last']]);
 
         return redirect()->route('students.settings', array_filter(['seq_session' => $d['seq_session'] ?? null]))->with('success', "Saved. The next number for that prefix continues after {$d['last']}.");
     }

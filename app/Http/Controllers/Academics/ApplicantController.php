@@ -33,7 +33,7 @@ class ApplicantController extends CrudController
     protected array $searchable = ['first_name', 'last_name', 'email', 'application_no', 'phone_number', 'jamb_reg_no'];
     protected ?string $extraView = 'applicants.partials.batch-admit';
 
-    public function __construct()
+    public function __construct(private \App\Services\ApplicationService $applications)
     {
         parent::__construct();
         $this->middleware('permission:View applicants')->only(['show', 'document']);
@@ -168,7 +168,9 @@ class ApplicantController extends CrudController
         $applicant = Applicant::findOrFail($id);
 
         try {
-            [$student, $password] = $admissions->admit($applicant);
+            $admission = $admissions->admit($applicant);
+            $student = $admission->student;
+            $password = $admission->temporaryPassword;
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -185,7 +187,7 @@ class ApplicantController extends CrudController
         return view('applicants.show', [
             'pagetitle' => $applicant->full_name,
             'applicant' => $applicant,
-            'checklist' => app(\App\Services\ApplicationService::class)->checklist($applicant),
+            'checklist' => $this->applications->checklist($applicant),
         ]);
     }
 

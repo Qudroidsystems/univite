@@ -23,7 +23,7 @@ class SessionLifecycleController extends Controller
     {
         $options = [];
         foreach ($this->lifecycle->next($session) as $to) {
-            $options[$to] = $this->lifecycle->check($session, $to) + ['reason' => $this->lifecycle->needsReason($session->status, $to)];
+            $options[$to] = $this->lifecycle->check($session, $to);
         }
 
         return view('sessions.lifecycle', [

@@ -9,7 +9,7 @@ class CourseResult extends Model
 {
     public const STATUSES = ['draft' => 'Draft', 'submitted' => 'Submitted', 'approved' => 'Approved', 'published' => 'Published'];
 
-    protected $fillable = ['result_sheet_id', 'student_id', 'course_id', 'academic_session_id', 'semester_type_id', 'ca', 'exam', 'total', 'grade', 'points', 'is_pass', 'credit_units', 'status'];
+    protected $fillable = ['result_sheet_id', 'legacy_import_id', 'student_id', 'course_id', 'academic_session_id', 'semester_type_id', 'ca', 'exam', 'total', 'grade', 'points', 'is_pass', 'credit_units', 'status'];
 
     protected $casts = ['ca' => 'float', 'exam' => 'float', 'total' => 'float', 'points' => 'float', 'is_pass' => 'boolean'];
 

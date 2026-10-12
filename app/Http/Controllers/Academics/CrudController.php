@@ -51,10 +51,16 @@ abstract class CrudController extends Controller
 
     public function __construct()
     {
-        $this->middleware('permission:View ' . $this->permission)->only('index');
+        $this->middleware($this->viewMiddleware())->only('index');
         in_array('create', $this->actions) && $this->middleware('permission:Create ' . $this->permission)->only('store');
         in_array('edit', $this->actions) && $this->middleware('permission:Edit ' . $this->permission)->only('update');
         in_array('delete', $this->actions) && $this->middleware('permission:Delete ' . $this->permission)->only('destroy');
+    }
+
+    /** Middleware guarding the list page. A page that heads may see for their own department returns a scoped middleware instead. */
+    protected function viewMiddleware(): string
+    {
+        return 'permission:View ' . $this->permission;
     }
 
     /** Extra GET filters: [column, label, options[value => label]] */

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Access\AccessScope;
 use App\Models\Department;
 use App\Models\LeaveApprovalStep;
 use App\Models\LeaveLedgerEntry;
@@ -10,6 +11,7 @@ use App\Models\LeaveType;
 use App\Models\Setting;
 use App\Models\StaffProfile;
 use App\Models\User;
+use App\Services\Access\ScopedAccess;
 use App\Services\LeaveService;
 use App\Services\OperationAudit;
 use Illuminate\Http\RedirectResponse;
@@ -22,18 +24,28 @@ use Spatie\Permission\Models\Role;
 /** The leave office: every application, settings and approval routes, balances, adjustments and carry-over. */
 class LeaveAdminController extends Controller
 {
-    public function __construct(private LeaveService $leave, private OperationAudit $audit)
+    public function __construct(private LeaveService $leave, private OperationAudit $audit, private ScopedAccess $access)
     {
-        $this->middleware('permission:View leave applications|Approve leave for any staff|Record staff resumption')->only('register');
+        $this->middleware('scoped:View leave applications|Approve leave for any staff|Record staff resumption')->only('register');
         $this->middleware('permission:Set leave policy')->only('settings', 'updateSettings', 'updateRoute');
-        $this->middleware('permission:View leave applications|Change leave balances')->only('balances');
+        $this->middleware('scoped:View leave applications|Change leave balances')->only('balances');
         $this->middleware('permission:Change leave balances')->only('adjust', 'carryOver');
+    }
+
+    /** Leave administrators see everyone; a head sees the staff of their department, faculty or unit. */
+    private function scope(Request $request, string ...$global): AccessScope
+    {
+        $user = $request->user();
+
+        return $user->canAny($global) ? AccessScope::everything() : $this->access->scope($user, 'View leave applications');
     }
 
     public function register(Request $request): View
     {
         $today = today();
-        $q = LeaveRequest::with('user.staffProfile.department', 'type', 'steps')
+        $scope = $this->scope($request, 'Approve leave for any staff', 'Record staff resumption');
+        $base = fn () => $scope->staffUsers(LeaveRequest::query());
+        $q = $scope->staffUsers(LeaveRequest::with('user.staffProfile.department', 'type', 'steps'))
             ->when($request->filled('status'), fn ($w) => $w->where('status', $request->status))
             ->when($request->filled('leave_type_id'), fn ($w) => $w->where('leave_type_id', $request->leave_type_id))
             ->when($request->filled('year'), fn ($w) => $w->where('year', $request->year))
@@ -46,12 +58,12 @@ class LeaveAdminController extends Controller
 
         return view('leave.register', [
             'pagetitle' => 'Leave register', 'rows' => $q->paginate(40)->withQueryString(),
-            'types' => LeaveType::orderBy('sort_order')->pluck('name', 'id'), 'departments' => Department::orderBy('name')->pluck('name', 'id'),
+            'types' => LeaveType::orderBy('sort_order')->pluck('name', 'id'), 'departments' => $this->departments($scope),
             'stats' => [
-                'pending' => LeaveRequest::where('status', 'pending')->count(),
-                'away' => LeaveRequest::where('status', 'approved')->whereNull('resumed_on')->whereDate('start_date', '<=', $today)->whereDate('expected_resumption', '>', $today)->count(),
-                'due' => LeaveRequest::where('status', 'approved')->whereNull('resumed_on')->whereDate('expected_resumption', '<=', $today)->count(),
-                'overdue' => \App\Models\LeaveRequestStep::where('status', 'pending')->where('due_at', '<', now())->count(),
+                'pending' => $base()->where('status', 'pending')->count(),
+                'away' => $base()->where('status', 'approved')->whereNull('resumed_on')->whereDate('start_date', '<=', $today)->whereDate('expected_resumption', '>', $today)->count(),
+                'due' => $base()->where('status', 'approved')->whereNull('resumed_on')->whereDate('expected_resumption', '<=', $today)->count(),
+                'overdue' => \App\Models\LeaveRequestStep::where('status', 'pending')->where('due_at', '<', now())->whereHas('request', fn ($r) => $scope->staffUsers($r))->count(),
             ],
         ]);
     }
@@ -120,12 +132,19 @@ class LeaveAdminController extends Controller
         return back()->with('success', $type && $rows->isEmpty() ? "{$name} now follows the default route." : "{$name} approval route saved. It applies to applications submitted from now on.");
     }
 
+    private function departments(AccessScope $scope): \Illuminate\Support\Collection
+    {
+        return Department::when(! $scope->all, fn ($q) => $q->whereIn('id', $scope->departmentIds))->orderBy('name')->pluck('name', 'id');
+    }
+
     public function balances(Request $request): View
     {
         $year = (int) $request->query('year', now()->year);
+        $scope = $this->scope($request, 'Change leave balances');
         $types = LeaveType::with('entitlements')->where('deducts_balance', true)->orderBy('sort_order')->get();
         $type = $types->firstWhere('id', (int) $request->query('type')) ?? $types->first();
         $staff = User::whereDoesntHave('student')->where('is_disabled', false)->with('staffProfile.department')
+            ->when(! $scope->all, fn ($q) => $q->whereHas('staffProfile', fn ($p) => $scope->staffProfiles($p)))
             ->when($request->filled('department_id'), fn ($q) => $q->whereHas('staffProfile', fn ($p) => $p->where('department_id', $request->department_id)))
             ->when(trim((string) $request->q) !== '', fn ($q) => $q->where('name', 'like', "%{$request->q}%"))
             ->orderBy('name')->paginate(40)->withQueryString();
@@ -133,8 +152,8 @@ class LeaveAdminController extends Controller
         return view('leave.balances', [
             'pagetitle' => 'Leave balances', 'year' => $year, 'types' => $types, 'type' => $type, 'staff' => $staff,
             'rows' => $type ? $staff->getCollection()->mapWithKeys(fn ($u) => [$u->id => $this->leave->balance($u, $type, $year)]) : collect(),
-            'departments' => Department::orderBy('name')->pluck('name', 'id'),
-            'ledger' => $type ? LeaveLedgerEntry::with('user', 'creator')->where(['leave_type_id' => $type->id, 'year' => $year])->latest()->limit(15)->get() : collect(),
+            'departments' => $this->departments($scope),
+            'ledger' => $type ? $scope->staffUsers(LeaveLedgerEntry::with('user', 'creator'))->where(['leave_type_id' => $type->id, 'year' => $year])->latest()->limit(15)->get() : collect(),
         ]);
     }
 

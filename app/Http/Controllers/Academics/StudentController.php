@@ -7,6 +7,7 @@ use App\Models\AcademicSession;
 use App\Models\Programme;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\Access\ScopedAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -35,10 +36,10 @@ class StudentController extends CrudController
     protected string $intro = 'Everyone who has been admitted. Open a student to see their full profile, upload a photo, change their status or reset their password. New students come from admitting an applicant.';
     protected array $searchable = ['matric_number', 'first_name', 'last_name', 'phone_number'];
 
-    public function __construct()
+    public function __construct(private ScopedAccess $access)
     {
         parent::__construct();
-        $this->middleware('permission:View students')->only('show');
+        $this->middleware('scoped:View students')->only('show');
         $this->middleware('permission:Edit students')->only('photo');
         $this->middleware('permission:Change student status')->only('status');
         $this->middleware('permission:Reset student passwords')->only('resetPassword');
@@ -49,9 +50,16 @@ class StudentController extends CrudController
         return Student::class;
     }
 
+    protected function viewMiddleware(): string
+    {
+        return 'scoped:View students';
+    }
+
     protected function query(Request $request): Builder
     {
-        return parent::query($request)->with(['user', 'programme', 'entrySession'])->reorder()->orderBy('last_name')->orderBy('first_name');
+        $q = parent::query($request)->with(['user', 'programme', 'entrySession'])->reorder()->orderBy('last_name')->orderBy('first_name');
+
+        return $this->access->scope($request->user(), 'View students')->students($q);
     }
 
     protected function filters(): array
@@ -123,6 +131,7 @@ class StudentController extends CrudController
     public function show($id): View
     {
         $student = Student::with(['user.roles', 'programme.department.faculty', 'entrySession', 'applicant'])->findOrFail($id);
+        abort_unless($this->access->scope(request()->user(), 'View students')->coversStudent($student), 403);
 
         return view('students.show', [
             'pagetitle' => $student->full_name,

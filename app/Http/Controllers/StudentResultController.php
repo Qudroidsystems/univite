@@ -9,7 +9,7 @@ use Illuminate\View\View;
 /** Published results, GPA and CGPA: a student's own, or any student's for staff with permission. */
 class StudentResultController extends Controller
 {
-    public function __construct(private ResultService $results, private \App\Services\ResultComplaintService $complaints)
+    public function __construct(private ResultService $results, private \App\Services\ResultComplaintService $complaints, private \App\Services\Access\ScopedAccess $access)
     {
     }
 
@@ -22,7 +22,7 @@ class StudentResultController extends Controller
 
     public function transcript(Student $student): View
     {
-        abort_unless(auth()->user()->can('View student results'), 403);
+        abort_unless($this->access->scope(auth()->user(), 'View student results')->coversStudent($student), 403);
 
         return $this->render($student, 'Transcript', false);
     }

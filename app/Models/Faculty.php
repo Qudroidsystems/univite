@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[\Illuminate\Database\Eloquent\Attributes\ObservedBy(\App\Observers\HeadObserver::class)]
 class Faculty extends Model
 {
     protected $fillable = ['name', 'code', 'dean_id', 'description', 'is_active'];

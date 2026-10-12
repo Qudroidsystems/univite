@@ -25,6 +25,7 @@ class Messenger
         'timetable' => 'Published timetables and changes',
         'seating' => 'Examination seat numbers',
         'venues' => 'Venue closures that affect timetables',
+        'payslip' => 'Payslips ready',
     ];
 
     public function __construct(private Gateway $gateway)

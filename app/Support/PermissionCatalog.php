@@ -46,6 +46,8 @@ class PermissionCatalog
                     ['Assign users to roles', 'Assign', 'Give an existing role to users, which gives them everything that role allows.'],
                     ['Remove users from roles', 'Remove', 'Take a role away from users, which removes the access it gave them.'],
                     ['Delete roles', 'Delete', 'Permanently delete a role. Users who held it lose the access it gave them.'],
+                    ['View scoped roles', 'View', 'See who holds a role only for one faculty, department or unit, including the roles heads get automatically.'],
+                    ['Assign scoped roles', 'Assign', 'Give someone a role for one faculty, department or unit only (for example an exams officer for one department), or take it away, and choose which role heads get.'],
                 ],
             ],
 
@@ -482,7 +484,37 @@ class PermissionCatalog
                     ['Set leave policy', 'Set', 'Set up leave types, entitlement rules (by category, grade, appointment and years of service), approval routes, reminders, escalation and the holiday calendar.'],
                     ['Change leave balances', 'Change', 'Add or remove days on a member of staff\'s balance with a reason, and carry unused days into the new leave year.'],
                     ['Record staff resumption', 'Record', 'Record the date a member of staff actually resumed. A late return is flagged and an early one gives back the unused days.'],
-                    ['Edit staff profiles', 'Edit', 'Set each member of staff\'s staff number, department, category, grade, appointment type, first appointment date, supervisor and whether their role must be covered.'],
+                ],
+            ],
+
+            'Staff records' => [
+                'about' => 'Each member of staff\'s employment record: where they work, grade and step, appointment and service, retirement, and how they are paid. Heads can be given these for their own department, faculty or unit.',
+                'permissions' => [
+                    ['View staff records', 'View', 'See staff records: department or unit, designation, category, grade, appointment and service dates, status and expected retirement. Pay, bank, pension and tax details are not shown without "View payroll".'],
+                    ['Edit staff profiles', 'Edit', 'Add a staff record and change its staff number, department or unit, designation, category, grade level, appointment, dates, supervisor, employment status and exit.'],
+                    ['Edit staff pay details', 'Edit', 'Change a member of staff\'s salary structure and step, bank account, pension fund administrator and RSA PIN, and tax details. Every change is kept on the operation history.'],
+                ],
+            ],
+
+            'Units' => [
+                'about' => 'Non-academic offices such as the Bursary, Registry, Works or Library. Staff belong to a department or a unit, and the head of a unit gets the unit head role for it.',
+                'permissions' => [
+                    ['View units', 'View', 'See the list of units and who heads each one.'],
+                    ['Create units', 'Create', 'Add a unit, such as the Bursary or Works department, and choose its head.'],
+                    ['Edit units', 'Edit', 'Rename a unit or change its head. The unit head role moves to the new head at once.'],
+                    ['Delete units', 'Delete', 'Delete a unit that no member of staff belongs to.'],
+                ],
+            ],
+
+            'Payroll' => [
+                'about' => 'Salary scales, allowances and deductions, the monthly payroll and payslips, and the bank, pension and tax schedules. Every member of staff sees their own payslips without any permission.',
+                'permissions' => [
+                    ['View payroll', 'View', 'See every payroll and payslip, staff pay, bank, pension and tax details, and download the bank, pension, tax and deduction schedules.'],
+                    ['Set payroll policy', 'Set', 'Set up salary structures and scales, allowances, deductions and employer contributions, the income tax table, which employment statuses are paid, retirement ages and whether payslips are emailed.'],
+                    ['Change staff pay', 'Change', 'Add, change or stop a member of staff\'s own earnings and deductions, such as loans (with a balance), co-operative savings or union dues.'],
+                    ['Prepare payroll', 'Manage', 'Prepare a month\'s payroll as a draft and prepare it again after corrections, or delete a draft.'],
+                    ['Approve payroll', 'Approve', 'Approve a prepared payroll: payslips are released to staff and loan balances go down. Can also reopen an approved payroll that has not been paid.'],
+                    ['Mark payroll paid', 'Manage', 'Record that the bank has paid an approved payroll. After this it can no longer be reopened.'],
                 ],
             ],
 

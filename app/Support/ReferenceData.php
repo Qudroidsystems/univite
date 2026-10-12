@@ -31,6 +31,9 @@ class ReferenceData
             'venue_facility' => ['Venue facilities', 'Equipment and features a venue can have. Timetables use these to place courses that need them.', ['projector' => 'Projector', 'public_address' => 'Public address system', 'smart_board' => 'Smart board', 'computers' => 'Computers', 'air_conditioning' => 'Air conditioning', 'science_lab_equipment' => 'Science laboratory equipment', 'internet' => 'Internet access', 'generator' => 'Standby power', 'cctv' => 'CCTV']],
             'staff_category' => ['Staff categories', 'Used by leave entitlement rules.', ['academic' => 'Academic staff', 'senior_non_teaching' => 'Senior non-teaching staff', 'junior_non_teaching' => 'Junior non-teaching staff']],
             'appointment_type' => ['Appointment types', 'Used by leave entitlement rules.', ['permanent' => 'Permanent', 'contract' => 'Contract', 'temporary' => 'Temporary', 'visiting' => 'Visiting', 'part_time' => 'Part-time']],
+            'employment_status' => ['Employment statuses', 'Where a member of staff stands. Payroll settings choose which statuses are paid.', ['active' => 'In service', 'study_leave' => 'On study leave', 'secondment' => 'On secondment', 'leave_without_pay' => 'On leave without pay', 'suspended' => 'Suspended', 'retired' => 'Retired', 'resigned' => 'Resigned', 'dismissed' => 'Dismissed', 'deceased' => 'Deceased']],
+            'pfa' => ['Pension fund administrators', 'The PFAs staff keep their Retirement Savings Accounts with. Pension schedules are grouped by PFA. Add the ones your staff use.', []],
+            'bank' => ['Banks', 'Banks staff are paid into. The code is the bank\'s sort or CBN code, used on the bank schedule.', []],
             'state' => ['States of origin', 'States offered as "state of origin". The code is the text stored on the record.', ['Not applicable (non-Nigerian)' => 'Not applicable (non-Nigerian)'] + array_combine($states, $states)],
         ];
     }

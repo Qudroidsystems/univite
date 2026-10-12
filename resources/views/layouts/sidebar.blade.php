@@ -1,5 +1,6 @@
 @php
     $u = auth()->user();
+    $scoped = app(\App\Services\Access\ScopedAccess::class);   // roles held for one department, faculty or unit
     $on = fn (string ...$patterns) => request()->routeIs(...$patterns);
 
     // [label, route name, permission, route pattern]
@@ -57,6 +58,7 @@
     $access = [
         ['Users',       'users.index',       'View users',       'users.*'],
         ['Roles',       'roles.index',       'View roles',       'roles.*'],
+        ['Scoped Roles & Heads', 'scoped-roles.index', ['View scoped roles', 'Assign scoped roles'], 'scoped-roles.*'],
         ['Permissions', 'permissions.index', 'View permissions', 'permissions.*'],
     ];
 
@@ -70,9 +72,17 @@
     $leave = [
         ['Leave Register',     'leave.register',            ['View leave applications', 'Approve leave for any staff', 'Record staff resumption'], 'leave.register'],
         ['Leave Balances',     'leave.balances',            ['View leave applications', 'Change leave balances'], 'leave.balances*'],
-        ['Staff Profiles',     'leave.staff.index',         ['Edit staff profiles', 'View leave applications'], 'leave.staff.*'],
         ['Leave Settings',     'leave.settings',            'Set leave policy',      'leave.settings', 'leave.types.*', 'leave.entitlements.*'],
         ['Holiday Calendar',   'leave.holidays.index',      ['Set leave policy', 'Create timetables'], 'leave.holidays.*'],
+    ];
+    $staff = [
+        ['Staff Records',      'staff.index',               ['View staff records', 'Edit staff profiles'], 'staff.index', 'staff.show'],
+        ['Retirements Due',    'staff.retirements',         ['View staff records', 'Edit staff profiles'], 'staff.retirements'],
+        ['Units',              'units.index',               'View units',            'units.*'],
+        ['Payroll',            'payroll.runs.index',        ['View payroll', 'Prepare payroll', 'Approve payroll'], 'payroll.runs.*', 'payroll.payslips.*'],
+        ['Salary Structures',  'payroll.structures.index',  ['Set payroll policy', 'View payroll'], 'payroll.structures.*', 'payroll.scales.*'],
+        ['Allowances & Deductions', 'payroll.elements.index', ['Set payroll policy', 'View payroll'], 'payroll.elements.*'],
+        ['Payroll Settings',   'payroll.settings',          ['Set payroll policy', 'View payroll'], 'payroll.settings*'],
     ];
     $messaging = [
         ['Messaging Settings', 'messaging.settings',        'Edit messaging settings', 'messaging.settings*'],
@@ -84,6 +94,7 @@
         ['id' => 'sidebarBills',    'label' => 'School Bills',   'icon' => 'ri-bill-line',           'items' => $bills],
         ['id' => 'sidebarFees',     'label' => 'Fees & Payments', 'icon' => 'ri-wallet-3-line', 'items' => $fees],
         ['id' => 'sidebarPlanning', 'label' => 'Venues & Timetables', 'icon' => 'ri-calendar-schedule-line', 'items' => $planning],
+        ['id' => 'sidebarStaff',    'label' => 'Staff & Payroll', 'icon' => 'ri-team-line',          'items' => $staff],
         ['id' => 'sidebarLeave',    'label' => 'Staff Leave',    'icon' => 'ri-suitcase-line',       'items' => $leave],
         ['id' => 'sidebarMessaging','label' => 'Messaging',      'icon' => 'ri-message-3-line',      'items' => $messaging],
         ['id' => 'sidebarAccess',   'label' => 'Users & Access', 'icon' => 'ri-shield-user-line',    'items' => $access],
@@ -129,7 +140,7 @@
                         </a>
                     </li>
                 @endif
-                @if (! $u->can('View course registrations') && \App\Models\CourseAdviser::where('user_id', $u->id)->exists())
+                @if ($scoped->scope($u, 'View course registrations')->isEmpty() && \App\Models\CourseAdviser::where('user_id', $u->id)->exists())
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $on('registrations.*') ? 'active' : '' }}" href="{{ route('registrations.index') }}">
                             <i class="ri-team-line"></i> <span>My Advisees</span>
@@ -177,6 +188,13 @@
                             </a>
                         </li>
                     @endif
+                    @if (\App\Models\Payslip::where('user_id', $u->id)->exists())
+                        <li class="nav-item">
+                            <a class="nav-link menu-link {{ $on('my.payslips*') ? 'active' : '' }}" href="{{ route('my.payslips') }}">
+                                <i class="ri-money-dollar-box-line"></i> <span>My Payslips</span>
+                            </a>
+                        </li>
+                    @endif
                     <li class="nav-item">
                         <a class="nav-link menu-link {{ $on('leave.index', 'leave.create', 'leave.edit', 'leave.show', 'leave.calendar') ? 'active' : '' }}" href="{{ route('leave.index') }}">
                             <i class="ri-suitcase-line"></i> <span>My Leave</span>
@@ -193,7 +211,7 @@
 
                 @foreach ($groups as $g)
                     @php
-                        $visible = collect($g['items'])->filter(fn ($i) => $u->canAny((array) $i[2]));
+                        $visible = collect($g['items'])->filter(fn ($i) => $u->canAny((array) $i[2]) || $scoped->any($u, ...(array) $i[2]));
                         $open = $visible->contains(fn ($i) => $on(...array_slice($i, 3)));
                     @endphp
                     @if ($visible->isNotEmpty())

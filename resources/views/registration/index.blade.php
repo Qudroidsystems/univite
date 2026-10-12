@@ -43,7 +43,7 @@
                         </table>
                     </div>
                     <div class="card-footer d-flex justify-content-between align-items-center">
-                        @if ($adviser || auth()->user()->can('Approve course registrations'))<button class="btn btn-success btn-sm" type="submit" data-confirm="Approve every ticked registration?"><i class="ri-check-double-line me-1"></i>Approve ticked</button>@else<span></span>@endif
+                        @if ($canApprove)<button class="btn btn-success btn-sm" type="submit" data-confirm="Approve every ticked registration?"><i class="ri-check-double-line me-1"></i>Approve ticked</button>@else<span></span>@endif
                         {{ $forms->links() }}
                     </div>
                 </form>

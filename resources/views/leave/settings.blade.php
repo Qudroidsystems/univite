@@ -15,7 +15,7 @@
         <a href="{{ route('leave.types.index') }}" class="btn btn-sm btn-light"><i class="ri-suitcase-line me-1"></i>Leave types</a>
         <a href="{{ route('leave.entitlements.index') }}" class="btn btn-sm btn-light"><i class="ri-scales-3-line me-1"></i>Entitlement rules</a>
         <a href="{{ route('leave.holidays.index') }}" class="btn btn-sm btn-light"><i class="ri-calendar-event-line me-1"></i>Holidays</a>
-        <a href="{{ route('leave.staff.index') }}" class="btn btn-sm btn-light"><i class="ri-id-card-line me-1"></i>Staff profiles</a>
+        <a href="{{ route('staff.index') }}" class="btn btn-sm btn-light"><i class="ri-id-card-line me-1"></i>Staff profiles</a>
     </div>
 
     <div class="row">

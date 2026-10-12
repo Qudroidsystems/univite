@@ -37,6 +37,7 @@ class DocumentMailer
         'complaint_response' => ['Result query responses', 'When a student\'s result query is answered.', true],
         'graduation'         => ['Graduation notices', 'When a graduation list is approved, or an approval is reversed.', false],
         'leave_letter'       => ['Leave letters', 'When staff leave is applied for, approved, not approved, returned, cancelled, or the person resumes.', false],
+        'payslip'            => ['Payslips', 'When a month\'s payroll is approved (if emailing payslips is on in Payroll Settings).', true],
     ];
 
     public static function enabled(string $type): bool
@@ -244,6 +245,35 @@ class DocumentMailer
         return $this->send('leave_letter', $r, $this->recipients($r->user), $doc['title'] . ' · ' . $r->reference, $doc, str_replace('/', '-', $r->reference) . '-' . $kind . '.html', $by);
     }
 
+    public function payslip(\App\Models\Payslip $slip, ?User $by = null): int
+    {
+        $slip->loadMissing('run', 'user', 'lines');
+        $money = fn ($v) => '₦' . number_format((float) $v, 2);
+        $rows = [];
+        foreach (['earning' => 'Earnings', 'deduction' => 'Deductions', 'employer' => 'Paid by the university (not deducted)'] as $kind => $heading) {
+            $lines = $slip->lines->where('kind', $kind);
+            if ($lines->isNotEmpty()) {
+                $rows[] = [$heading, ''];
+                foreach ($lines as $l) {
+                    $rows[] = ['   ' . $l->name, $money($l->amount)];
+                }
+            }
+        }
+
+        return $this->send('payslip', $slip, $this->recipients($slip->user), 'Payslip for ' . $slip->run->label(), [
+            'title'     => 'Payslip · ' . $slip->run->label(),
+            'banner'    => ['Net pay ' . $money($slip->net), 'success'],
+            'greeting'  => 'Dear ' . $slip->user->name . ',',
+            'intro'     => ['Your payslip for ' . $slip->run->label() . ' is below. You can also see it, and earlier ones, under My Payslips on the portal.'],
+            'details'   => array_filter(['Name' => $slip->name, 'Staff number' => $slip->staff_number, 'Department / unit' => $slip->department,
+                'Grade' => $slip->structure ? "{$slip->structure} {$slip->grade_level}/{$slip->step}" : null,
+                'Bank' => $slip->bank_name ? $slip->bank_name . ' · ' . substr((string) $slip->bank_account_number, -4) . ' (last four digits)' : null]),
+            'table'     => ['head' => ['Item', 'Amount'], 'right' => [1], 'rows' => $rows,
+                'foot' => [['Gross pay', $money($slip->gross)], ['Total deductions', $money($slip->total_deductions)], ['Net pay', $money($slip->net)]]],
+            'signatory' => 'bursar',
+        ], 'payslip-' . $slip->run->period . '.html', $by);
+    }
+
     /** Send again from the email log, rebuilt from the record as it is now. */
     public function resend(DocumentEmail $email, User $by): int
     {
@@ -260,6 +290,7 @@ class DocumentMailer
             'clearance_slip' => $this->clearanceSlip($subject, $by),
             'application_slip' => $this->applicationSlip($subject, $by),
             'complaint_response' => $this->complaintAnswered($subject, $by),
+            'payslip' => $this->payslip($subject, $by),
         };
     }
 

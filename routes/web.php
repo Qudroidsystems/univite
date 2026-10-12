@@ -368,7 +368,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('types', \App\Http\Controllers\Leave\LeaveTypeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('entitlements', \App\Http\Controllers\Leave\LeaveEntitlementController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('holidays', \App\Http\Controllers\Leave\HolidayController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::resource('staff', \App\Http\Controllers\Leave\StaffProfileController::class)->only(['index', 'store', 'update']);
+        Route::redirect('staff', '/staff')->name('staff.index');   // staff profiles moved to Staff Records
         Route::controller(\App\Http\Controllers\LeaveController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('apply', 'create')->name('create');
@@ -399,6 +399,40 @@ Route::middleware('auth')->group(function () {
     Route::get('notifications/settings', [\App\Http\Controllers\NotificationController::class, 'preferences'])->name('notifications.preferences');
     Route::put('notifications/settings', [\App\Http\Controllers\NotificationController::class, 'savePreferences'])->name('notifications.preferences.save');
     Route::get('notifications/{id}', [\App\Http\Controllers\NotificationController::class, 'open'])->name('notifications.open');
+    // ---- Staff records, units, payroll, scoped roles ----
+    Route::controller(\App\Http\Controllers\Hr\StaffRecordController::class)->group(function () {
+        Route::get('staff/retirements', 'retirements')->name('staff.retirements');
+        Route::put('staff/{staff}/pay', 'updatePay')->name('staff.pay');
+        Route::post('staff/{staff}/pay-items', 'storeItem')->name('staff.items.store');
+        Route::put('staff-pay-items/{item}', 'updateItem')->name('staff.items.update');
+    });
+    Route::resource('staff', \App\Http\Controllers\Hr\StaffRecordController::class)->only(['index', 'store', 'update', 'show'])->parameters(['staff' => 'staff']);
+    Route::resource('units', \App\Http\Controllers\Hr\UnitController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::prefix('payroll')->name('payroll.')->group(function () {
+        Route::resource('structures', \App\Http\Controllers\Payroll\SalaryStructureController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('elements', \App\Http\Controllers\Payroll\PayElementController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('scales/{structure}', [\App\Http\Controllers\Payroll\SalaryScaleController::class, 'show'])->name('scales.show');
+        Route::put('scales/{structure}', [\App\Http\Controllers\Payroll\SalaryScaleController::class, 'update'])->name('scales.update');
+        Route::post('scales/{structure}/upload', [\App\Http\Controllers\Payroll\SalaryScaleController::class, 'upload'])->name('scales.upload');
+        Route::get('settings', [\App\Http\Controllers\Payroll\PayrollSettingsController::class, 'edit'])->name('settings');
+        Route::put('settings', [\App\Http\Controllers\Payroll\PayrollSettingsController::class, 'update'])->name('settings.update');
+        Route::controller(\App\Http\Controllers\Payroll\PayrollRunController::class)->group(function () {
+            Route::get('/', 'index')->name('runs.index');
+            Route::post('/', 'store')->name('runs.store');
+            Route::get('payslips/{payslip}', 'payslip')->name('payslips.show');
+            Route::get('{run}', 'show')->name('runs.show');
+            Route::delete('{run}', 'destroy')->name('runs.destroy');
+            Route::post('{run}/approve', 'approve')->name('runs.approve');
+            Route::post('{run}/paid', 'paid')->name('runs.paid');
+            Route::get('{run}/schedules/{kind}', 'schedule')->name('runs.schedule');
+        });
+    });
+    Route::get('my/payslips', [\App\Http\Controllers\Payroll\MyPayslipController::class, 'index'])->name('my.payslips');
+    Route::get('my/payslips/{payslip}', [\App\Http\Controllers\Payroll\MyPayslipController::class, 'show'])->name('my.payslips.show');
+    Route::get('access/scoped-roles', [\App\Http\Controllers\ScopedRoleController::class, 'index'])->name('scoped-roles.index');
+    Route::post('access/scoped-roles', [\App\Http\Controllers\ScopedRoleController::class, 'store'])->name('scoped-roles.store');
+    Route::put('access/scoped-roles/settings', [\App\Http\Controllers\ScopedRoleController::class, 'settings'])->name('scoped-roles.settings');
+    Route::delete('access/scoped-roles/{scopedRole}', [\App\Http\Controllers\ScopedRoleController::class, 'destroy'])->name('scoped-roles.destroy');
     // ---- Results from before the portal ----
     Route::prefix('legacy-results')->name('legacy.')->controller(\App\Http\Controllers\LegacyImportController::class)->group(function () {
         Route::get('/', 'index')->name('index');

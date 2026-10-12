@@ -68,6 +68,13 @@ class Reversals
         'messaging_settings'    => ['Messaging settings changed', null],
         'legacy_import'         => ['Legacy results imported', R\LegacyImportReversal::class],
         'legacy_import_undo'    => ['Legacy results import undone', null],
+        'payroll_approve'       => ['Payroll approved', R\PayrollApprovalReversal::class],
+        'payroll_reopen'        => ['Payroll reopened', null],
+        'payroll_paid'          => ['Payroll marked paid', null],
+        'payroll_policy'        => ['Payroll settings changed', null],
+        'staff_pay_details'     => ['Staff pay or bank details changed', null],
+        'staff_pay_item'        => ['Personal earning or deduction changed', null],
+        'scoped_role'           => ['Scoped role given or removed', null],
     ];
 
     public static function typeLabel(string $type): string

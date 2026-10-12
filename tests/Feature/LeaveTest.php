@@ -227,11 +227,11 @@ it('opens every leave, messaging and notification page', function () {
 
     $this->actingAs($this->admin);
     foreach ([route('leave.register'), route('leave.register', ['phase' => 'away']), route('leave.settings'), route('leave.settings', ['type' => $this->annual->id]), route('leave.balances'),
-        route('leave.types.index'), route('leave.entitlements.index'), route('leave.holidays.index'), route('leave.staff.index', ['q' => 'Efe']), route('leave.approvals'),
+        route('leave.types.index'), route('leave.entitlements.index'), route('leave.holidays.index'), route('staff.index', ['q' => 'Efe']), route('leave.approvals'),
         route('messaging.settings'), route('messaging.log')] as $url) {
         $this->get($url)->assertOk();
     }
-    $this->get(route('leave.staff.index', ['q' => 'Efe']))->assertSee('Staff Efe')->assertViewHas('rows', fn ($rows) => $rows->total() === 1);
+    $this->get(route('staff.index', ['q' => 'Efe']))->assertSee('Staff Efe')->assertViewHas('rows', fn ($rows) => $rows->total() === 1);
 });
 
 it('lets the leave office change reminders and the approval route, and every person their own text settings', function () {

@@ -17,6 +17,7 @@ use App\Models\LeaveType;
 use App\Models\Setting;
 use App\Models\StaffProfile;
 use App\Models\User;
+use App\Services\Access\ScopedAccess;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
@@ -40,7 +41,7 @@ class LeaveService
         'weekend' => ['Days that are not working days (1 = Monday ... 7 = Sunday, comma-separated)', '6,7'],
     ];
 
-    public function __construct(private OperationAudit $audit, private Messenger $messenger, private DocumentMailer $mailer, private TimetableService $timetables)
+    public function __construct(private OperationAudit $audit, private Messenger $messenger, private DocumentMailer $mailer, private TimetableService $timetables, private ScopedAccess $access)
     {
     }
 
@@ -590,8 +591,8 @@ class LeaveService
 
     public function canView(User $user, LeaveRequest $r): bool
     {
-        return $user->id === $r->user_id || $user->id === $r->acting_officer_id || $user->can('View leave applications')
-            || $user->can('Approve leave for any staff') || $r->steps->contains(fn ($s) => $s->acted_by === $user->id)
+        return $user->id === $r->user_id || $user->id === $r->acting_officer_id || $user->can('Approve leave for any staff')
+            || $this->access->scope($user, 'View leave applications')->coversStaff($r->user?->staffProfile) || $r->steps->contains(fn ($s) => $s->acted_by === $user->id)
             || $r->steps->contains(fn ($s) => in_array($s->status, ['pending', 'waiting'], true) && $this->approversFor($s, $r)->contains('id', $user->id));
     }
 

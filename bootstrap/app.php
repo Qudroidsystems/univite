@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'applicant' => \App\Http\Middleware\ApplicantAuth::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'scoped' => \App\Http\Middleware\ScopedPermission::class,
         ]);
 
         $middleware->web(append: [\App\Http\Middleware\AjaxResponses::class]);

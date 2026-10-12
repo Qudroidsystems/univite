@@ -4,7 +4,7 @@
 @php $badge = ['change' => 'bg-primary-subtle text-primary', 'skip' => 'bg-secondary-subtle text-secondary', 'blocked' => 'bg-danger-subtle text-danger']; $word = ['change' => 'Will change', 'skip' => 'Skipped', 'blocked' => 'Blocked']; @endphp
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:1000px">
+        <div class="container-fluid">
             <div class="page-title-box d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">{{ $title }}</h4>
                 <a href="{{ route('operations.show', $batch) }}" class="btn btn-sm btn-light"><i class="ri-arrow-left-line me-1"></i>Operation {{ $batch->operation_id }}</a>

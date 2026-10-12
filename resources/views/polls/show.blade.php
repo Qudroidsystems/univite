@@ -7,7 +7,7 @@
     $editable = ! $locked && $phase !== 'closed';
     $u = auth()->user();
 @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $poll->title, 'icon' => 'ri-checkbox-multiple-line', 'back' => [route('polls.index'), 'All polls']])
     @include('academics.partials.alerts')
 

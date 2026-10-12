@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'My examinations', 'icon' => 'ri-file-edit-line', 'subtitle' => $semester ? $semester->session?->name . ' · ' . $semester->name : null])
     @if ($timetables->isEmpty())
         <div class="card"><div class="card-body text-muted">The examination timetable has not been published yet. You will be notified when it is.</div></div>

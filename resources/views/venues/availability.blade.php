@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Find a free venue', 'icon' => 'ri-search-line', 'subtitle' => 'Free venues for a date and time, smallest suitable first. Closures, faults, bookings and published timetables are all checked.', 'back' => [route('venues.index'), 'Venues']])
     <div class="card"><div class="card-body"><form method="GET" class="row g-2 align-items-end">
         <div class="col-md-2"><label class="form-label fs-12">Date</label><input type="date" name="date" value="{{ $q['date'] ?? today()->toDateString() }}" class="form-control form-control-sm" required></div>

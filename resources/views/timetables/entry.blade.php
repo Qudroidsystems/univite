@@ -2,7 +2,7 @@
 
 @section('content')
 @php $first = $rows->first(); @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $u['code'] . ($u['meeting'] > 1 || ! $t->isExam() ? ' · meeting ' . $u['meeting'] : ''), 'icon' => 'ri-drag-move-2-line', 'subtitle' => ($u['title'] ?? '') . ' · ' . $u['size'] . ($t->isExam() ? ' candidates' : ' students'), 'back' => [route('timetables.show', $t), $t->title]])
     @include('academics.partials.alerts')
 

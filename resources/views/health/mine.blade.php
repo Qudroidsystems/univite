@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'My Health', 'icon' => 'ri-heart-pulse-line', 'subtitle' => 'Only the health centre can see this. Every time they open it, it is listed at the bottom of this page.'])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

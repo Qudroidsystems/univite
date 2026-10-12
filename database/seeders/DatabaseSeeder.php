@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
     {
         return [
             '🔐 PART 1: PERMISSIONS' => ['always', [
-                'PermissionTableSeeder' => '🔐 Bringing permissions in line with the permission catalogue...',
+                'PermissionSeeder' => '🔐 Seeding permissions (core, then one named seeder per module)...',
             ]],
             '👤 PART 2: ROLES, HEADS AND ADMINISTRATOR' => ['always', [
                 'UserTableSeeder' => '👤 Seeding roles, head roles and the administrator account...',
@@ -217,7 +217,7 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /** "PermissionTableSeeder" -> Database\\Seeders\\PermissionTableSeeder; a class from elsewhere is kept as given. */
+    /** "PermissionSeeder" -> Database\\Seeders\\PermissionSeeder; a class from elsewhere is kept as given. */
     protected function resolveSeederClass(string $seeder): string
     {
         $local = __NAMESPACE__ . '\\' . ltrim($seeder, '\\');

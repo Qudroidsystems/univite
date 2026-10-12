@@ -2,7 +2,7 @@
 
 @section('content')
 @php $days = $entries->groupBy('day'); @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'My timetable', 'icon' => 'ri-calendar-2-line', 'subtitle' => $semester ? $semester->session?->name . ' · ' . $semester->name : null])
     @if ($timetables->isEmpty())
         <div class="card"><div class="card-body text-muted">The lecture timetable for this semester has not been published yet. You will be notified when it is.</div></div>

@@ -34,7 +34,7 @@
                 <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
                     <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
                         <input type="search" name="q" value="{{ request('q') }}" class="form-control" style="width:240px" placeholder="Reference, matric number or name">
-                        <select name="academic_session_id" class="form-select" style="width:auto" onchange="this.form.submit()">
+                        <select name="academic_session_id" data-lookup="sessions" class="form-select" style="width:auto" onchange="this.form.submit()">
                             <option value="">All sessions</option>
                             @foreach ($sessions as $id => $name)<option value="{{ $id }}" @selected((string) request('academic_session_id') === (string) $id)>{{ $name }}</option>@endforeach
                         </select>
@@ -86,18 +86,18 @@
                 <p class="text-muted">Creates an invoice for every <strong>active</strong> student who does not have one yet for the session. Amounts come from the school bills for each student's programme and level; students who entered in that session are billed as fresh, the rest as returning.</p>
                 <div class="mb-3">
                     <label class="form-label">Session <span class="text-danger">*</span></label>
-                    <select name="academic_session_id" class="form-select" required>
+                    <select name="academic_session_id" data-lookup="sessions" class="form-select" required>
                         @foreach ($sessions as $id => $name)<option value="{{ $id }}" @selected(optional(\App\Models\AcademicSession::current())->id === $id)>{{ $name }}</option>@endforeach
                     </select>
                 </div>
                 <div class="row g-3">
                     <div class="col-7"><label class="form-label">Programme (optional)</label>
-                        <select name="programme_id" class="form-select"><option value="">All programmes</option>@foreach ($programmes as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select></div>
+                        <select name="programme_id" data-lookup="programmes" class="form-select"><option value="">All programmes</option>@foreach ($programmes as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach</select></div>
                     <div class="col-5"><label class="form-label">Level (optional)</label>
                         <select name="level" class="form-select"><option value="">All levels</option>@foreach (\App\Support\Levels::options() as $v => $l)<option value="{{ $v }}">{{ $l }}</option>@endforeach</select></div>
                 </div>
                 <div class="mt-3"><label class="form-label">Bill for (optional)</label>
-                    <select name="semester_type_id" class="form-select"><option value="">The whole session (session fees)</option>@foreach (\App\Models\SemesterType::options() as $v => $n)<option value="{{ $v }}">{{ $n }} fees only</option>@endforeach</select>
+                    <select name="semester_type_id" data-lookup="semester-orders" class="form-select"><option value="">The whole session (session fees)</option>@foreach (\App\Models\SemesterType::options() as $v => $n)<option value="{{ $v }}">{{ $n }} fees only</option>@endforeach</select>
                     <div class="form-text">Choose a semester to invoice the fees you set for that semester alone.</div></div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Preview</button></div>

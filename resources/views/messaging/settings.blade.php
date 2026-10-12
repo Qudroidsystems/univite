@@ -9,7 +9,7 @@
         'webhook' => ['Other provider (webhook)', [$field('webhook_url', 'Webhook URL', 'The portal posts JSON {channel, to, body} to this https address.'), $field('webhook_token', 'Bearer token', 'Sent as Authorization: Bearer …', 'password')]],
     ];
 @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Messaging settings', 'icon' => 'ri-message-3-line', 'subtitle' => 'Text messages and WhatsApp. Emails use the mail settings; portal notices always go out.'])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

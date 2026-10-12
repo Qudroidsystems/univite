@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:960px">
+        <div class="container-fluid">
             <div class="page-title-box"><h4 class="mb-0">Institution profile</h4></div>
             @include('academics.partials.alerts')
             <p class="text-muted">These details appear across the portal: the menu, sign-in and application pages, and every printed slip, receipt and transcript.</p>

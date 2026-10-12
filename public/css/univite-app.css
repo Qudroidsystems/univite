@@ -20,3 +20,10 @@
 @keyframes uv-rot { to { transform: rotate(360deg); } }
 .uv-err { font-size: 12px; }
 .uv-offline-spin { width: 38px; height: 38px; border-width: 3px; margin: 0 auto 8px; display: block; opacity: .5; }
+
+/* A dropdown fetching its options (univite-lookups.js): a small spinner replaces the arrow. */
+select.uv-lookup-loading {
+    cursor: progress;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%23878a99' stroke-width='2' stroke-dasharray='28' stroke-dashoffset='10'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 8 8' to='360 8 8' dur='.7s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat; background-position: right .75rem center; background-size: 14px 14px;
+}

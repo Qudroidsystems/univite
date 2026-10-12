@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::get('custom-fields/files/{value}', [\App\Http\Controllers\CustomFieldFileController::class, 'download'])->name('custom-fields.download');
     Route::get('/home', fn () => redirect()->route('dashboard'))->name('home');
     Route::get('/search', \App\Http\Controllers\SearchController::class)->middleware('throttle:60,1')->name('search');
+    Route::get('/lookups/{list}', \App\Http\Controllers\LookupController::class)->middleware('throttle:240,1')->where('list', '[a-z-]+')->name('lookups');
 
     // ---- Users, roles & permissions ----
     Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');

@@ -99,9 +99,9 @@ class ApplicantController extends CrudController
 
         $admission = [
             ['name' => 'email', 'label' => 'Email (becomes the login)', 'type' => 'email', 'required' => true, 'col' => 6],
-            ['name' => 'programme_id', 'label' => 'Programme applied for', 'type' => 'select', 'options' => Programme::where('is_active', true)->orderBy('name')->get()->mapWithKeys(fn ($p) => [$p->id => $p->name . ' (' . $p->code . ')'])->all(), 'required' => true, 'col' => 6],
-            ['name' => 'academic_session_id', 'label' => 'Entry session', 'type' => 'select', 'options' => AcademicSession::orderByDesc('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 4, 'default' => AcademicSession::current()?->id],
-            ['name' => 'entry_mode', 'label' => 'Entry mode', 'type' => 'select', 'options' => \App\Models\EntryMode::options(), 'required' => true, 'col' => 4, 'default' => \App\Models\EntryMode::orderBy('sort_order')->value('code')],
+            ['name' => 'programme_id', 'lookup' => 'programmes', 'lookup_active' => true, 'label' => 'Programme applied for', 'type' => 'select', 'options' => Programme::where('is_active', true)->orderBy('name')->get()->mapWithKeys(fn ($p) => [$p->id => $p->name . ' (' . $p->code . ')'])->all(), 'required' => true, 'col' => 6],
+            ['name' => 'academic_session_id', 'lookup' => 'sessions', 'label' => 'Entry session', 'type' => 'select', 'options' => AcademicSession::orderByDesc('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 4, 'default' => AcademicSession::current()?->id],
+            ['name' => 'entry_mode', 'lookup' => 'entry-modes', 'label' => 'Entry mode', 'type' => 'select', 'options' => \App\Models\EntryMode::options(), 'required' => true, 'col' => 4, 'default' => \App\Models\EntryMode::orderBy('sort_order')->value('code')],
             ['name' => 'entry_level', 'label' => 'Entry level', 'type' => 'select', 'options' => \App\Support\Levels::options(), 'required' => true, 'col' => 4, 'default' => 100],
         ];
 

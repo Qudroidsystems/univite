@@ -68,7 +68,7 @@ class SemesterController extends CrudController
     protected function fields(): array
     {
         return [
-            ['name' => 'academic_session_id', 'label' => 'Session', 'type' => 'select', 'options' => $this->sessionOptions(), 'required' => true, 'col' => 12],
+            ['name' => 'academic_session_id', 'lookup' => 'sessions', 'label' => 'Session', 'type' => 'select', 'options' => $this->sessionOptions(), 'required' => true, 'col' => 12],
             ['name' => 'name', 'label' => 'Semester name', 'type' => 'text', 'required' => true, 'col' => 8, 'placeholder' => 'First Semester'],
             ['name' => 'sort_order', 'label' => 'Order', 'type' => 'number', 'required' => true, 'col' => 4, 'help' => '1 = first, 2 = second', 'default' => 1],
             ['name' => 'start_date', 'label' => 'Start date', 'type' => 'date', 'col' => 6],

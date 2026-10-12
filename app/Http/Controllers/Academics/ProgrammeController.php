@@ -71,10 +71,10 @@ class ProgrammeController extends CrudController
     protected function fields(): array
     {
         return [
-            ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'options' => $this->departmentOptions(), 'required' => true, 'col' => 12],
+            ['name' => 'department_id', 'lookup' => 'departments', 'label' => 'Department', 'type' => 'select', 'options' => $this->departmentOptions(), 'required' => true, 'col' => 12],
             ['name' => 'name', 'label' => 'Programme name', 'type' => 'text', 'required' => true, 'col' => 8, 'placeholder' => 'B.Sc. Computer Science'],
             ['name' => 'code', 'label' => 'Code', 'type' => 'text', 'required' => true, 'col' => 4, 'placeholder' => 'BSC-CSC'],
-            ['name' => 'study_category_id', 'label' => 'Study category', 'type' => 'select', 'options' => \App\Models\StudyCategory::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6, 'help' => 'Degree, NCE, Part-time ... set up under Study Categories.'],
+            ['name' => 'study_category_id', 'lookup' => 'study-categories', 'lookup_active' => true, 'label' => 'Study category', 'type' => 'select', 'options' => \App\Models\StudyCategory::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6, 'help' => 'Degree, NCE, Part-time ... set up under Study Categories.'],
             ['name' => 'degree_type', 'label' => 'Qualification awarded', 'type' => 'text', 'required' => true, 'col' => 6, 'placeholder' => 'B.Sc. (Ed.)'],
             ['name' => 'duration_years', 'label' => 'Duration (years)', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 4],
             ['name' => 'is_active', 'label' => 'Active (accepting students)', 'type' => 'switch', 'col' => 12, 'default' => true],

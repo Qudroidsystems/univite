@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'My teaching and duties', 'icon' => 'ri-presentation-line', 'subtitle' => $semester ? $semester->session?->name . ' · ' . $semester->name : null])
     <div class="d-flex justify-content-end mb-2"><a href="{{ route('staff-availability.index') }}" class="btn btn-sm btn-soft-secondary"><i class="ri-user-unfollow-line me-1"></i>Times I am not available</a></div>
     <div class="row">

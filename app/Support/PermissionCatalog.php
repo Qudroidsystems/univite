@@ -9,7 +9,7 @@ namespace App\Support;
  * "verb + what" sentence ("Edit academic sessions"). Each one also carries an ACTION chip and a
  * DESCRIPTION that says exactly what it allows, and each group carries a short "about" line.
  *
- * Seeded into the database by PermissionTableSeeder; shown by the role editor (PermissionMeta).
+ * Seeded into the database by PermissionSeeder and its named module seeders (LeavePermissionSeeder ...); shown by the role editor (PermissionMeta).
  * To add a permission: add it here, use the exact name in the controller/view, run `php artisan db:seed`.
  */
 class PermissionCatalog

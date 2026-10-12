@@ -2,7 +2,7 @@
 
 @section('content')
 @php [$label, $badge] = $poll->phaseBadge(); @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:820px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $poll->title, 'icon' => 'ri-checkbox-multiple-line', 'back' => [route('my.polls'), 'All polls']])
     @include('academics.partials.alerts')
     <div class="card"><div class="card-body">

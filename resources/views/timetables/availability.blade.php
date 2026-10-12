@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Staff availability', 'icon' => 'ri-user-unfollow-line', 'subtitle' => 'Times lecturers and invigilators must not be scheduled. Approved leave is taken into account automatically.'])
     @include('academics.partials.alerts')
     <div class="card"><div class="card-body"><form method="POST" action="{{ route('staff-availability.store') }}" class="row g-2 align-items-end">@csrf

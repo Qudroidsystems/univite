@@ -2,7 +2,7 @@
 
 @section('content')
 @php $v = $venue; $old = fn ($k, $d = null) => old($k, $v->{$k} ?? $d); @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $v->exists ? 'Edit ' . $v->name : 'Add a venue', 'icon' => 'ri-building-2-line', 'back' => [$v->exists ? route('venues.show', $v) : route('venues.index'), $v->exists ? $v->name : 'Venues']])
     @include('academics.partials.alerts')
 
@@ -17,7 +17,7 @@
             <div class="col-md-2"><label class="form-label">Floor</label><input name="floor" value="{{ $old('floor') }}" class="form-control"></div>
             <div class="col-md-2"><label class="form-label">Room number</label><input name="room_number" value="{{ $old('room_number') }}" class="form-control"></div>
             <div class="col-md-2"><label class="form-label">Hall entry</label><input name="entry_info" value="{{ $old('entry_info') }}" class="form-control" placeholder="North entrance"></div>
-            <div class="col-md-6"><label class="form-label">Owning department <span class="text-muted">(optional)</span></label><select name="department_id" class="form-select"><option value="">Shared by everyone</option>@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected((int) $old('department_id') === $id)>{{ $n }}</option>@endforeach</select><div class="form-text">Timetables prefer giving a department its own rooms.</div></div>
+            <div class="col-md-6"><label class="form-label">Owning department <span class="text-muted">(optional)</span></label><select name="department_id" data-lookup="departments" data-lookup-active="1" class="form-select"><option value="">Shared by everyone</option>@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected((int) $old('department_id') === $id)>{{ $n }}</option>@endforeach</select><div class="form-text">Timetables prefer giving a department its own rooms.</div></div>
             <div class="col-md-3"><label class="form-label">Status</label><select name="status" class="form-select">@foreach (\App\Models\Venue::STATUSES as $k => $s)<option value="{{ $k }}" @selected($old('status', 'available') === $k)>{{ $s }}</option>@endforeach</select></div>
             <div class="col-md-3 d-flex align-items-end"><div class="form-check form-switch"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="active" @checked($old('is_active', true))><label class="form-check-label" for="active">In the register (active)</label></div></div>
         </div></div>

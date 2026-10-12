@@ -6,14 +6,14 @@
 @endphp
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:1100px">
+        <div class="container-fluid">
             <div class="page-title-box d-print-none"><h4 class="mb-0">Result summary</h4></div>
             @include('academics.partials.alerts')
             <form method="GET" class="card d-print-none"><div class="card-body d-flex flex-wrap gap-2 align-items-end">
                 <div><label class="form-label mb-1">Department</label><select name="department_id" class="form-select" required><option value="">Select…</option>@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected($dept?->id === $id)>{{ $n }}</option>@endforeach</select></div>
                 <div><label class="form-label mb-1">Level</label><select name="level" class="form-select"><option value="">All levels</option>@foreach ($levels as $v => $l)<option value="{{ $v }}" @selected($f['level'] === $v)>{{ $l }}</option>@endforeach</select></div>
-                <div><label class="form-label mb-1">Session</label><select name="session_id" class="form-select">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected($f['session'] === $id)>{{ $n }}</option>@endforeach</select></div>
-                <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" class="form-select">@foreach ($types as $id => $n)<option value="{{ $id }}" @selected($f['type'] === $id)>{{ $n }}</option>@endforeach</select></div>
+                <div><label class="form-label mb-1">Session</label><select name="session_id" data-lookup="sessions" class="form-select">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected($f['session'] === $id)>{{ $n }}</option>@endforeach</select></div>
+                <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" data-lookup="semester-types" class="form-select">@foreach ($types as $id => $n)<option value="{{ $id }}" @selected($f['type'] === $id)>{{ $n }}</option>@endforeach</select></div>
                 <button class="btn btn-primary" type="submit">Show</button>
                 @if ($groups)<button type="button" class="btn btn-light" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>@endif
             </div></form>

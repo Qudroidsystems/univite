@@ -3,7 +3,7 @@
 use App\Models\User;
 use App\Support\PermissionCatalog;
 use Database\Seeders\DatabaseSeeder;
-use Database\Seeders\PermissionTableSeeder;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -11,7 +11,7 @@ use Spatie\Permission\Models\Role;
 uses(RefreshDatabase::class);
 
 it('seeds every permission with a group and a real description', function () {
-    $this->seed(PermissionTableSeeder::class);
+    $this->seed(PermissionSeeder::class);
 
     expect(Permission::count())->toBe(count(PermissionCatalog::all()));
 
@@ -103,7 +103,7 @@ it('carries existing role and user assignments across when permissions are renam
     $user = User::factory()->create();
     $user->givePermissionTo($oldDash);
 
-    $this->seed(PermissionTableSeeder::class);
+    $this->seed(PermissionSeeder::class);
 
     expect(Permission::where('name', 'View session')->exists())->toBeFalse()
         ->and(Permission::where('name', 'dashboard')->exists())->toBeFalse();
@@ -156,4 +156,26 @@ it('lets separate permissions control resetting passwords and disabling accounts
     $this->actingAs($helper)->post(route('users.reset-password', $target))->assertSessionHas('generated_password');
     $this->actingAs($helper)->post(route('users.toggle-status', $target))->assertForbidden();
     $this->actingAs($helper)->post(route('users.store'), ['name' => 'X', 'email' => 'x@example.com'])->assertForbidden();
+});
+
+it('gives every permission group exactly one named seeder', function () {
+    $owners = [];
+    foreach ([PermissionSeeder::class, ...PermissionSeeder::MODULES] as $seeder) {
+        expect(class_basename($seeder))->toEndWith('PermissionSeeder');
+        foreach ((new $seeder)->groups() as $group) {
+            expect(array_key_exists($group, PermissionCatalog::groups()))->toBeTrue("{$seeder} names an unknown group {$group}");
+            $owners[$group][] = class_basename($seeder);
+        }
+    }
+
+    foreach (array_keys(PermissionCatalog::groups()) as $group) {
+        expect($owners[$group] ?? [])->toHaveCount(1, "Group {$group} must be seeded by exactly one named seeder");
+    }
+});
+
+it('lets one module seeder run on its own', function () {
+    $this->seed(\Database\Seeders\LeavePermissionSeeder::class);
+
+    expect(Permission::pluck('title')->unique()->values()->all())->toBe(['Staff leave'])
+        ->and(Permission::count())->toBe(count(PermissionCatalog::groups()['Staff leave']['permissions']));
 });

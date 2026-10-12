@@ -2,7 +2,7 @@
 
 @section('content')
 @php $icon = ['success' => 'ri-checkbox-circle-line text-success', 'danger' => 'ri-error-warning-line text-danger', 'warning' => 'ri-alert-line text-warning', 'info' => 'ri-information-line text-info']; @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:900px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Notifications', 'icon' => 'ri-notification-3-line'])
     @include('academics.partials.alerts')
     <div class="d-flex gap-2 mb-3"><form method="POST" action="{{ route('notifications.read-all') }}">@csrf<button class="btn btn-sm btn-light">Mark all as read</button></form>

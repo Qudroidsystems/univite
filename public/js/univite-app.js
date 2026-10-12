@@ -102,29 +102,84 @@
         if (next === 'offline') { showOffline(); }
         else if (prev === 'offline') {
             closeOffline();
-            Uv.toast('success', 'You are back online');
+            backOnline();
         } else if (next === 'poor' && prev !== 'poor' && Date.now() - lastPoorToast > 90000) {
             lastPoorToast = Date.now();
             Uv.toast('warning', 'Your connection is weak. Saving may take a little longer.');
         }
     }
 
+    /*
+     * An action (saving a form, opening a page, loading a list) that failed because the connection dropped waits here.
+     * While offline the user sees which action is paused; when the connection is back they are told it can continue
+     * and choose Continue (the action runs again with the same idempotency key, so nothing is done twice) or Not now.
+     */
+    var pending = null, modalSeq = 0, offlineModalFor = null;
+
+    function esc(text) { var d = document.createElement('div'); d.textContent = String(text); return d.innerHTML; }
+
     function showOffline() {
-        if (offlineModalOpen || !hasSwal()) { return; }
-        offlineModalOpen = true;
+        if (!hasSwal()) { return; }
+        var what = pending ? pending.what : null;
+        if (offlineModalOpen && offlineModalFor === what) { return; }
+        var seq = ++modalSeq;
+        offlineModalOpen = true; offlineModalFor = what;
         Swal.fire({
             icon: 'warning', title: navigator.onLine === false ? 'You are offline' : 'Cannot reach the server',
-            html: '<span class="uv-spin uv-offline-spin"></span>Whatever you typed is still on this page. We keep trying and will carry on as soon as you are connected. Nothing is saved until then.',
-            allowOutsideClick: false, allowEscapeKey: true, confirmButtonText: 'Check again', confirmButtonColor: brand,
+            html: '<span class="uv-spin uv-offline-spin"></span>' + (what
+                ? 'The connection dropped while <b>' + esc(what) + '</b>, so it is paused. Whatever you typed is still on this page. We keep checking and will tell you as soon as you are back online so you can continue.'
+                : 'Whatever you typed is still on this page. We keep trying and will tell you as soon as you are connected. Nothing is saved until then.'),
+            allowOutsideClick: false, allowEscapeKey: !what, confirmButtonText: 'Check again', confirmButtonColor: brand,
+            showCancelButton: !!what, cancelButtonText: 'Cancel it',
             showLoaderOnConfirm: true,
             preConfirm: function () { return probe().then(function () { if (Net.state === 'offline') { Swal.showValidationMessage('Still offline. We will keep checking.'); return false; } return true; }); }
-        }).then(function () { offlineModalOpen = false; });
+        }).then(function (r) {
+            if (seq !== modalSeq) { return; }   // replaced by another dialog
+            offlineModalOpen = false; offlineModalFor = null;
+            if (r.dismiss === Swal.DismissReason.cancel) { settle(false); }
+        });
     }
 
     function closeOffline() {
-        if (offlineModalOpen && hasSwal()) { Swal.close(); }
-        offlineModalOpen = false;
+        if (offlineModalOpen && hasSwal()) { modalSeq++; Swal.close(); }
+        offlineModalOpen = false; offlineModalFor = null;
     }
+
+    function settle(again) {
+        var p = pending; pending = null;
+        if (p) { p.resolve(again); }
+    }
+
+    function backOnline() {
+        if (!pending) { Uv.toast('success', 'You are back online'); return; }
+        if (!hasSwal()) { settle(true); return; }
+        var p = pending, seq = ++modalSeq;
+        p.told = true;
+        document.dispatchEvent(new CustomEvent('uv:resume', { detail: { what: p.what } }));
+        Swal.fire({
+            icon: 'success', title: 'You are back online',
+            html: 'The connection is back, so <b>' + esc(p.what) + '</b> can now continue.',
+            showCancelButton: true, confirmButtonText: 'Continue', cancelButtonText: 'Not now', confirmButtonColor: brand,
+            allowOutsideClick: false, reverseButtons: true
+        }).then(function (r) {
+            if (seq !== modalSeq || pending !== p) { return; }
+            settle(!!r.isConfirmed);
+        });
+    }
+
+    /**
+     * Pause an action until the connection is back. Resolves true when the user chooses Continue, false when they
+     * cancel it or start another action instead.
+     */
+    Uv.whenOnline = function (what) {
+        return new Promise(function (resolve) {
+            settle(false);
+            var p = pending = { what: what, resolve: resolve, told: false };
+            if (Net.state !== 'offline') { Net.unreachable = true; setState(); }
+            showOffline();
+            probe().then(function () { if (pending === p && !p.told && Net.state !== 'offline') { closeOffline(); backOnline(); } });
+        });
+    };
 
     var probing = null;
     function probe() {
@@ -209,6 +264,7 @@
         if (err && err.aborted) { return Promise.resolve(false); }
         if (!hasSwal()) { return Promise.resolve(false); }
         var weak = err && err.timeout;
+        if (!weak) { return Uv.whenOnline(what); }
         return Swal.fire({
             icon: 'warning',
             title: weak ? 'This is taking too long' : (navigator.onLine === false ? 'You are offline' : 'Could not reach the server'),
@@ -373,7 +429,7 @@
             return Uv.visit(base.pathname + (params ? '?' + params : ''));
         }
         if (Net.state === 'offline') {
-            return networkProblem({ network: true }, 'this change').then(function (again) { if (again) { return probe().then(function () { return submitForm(form, submitter, key); }); } });
+            return networkProblem({ network: true }, 'saving this form').then(function (again) { if (again) { return submitForm(form, submitter, key); } });
         }
 
         key = key || uuid();
@@ -386,12 +442,26 @@
             .catch(function (err) {
                 setBusy(form, submitter, false);
                 if (err && (err.timeout || err.network || err.aborted)) {
-                    return networkProblem(err, 'saving').then(function (again) { if (again) { return submitForm(form, submitter, key); } });
+                    return networkProblem(err, 'saving this form').then(function (again) { if (again) { return submitForm(form, submitter, key); } });
                 }
                 window.console && console.error(err);
                 Uv.alert('error', 'Something went wrong', 'The page hit an unexpected problem. Reload it and try again.');
             });
     }
+
+    // A form that does a normal full-page submit (downloads, payment redirects, sign out) would land on the browser's
+    // own error page while offline: hold it and send it once the connection is back and the user says Continue.
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!(form instanceof HTMLFormElement) || e.defaultPrevented || formEligible(form)) { return; }
+        if (Net.state !== 'offline' && navigator.onLine !== false) { return; }
+        e.preventDefault();
+        var submitter = e.submitter || null;
+        Uv.whenOnline('sending this form').then(function (again) {
+            if (!again) { return; }
+            if (form.requestSubmit) { form.requestSubmit(submitter || undefined); } else { form.submit(); }
+        });
+    });
 
     document.addEventListener('submit', function (e) {
         var form = e.target;

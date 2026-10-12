@@ -6,10 +6,10 @@
         <div class="container-fluid">
             <div class="page-title-box d-print-none"><h4 class="mb-0">Broadsheet</h4></div>
             <form method="GET" class="card d-print-none"><div class="card-body d-flex flex-wrap gap-2 align-items-end">
-                <div><label class="form-label mb-1">Programme</label><select name="programme_id" class="form-select" required><option value="">Select…</option>@foreach ($programmes as $id => $n)<option value="{{ $id }}" @selected((string) $f['programme'] === (string) $id)>{{ $n }}</option>@endforeach</select></div>
+                <div><label class="form-label mb-1">Programme</label><select name="programme_id" data-lookup="programmes" class="form-select" required><option value="">Select…</option>@foreach ($programmes as $id => $n)<option value="{{ $id }}" @selected((string) $f['programme'] === (string) $id)>{{ $n }}</option>@endforeach</select></div>
                 <div><label class="form-label mb-1">Level</label><select name="level" class="form-select" required><option value="">Select…</option>@foreach ($levels as $v => $l)<option value="{{ $v }}" @selected((string) $f['level'] === (string) $v)>{{ $l }}</option>@endforeach</select></div>
-                <div><label class="form-label mb-1">Session</label><select name="session_id" class="form-select">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected((string) $f['session'] === (string) $id)>{{ $n }}</option>@endforeach</select></div>
-                <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" class="form-select">@foreach ($types as $id => $n)<option value="{{ $id }}" @selected((string) $f['type'] === (string) $id)>{{ $n }}</option>@endforeach</select></div>
+                <div><label class="form-label mb-1">Session</label><select name="session_id" data-lookup="sessions" class="form-select">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected((string) $f['session'] === (string) $id)>{{ $n }}</option>@endforeach</select></div>
+                <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" data-lookup="semester-types" class="form-select">@foreach ($types as $id => $n)<option value="{{ $id }}" @selected((string) $f['type'] === (string) $id)>{{ $n }}</option>@endforeach</select></div>
                 <button class="btn btn-primary" type="submit">Show</button>
                 @if ($sheet)<button type="button" class="btn btn-light" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>@endif
             </div></form>

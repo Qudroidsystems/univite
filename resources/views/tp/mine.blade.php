@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:900px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Teaching Practice', 'icon' => 'ri-presentation-line'])
     @include('academics.partials.alerts')
     @forelse ($postings as $p)

@@ -4,7 +4,7 @@
 @php $total = $rows->where('item.is_required', true)->count(); $done = $rows->where('item.is_required', true)->where('status', 'cleared')->count(); @endphp
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:820px">
+        <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">My clearance</h4>
                 <a href="{{ route('dashboard') }}" class="btn btn-light">Back</a>

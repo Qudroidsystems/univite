@@ -6,7 +6,7 @@
     $rows = ($usesDefault ? $defaultSteps : $steps)->values();
     $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'];
 @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Leave settings', 'icon' => 'ri-settings-4-line'])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

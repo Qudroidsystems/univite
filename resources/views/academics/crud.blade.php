@@ -168,7 +168,8 @@
                             @else
                                 <label class="form-label" for="f-{{ $name }}">{{ $f['label'] }}@if (! empty($f['required'])) <span class="text-danger">*</span>@endif</label>
                                 @if ($type === 'select')
-                                    <select class="form-select @error($name) is-invalid @enderror" id="f-{{ $name }}" name="{{ $name }}" data-default="{{ $f['default'] ?? '' }}" @required(! empty($f['required']))>
+                                    <select class="form-select @error($name) is-invalid @enderror" id="f-{{ $name }}" name="{{ $name }}" data-default="{{ $f['default'] ?? '' }}" @required(! empty($f['required']))
+                                        {!! empty($f['lookup']) ? '' : 'data-lookup="' . e($f['lookup']) . '"' . (empty($f['lookup_parent']) ? '' : ' data-lookup-parent="' . e($f['lookup_parent']) . '"') . (empty($f['lookup_active']) ? '' : ' data-lookup-active="1"') !!}>
                                         <option value="">{{ $f['blank'] ?? 'Select…' }}</option>
                                         @foreach ($f['options'] as $optValue => $optLabel)
                                             @if (is_array($optLabel))

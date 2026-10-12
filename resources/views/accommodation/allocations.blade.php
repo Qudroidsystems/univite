@@ -16,7 +16,7 @@
             <h6>Place a student</h6>
             <form method="POST" action="{{ route('accommodation.place') }}" class="row g-2">@csrf
                 <div class="col-md-4"><input name="person" value="{{ old('person') }}" class="form-control" placeholder="Matric number" required></div>
-                <div class="col-md-4"><select name="hostel_id" class="form-select" required>@foreach ($hostels as $h)<option value="{{ $h->id }}">{{ $h->name }}</option>@endforeach</select></div>
+                <div class="col-md-4"><select name="hostel_id" data-lookup="hostels" class="form-select" required>@foreach ($hostels as $h)<option value="{{ $h->id }}">{{ $h->name }}</option>@endforeach</select></div>
                 <div class="col-md-2"><input name="room" value="{{ old('room') }}" class="form-control" placeholder="Room (optional)" title="Leave empty for the first free bed"></div>
                 <div class="col-md-1"><input name="bed" value="{{ old('bed') }}" type="number" min="1" class="form-control" placeholder="Bed"></div>
                 <div class="col-md-1"><button class="btn btn-light w-100">Place</button></div>
@@ -60,7 +60,7 @@
                             @if ($a->holdsBed() && $u->can('Allocate accommodation'))
                                 <details class="d-inline-block text-start"><summary class="btn btn-sm btn-light">Move</summary>
                                     <form method="POST" action="{{ route('accommodation.move', $a) }}" class="d-flex flex-wrap gap-1 mt-1" style="max-width:340px">@csrf
-                                        <select name="hostel_id" class="form-select form-select-sm">@foreach ($hostels as $h)<option value="{{ $h->id }}" @selected($h->id === $a->room->hostel_id)>{{ $h->name }}</option>@endforeach</select>
+                                        <select name="hostel_id" data-lookup="hostels" class="form-select form-select-sm">@foreach ($hostels as $h)<option value="{{ $h->id }}" @selected($h->id === $a->room->hostel_id)>{{ $h->name }}</option>@endforeach</select>
                                         <input name="room" class="form-control form-control-sm" style="width:90px" placeholder="Room" required><input name="bed" type="number" min="1" class="form-control form-control-sm" style="width:64px" placeholder="Bed">
                                         <input name="reason" class="form-control form-control-sm" placeholder="Reason" required><button class="btn btn-sm btn-primary">Move</button>
                                     </form></details>

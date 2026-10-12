@@ -2,7 +2,7 @@
 
 @section('content')
 @php $editing = $leave->exists; @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:980px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $editing ? 'Correct ' . $leave->reference : 'Apply for leave', 'icon' => 'ri-suitcase-line', 'back' => [route('leave.index'), 'My leave']])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

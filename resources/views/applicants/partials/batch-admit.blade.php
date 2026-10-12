@@ -14,7 +14,7 @@
                     <input name="batch" class="form-control" style="width:260px" placeholder="First Batch 2026/2027" required maxlength="100">
                 </div>
                 <div>
-                    <select name="programme_id" class="form-select" style="width:220px">
+                    <select name="programme_id" data-lookup="programmes" class="form-select" style="width:220px">
                         <option value="">All programmes</option>
                         @foreach ($programmeOptions as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
                     </select>

@@ -9,6 +9,7 @@
     <meta name="uv-layout" content="master">
     <meta name="uv-ajax" content="{{ Route::is('roles.*') || Route::is('permissions.*') ? 'off' : 'on' }}">
     <meta name="uv-ping" content="{{ route('ping', [], false) }}">
+    <meta name="uv-lookups" content="{{ url('lookups') }}">
     <link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
     @include('partials.brand-head')
@@ -172,6 +173,7 @@
 <script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
 <script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
 <script src="{{ asset('js/univite-shell.js') }}?v={{ @filemtime(public_path('js/univite-shell.js')) }}"></script>
+<script src="{{ asset('js/univite-lookups.js') }}?v={{ @filemtime(public_path('js/univite-lookups.js')) }}"></script>
 <div id="uv-page-scripts">
 @stack('scripts')
 </div>

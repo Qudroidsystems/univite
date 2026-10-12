@@ -13,7 +13,7 @@
         <h6 class="mb-0 mx-2">{{ $month->format('F Y') }}</h6>
         <a href="?{{ http_build_query(array_merge(request()->query(), ['month' => $month->copy()->addMonth()->format('Y-m')])) }}" class="btn btn-sm btn-light"><i class="ri-arrow-right-s-line"></i></a>
         <form method="GET" class="d-flex gap-2 ms-auto align-items-center"><input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
-            @if ($all)<select name="department_id" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">All departments</option>@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected($department == $id)>{{ $n }}</option>@endforeach</select>@endif
+            @if ($all)<select name="department_id" data-lookup="departments" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">All departments</option>@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected($department == $id)>{{ $n }}</option>@endforeach</select>@endif
             <div class="form-check mb-0"><input type="checkbox" name="pending" value="1" class="form-check-input" id="pend" @checked(request('pending')) onchange="this.form.submit()"><label class="form-check-label fs-12 text-nowrap" for="pend">Include awaiting approval</label></div>
         </form></div>
         <div class="table-responsive"><table class="table table-bordered table-sm mb-0 fs-12" style="min-width:900px">

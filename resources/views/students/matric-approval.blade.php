@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:1000px">
+        <div class="container-fluid">
             <div class="page-title-box d-flex justify-content-between align-items-center"><h4 class="mb-0">Matric batch {{ $batch->code }}</h4>
                 <a href="{{ route('matric.approvals.index') }}" class="btn btn-sm btn-light"><i class="ri-arrow-left-line me-1"></i>All batches</a></div>
             @include('academics.partials.alerts')

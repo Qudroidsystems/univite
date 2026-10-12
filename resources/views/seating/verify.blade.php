@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:600px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Seat check', 'icon' => 'ri-qr-scan-2-line'])
     @include('academics.partials.alerts')
     <div class="card {{ $current ? 'border-success' : 'border-danger' }}"><div class="card-body">

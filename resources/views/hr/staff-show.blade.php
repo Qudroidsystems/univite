@@ -43,7 +43,7 @@
                         @php $ro = ! $u->can('Edit staff pay details'); @endphp
                         <fieldset @disabled($ro)>
                         <div class="row g-2">
-                            <div class="col-md-4"><label class="form-label">Salary structure</label><select name="salary_structure_id" class="form-select"><option value="">Not on payroll</option>@foreach ($structures as $id => $code)<option value="{{ $id }}" @selected($p->salary_structure_id == $id)>{{ $code }}</option>@endforeach</select></div>
+                            <div class="col-md-4"><label class="form-label">Salary structure</label><select name="salary_structure_id" data-lookup="salary-structures" data-lookup-active="1" class="form-select"><option value="">Not on payroll</option>@foreach ($structures as $id => $code)<option value="{{ $id }}" @selected($p->salary_structure_id == $id)>{{ $code }}</option>@endforeach</select></div>
                             <div class="col-md-4"><label class="form-label">Grade level</label><input type="number" name="grade_level" min="1" max="20" value="{{ $p->grade_level }}" class="form-control"></div>
                             <div class="col-md-4"><label class="form-label">Step</label><input type="number" name="step" min="1" max="20" value="{{ $p->step }}" class="form-control"></div>
                             @if ($banks)

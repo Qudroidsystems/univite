@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $item->exists ? 'Edit ' . $item->title : 'Add a title', 'icon' => 'ri-book-2-line', 'back' => [$item->exists ? route('library.items.show', $item) : route('library.items.index'), $item->exists ? 'Title' : 'Catalogue']])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

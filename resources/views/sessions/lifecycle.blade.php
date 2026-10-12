@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:860px">
+        <div class="container-fluid">
             <div class="page-title-box d-flex align-items-center justify-content-between">
                 <h4 class="mb-0">{{ $session->name }} <span class="badge bg-{{ \App\Services\SessionLifecycle::BADGES[$session->status] ?? 'secondary' }} ms-2">{{ $lifecycle->label($session->status) }}</span></h4>
                 <a href="{{ route('academics.sessions.index') }}" class="btn btn-sm btn-light"><i class="ri-arrow-left-line me-1"></i>Sessions</a>

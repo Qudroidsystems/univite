@@ -56,9 +56,9 @@ class CourseAssignmentController extends CrudController
     {
         return [
             ['name' => 'user_id', 'label' => 'Lecturer', 'type' => 'select', 'options' => User::orderBy('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 12],
-            ['name' => 'course_id', 'label' => 'Course', 'type' => 'select', 'options' => Course::where('is_active', true)->orderBy('code')->get()->mapWithKeys(fn ($c) => [$c->id => $c->code . ' - ' . $c->title])->all(), 'required' => true, 'col' => 12],
-            ['name' => 'academic_session_id', 'label' => 'Session', 'type' => 'select', 'options' => AcademicSession::orderByDesc('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6, 'default' => AcademicSession::current()?->id],
-            ['name' => 'semester_type_id', 'label' => 'Semester', 'type' => 'select', 'options' => SemesterType::orderBy('sort_order')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6],
+            ['name' => 'course_id', 'lookup' => 'courses', 'lookup_active' => true, 'label' => 'Course', 'type' => 'select', 'options' => Course::where('is_active', true)->orderBy('code')->get()->mapWithKeys(fn ($c) => [$c->id => $c->code . ' - ' . $c->title])->all(), 'required' => true, 'col' => 12],
+            ['name' => 'academic_session_id', 'lookup' => 'sessions', 'label' => 'Session', 'type' => 'select', 'options' => AcademicSession::orderByDesc('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6, 'default' => AcademicSession::current()?->id],
+            ['name' => 'semester_type_id', 'lookup' => 'semester-types', 'label' => 'Semester', 'type' => 'select', 'options' => SemesterType::orderBy('sort_order')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6],
         ];
     }
 

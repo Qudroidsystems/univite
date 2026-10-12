@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'What if…', 'icon' => 'ri-flask-line', 'subtitle' => 'Test a change before making it: close a hall, change its capacity, or add days. Nothing is saved.', 'back' => [route('timetables.show', $t), $t->title]])
     <form method="GET" class="card"><div class="card-body row g-3"><input type="hidden" name="run" value="1">
         <div class="col-md-6"><label class="form-label">Close these venues</label><select name="close_venues[]" multiple size="8" class="form-select">@foreach ($venues as $v)<option value="{{ $v->id }}" @selected(in_array($v->id, $q['close_venues'] ?? []))>{{ $v->code }} · {{ $v->name }}</option>@endforeach</select></div>

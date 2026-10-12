@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $hostel->exists ? 'Edit ' . $hostel->name : 'New hostel', 'icon' => 'ri-hotel-bed-line', 'back' => [$hostel->exists ? route('hostels.show', $hostel) : route('hostels.index'), 'Hostels']])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

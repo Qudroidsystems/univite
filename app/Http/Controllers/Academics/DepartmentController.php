@@ -63,7 +63,7 @@ class DepartmentController extends CrudController
     protected function fields(): array
     {
         return [
-            ['name' => 'faculty_id', 'label' => 'Faculty', 'type' => 'select', 'options' => $this->facultyOptions(), 'required' => true, 'col' => 12],
+            ['name' => 'faculty_id', 'lookup' => 'faculties', 'label' => 'Faculty', 'type' => 'select', 'options' => $this->facultyOptions(), 'required' => true, 'col' => 12],
             ['name' => 'name', 'label' => 'Department name', 'type' => 'text', 'required' => true, 'col' => 8, 'placeholder' => 'Computer Science'],
             ['name' => 'code', 'label' => 'Code', 'type' => 'text', 'required' => true, 'col' => 4, 'placeholder' => 'CSC'],
             ['name' => 'hod_id', 'label' => 'Head of department', 'type' => 'select', 'options' => User::orderBy('name')->pluck('name', 'id')->all(), 'col' => 12, 'blank' => 'Not assigned'],

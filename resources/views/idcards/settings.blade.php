@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Identity card design', 'icon' => 'ri-palette-line', 'back' => [route('id-cards.index'), 'Identity cards']])
     @include('academics.partials.alerts')
     <form method="POST" action="{{ route('id-cards.settings.save') }}" class="card"><div class="card-body">@csrf @method('PUT')

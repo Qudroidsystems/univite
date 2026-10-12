@@ -1,19 +1,19 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $pagetitle, 'icon' => 'ri-presentation-line', 'back' => [$exercise->exists ? route('tp.exercises.show', $exercise) : route('tp.exercises.index'), 'Teaching practice']])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
     <form method="POST" action="{{ $exercise->exists ? route('tp.exercises.update', $exercise) : route('tp.exercises.store') }}" class="card">@csrf @if ($exercise->exists) @method('PUT') @endif
         <div class="card-body row g-3">
             <div class="col-md-6"><label class="form-label">Name</label><input name="name" value="{{ old('name', $exercise->name) }}" class="form-control" placeholder="e.g. Teaching Practice 2026/2027 (400 level)" required></div>
-            <div class="col-md-3"><label class="form-label">Session</label><select name="academic_session_id" class="form-select">@foreach ($sessions as $s)<option value="{{ $s->id }}" @selected(old('academic_session_id', $exercise->academic_session_id) == $s->id)>{{ $s->name }}</option>@endforeach</select></div>
+            <div class="col-md-3"><label class="form-label">Session</label><select name="academic_session_id" data-lookup="sessions" class="form-select">@foreach ($sessions as $s)<option value="{{ $s->id }}" @selected(old('academic_session_id', $exercise->academic_session_id) == $s->id)>{{ $s->name }}</option>@endforeach</select></div>
             <div class="col-md-3"><label class="form-label">Assessed visits per student</label><input name="visits_required" type="number" min="1" max="10" value="{{ old('visits_required', $exercise->visits_required) }}" class="form-control"></div>
             <div class="col-md-3"><label class="form-label">Starts</label><input name="starts_on" type="date" value="{{ old('starts_on', $exercise->starts_on?->toDateString()) }}" class="form-control"></div>
             <div class="col-md-3"><label class="form-label">Ends</label><input name="ends_on" type="date" value="{{ old('ends_on', $exercise->ends_on?->toDateString()) }}" class="form-control"></div>
-            <div class="col-md-3"><label class="form-label">Graded under course</label><select name="course_id" class="form-select"><option value="">Not graded on the portal</option>@foreach ($courses as $c)<option value="{{ $c->id }}" @selected(old('course_id', $exercise->course_id) == $c->id)>{{ $c->code }} {{ $c->title }}</option>@endforeach</select></div>
-            <div class="col-md-3"><label class="form-label">Semester</label><select name="semester_type_id" class="form-select"><option value="">—</option>@foreach ($semesters as $s)<option value="{{ $s->id }}" @selected(old('semester_type_id', $exercise->semester_type_id) == $s->id)>{{ $s->name }}</option>@endforeach</select></div>
+            <div class="col-md-3"><label class="form-label">Graded under course</label><select name="course_id" data-lookup="courses" data-lookup-active="1" class="form-select"><option value="">Not graded on the portal</option>@foreach ($courses as $c)<option value="{{ $c->id }}" @selected(old('course_id', $exercise->course_id) == $c->id)>{{ $c->code }} {{ $c->title }}</option>@endforeach</select></div>
+            <div class="col-md-3"><label class="form-label">Semester</label><select name="semester_type_id" data-lookup="semester-types" class="form-select"><option value="">—</option>@foreach ($semesters as $s)<option value="{{ $s->id }}" @selected(old('semester_type_id', $exercise->semester_type_id) == $s->id)>{{ $s->name }}</option>@endforeach</select></div>
             <div class="col-12"><div class="fw-semibold mb-1">Students on this exercise</div>@include('partials.audience', ['audience' => $exercise->audienceData(), 'who' => ['students']])</div>
             <div class="col-md-6"><div class="form-check mt-2"><input type="hidden" name="choices_open" value="0"><input type="checkbox" name="choices_open" value="1" id="co" class="form-check-input" @checked(old('choices_open', $exercise->choices_open))><label for="co" class="form-check-label">Students may choose schools on the portal</label></div></div>
             <div class="col-md-3"><label class="form-label">Choices allowed</label><input name="max_choices" type="number" min="1" max="10" value="{{ old('max_choices', $exercise->max_choices) }}" class="form-control"></div>

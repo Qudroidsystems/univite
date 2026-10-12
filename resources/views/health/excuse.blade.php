@@ -2,7 +2,7 @@
 
 @section('content')
 @php $p = $visit->user; @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:800px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     <div class="d-print-none mb-3 text-end"><button onclick="window.print()" class="btn btn-primary"><i class="ri-printer-line me-1"></i>Print</button></div>
     <div class="card"><div class="card-body p-5">
         @include('partials.letterhead', ['subtitle' => 'Health Centre · Medical excuse note'])

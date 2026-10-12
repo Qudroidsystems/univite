@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:900px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Polls & Elections', 'icon' => 'ri-checkbox-multiple-line', 'subtitle' => 'Polls, surveys and elections open to you.'])
     @include('academics.partials.alerts')
     @forelse ($polls as $p)

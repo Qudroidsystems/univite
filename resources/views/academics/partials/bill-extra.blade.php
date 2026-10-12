@@ -48,14 +48,14 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">To session</label>
-                        <select name="to_session_id" class="form-select" required>
+                        <select name="to_session_id" data-lookup="sessions" class="form-select" required>
                             <option value="">Select…</option>
                             @foreach ($sessionOptions as $id => $name) <option value="{{ $id }}">{{ $name }}</option> @endforeach
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Programme <span class="text-muted">(optional)</span></label>
-                        <select name="programme_id" class="form-select">
+                        <select name="programme_id" data-lookup="programmes" class="form-select">
                             <option value="">All programmes</option>
                             @foreach ($programmes as $id => $name) <option value="{{ $id }}">{{ $name }}</option> @endforeach
                         </select>

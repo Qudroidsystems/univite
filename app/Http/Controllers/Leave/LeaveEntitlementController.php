@@ -41,7 +41,7 @@ class LeaveEntitlementController extends PolicyCrud
     protected function fields(): array
     {
         return [
-            ['name' => 'leave_type_id', 'label' => 'Leave type', 'type' => 'select', 'options' => LeaveType::orderBy('sort_order')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6],
+            ['name' => 'leave_type_id', 'lookup' => 'leave-types', 'label' => 'Leave type', 'type' => 'select', 'options' => LeaveType::orderBy('sort_order')->pluck('name', 'id')->all(), 'required' => true, 'col' => 6],
             ['name' => 'days', 'label' => 'Days a year', 'type' => 'number', 'required' => true, 'col' => 6],
             ['name' => 'category', 'label' => 'Staff category', 'type' => 'select', 'options' => Lookups::options('staff_category'), 'blank' => 'Any category', 'col' => 6],
             ['name' => 'appointment_type', 'label' => 'Appointment', 'type' => 'select', 'options' => Lookups::options('appointment_type'), 'blank' => 'Any appointment', 'col' => 6],

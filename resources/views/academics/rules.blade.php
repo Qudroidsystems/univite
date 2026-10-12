@@ -9,7 +9,7 @@
 @endphp
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:1100px">
+        <div class="container-fluid">
             <div class="page-title-box"><h4 class="mb-0">Academic rules</h4></div>
             @include('academics.partials.alerts')
             <p class="text-muted">The university sets the defaults. A faculty, department or programme can override any rule, and the credit load can also be set for one level or semester. The most specific setting wins.</p>
@@ -24,7 +24,7 @@
                     <input type="hidden" name="scope" value="{{ $type }}"><input type="hidden" name="id" value="{{ $id }}">
                 </div>
                 <div><label class="form-label mb-1">Level</label><select name="level" class="form-select"><option value="">All levels</option>@foreach ($levels as $v => $l)<option value="{{ $v }}" @selected($level === $v)>{{ $l }}</option>@endforeach</select></div>
-                <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" class="form-select"><option value="">All semesters</option>@foreach ($semesters as $v => $l)<option value="{{ $v }}" @selected($sem === $v)>{{ $l }}</option>@endforeach</select></div>
+                <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" data-lookup="semester-types" class="form-select"><option value="">All semesters</option>@foreach ($semesters as $v => $l)<option value="{{ $v }}" @selected($sem === $v)>{{ $l }}</option>@endforeach</select></div>
                 <button class="btn btn-primary" type="submit">Show</button>
             </div></form>
 

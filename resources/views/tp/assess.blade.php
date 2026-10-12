@@ -2,7 +2,7 @@
 
 @section('content')
 @php $ex = $posting->exercise; $a = $posting->assessments->firstWhere('visit_no', $visit); @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:800px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $posting->student->full_name, 'icon' => 'ri-presentation-line', 'subtitle' => $posting->student->matric_number . ' · ' . $posting->school->name . ' · ' . $ex->name, 'back' => [route('tp.supervise'), 'My students']])
     @include('academics.partials.alerts')
     @if ($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

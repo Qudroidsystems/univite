@@ -29,7 +29,7 @@
                             <form method="GET" class="d-flex flex-wrap gap-2">
                                 <input type="hidden" name="tab" value="{{ $tab }}">
                                 <input type="search" name="q" value="{{ request('q') }}" class="form-control" style="width:220px" placeholder="Name or matric number">
-                                <select name="programme_id" class="form-select" style="width:auto;max-width:240px" onchange="this.form.submit()"><option value="">All programmes</option>@foreach ($programmes as $id => $name)<option value="{{ $id }}" @selected((string) request('programme_id') === (string) $id)>{{ $name }}</option>@endforeach</select>
+                                <select name="programme_id" data-lookup="programmes" class="form-select" style="width:auto;max-width:240px" onchange="this.form.submit()"><option value="">All programmes</option>@foreach ($programmes as $id => $name)<option value="{{ $id }}" @selected((string) request('programme_id') === (string) $id)>{{ $name }}</option>@endforeach</select>
                                 <button class="btn btn-soft-primary" type="submit"><i class="ri-search-line"></i></button>
                             </form>
                         </div>

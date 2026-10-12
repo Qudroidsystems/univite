@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:760px">
+        <div class="container-fluid">
             <div class="page-title-box"><h4 class="mb-0">Session rules</h4></div>
             @include('academics.partials.alerts')
             <form method="POST" action="{{ route('sessions.rules.update') }}" class="card">

@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'My Accommodation', 'icon' => 'ri-hotel-bed-line', 'subtitle' => $session?->name])
     @include('academics.partials.alerts')
     @if ($settings->get('instructions'))<div class="alert alert-info">{!! nl2br(e($settings->get('instructions'))) !!}</div>@endif

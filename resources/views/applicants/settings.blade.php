@@ -16,7 +16,7 @@
             @include('academics.partials.alerts')
 
             <div class="row">
-                <div class="col-lg-8">
+                <div class="col-12">
                     <div class="card">
                         <div class="card-body">
                             <div class="alert {{ $open ? 'alert-success' : 'alert-secondary' }}">
@@ -33,7 +33,7 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6"><label class="form-label">Session applicants apply for</label>
-                                    <select name="academic_session_id" class="form-select @error('academic_session_id') is-invalid @enderror" @disabled(! $canEdit)>
+                                    <select name="academic_session_id" data-lookup="sessions" class="form-select @error('academic_session_id') is-invalid @enderror" @disabled(! $canEdit)>
                                         <option value="">Select…</option>
                                         @foreach ($sessions as $id => $name)<option value="{{ $id }}" @selected((string) old('academic_session_id', $sessionId) === (string) $id)>{{ $name }}</option>@endforeach
                                     </select>

@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:900px">
+        <div class="container-fluid">
             <div class="page-title-box d-flex justify-content-between align-items-center"><h4 class="mb-0">Generate invoices: preview</h4>
                 <a href="{{ route('invoices.index') }}" class="btn btn-sm btn-light"><i class="ri-arrow-left-line me-1"></i>Invoices</a></div>
             @include('academics.partials.alerts')

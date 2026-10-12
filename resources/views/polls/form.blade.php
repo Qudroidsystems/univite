@@ -2,7 +2,7 @@
 
 @section('content')
 @php $locked = $poll->exists && $poll->isLocked(); @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1000px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => $poll->exists ? 'Edit poll' : 'New poll or election', 'icon' => 'ri-checkbox-multiple-line', 'back' => [$poll->exists ? route('polls.show', $poll) : route('polls.index'), 'Back']])
     @include('academics.partials.alerts')
     @if ($locked)<div class="alert alert-info">People have already voted, so only the description and a later closing time can be changed.</div>@endif

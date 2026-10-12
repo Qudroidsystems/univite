@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:960px">
+        <div class="container-fluid">
             <div class="page-title-box d-flex justify-content-between align-items-center"><h4 class="mb-0">Operation {{ $batch->operation_id }}</h4>
                 <div class="d-flex gap-2">
                     @if ($reversal)<a href="{{ route('operations.reverse', $batch) }}" class="btn btn-sm btn-soft-danger"><i class="ri-arrow-go-back-line me-1"></i>{{ $reversal }}…</a>@endif

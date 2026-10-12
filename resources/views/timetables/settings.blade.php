@@ -5,7 +5,7 @@
     $blockedText = collect($c['blocked'] ?? [])->map(fn ($b) => (! empty($b['date']) ? $b['date'] : ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][$b['day'] ?? 0]) . (! empty($b['start']) ? " {$b['start']}-{$b['end']}" : '') . ' ' . ($b['label'] ?? ''))->implode("\n");
     $ranges = fn ($list) => collect($list ?? [])->map(fn ($p) => $p[0] . '-' . $p[1])->implode(', ');
 @endphp
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:1100px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Rules and priorities', 'icon' => 'ri-settings-3-line', 'subtitle' => $t->title, 'back' => [route('timetables.show', $t), 'Back to the timetable']])
     @include('academics.partials.alerts')
     <form method="POST" action="{{ route('timetables.settings.update', $t) }}">@csrf @method('PUT')
@@ -45,7 +45,7 @@
         </div></div>
 
         <div class="card"><div class="card-header"><h6 class="card-title mb-0">Scope and committee</h6></div><div class="card-body row g-3">
-            <div class="col-md-4"><label class="form-label">Departments (none = all)</label><select name="departments[]" multiple size="6" class="form-select">@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected(in_array($id, $c['scope']['departments'] ?? []))>{{ $n }}</option>@endforeach</select></div>
+            <div class="col-md-4"><label class="form-label">Departments (none = all)</label><select name="departments[]" data-lookup="departments" data-lookup-active="1" multiple size="6" class="form-select">@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected(in_array($id, $c['scope']['departments'] ?? []))>{{ $n }}</option>@endforeach</select></div>
             <div class="col-md-3"><label class="form-label">Levels (none = all)</label><select name="levels[]" multiple size="6" class="form-select">@foreach ($levels as $l)<option value="{{ $l }}" @selected(in_array($l, $c['scope']['levels'] ?? []))>{{ $l }}</option>@endforeach</select><div class="form-text">Scope changes apply when you add new courses on "What to schedule".</div></div>
             <div class="col-md-5"><label class="form-label">Committee</label><select name="committee[]" multiple size="6" class="form-select">@foreach ($staff as $id => $n)<option value="{{ $id }}" @selected(in_array($id, $t->committee ?? []))>{{ $n }}</option>@endforeach</select></div>
         </div></div>

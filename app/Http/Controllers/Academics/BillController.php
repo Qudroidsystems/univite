@@ -143,16 +143,16 @@ class BillController extends CrudController
         $any = ['blank' => 'All'];
 
         return [
-            ['name' => 'academic_session_id', 'label' => 'Session', 'type' => 'select', 'options' => $this->sessionOptions(), 'required' => true, 'col' => 4, 'default' => $current?->id],
-            ['name' => 'bill_item_id', 'label' => 'Bill item', 'type' => 'select', 'options' => BillItem::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 5],
+            ['name' => 'academic_session_id', 'lookup' => 'sessions', 'label' => 'Session', 'type' => 'select', 'options' => $this->sessionOptions(), 'required' => true, 'col' => 4, 'default' => $current?->id],
+            ['name' => 'bill_item_id', 'lookup' => 'bill-items', 'lookup_active' => true, 'label' => 'Bill item', 'type' => 'select', 'options' => BillItem::where('is_active', true)->orderBy('name')->pluck('name', 'id')->all(), 'required' => true, 'col' => 5],
             ['name' => 'amount', 'label' => 'Amount (₦)', 'type' => 'number', 'required' => true, 'col' => 3, 'step' => '0.01'],
 
-            ['name' => 'faculty_id', 'label' => 'Faculty / School', 'type' => 'select', 'options' => Faculty::orderBy('name')->pluck('name', 'id')->all(), 'col' => 4, 'help' => 'Leave on All to charge every faculty.'] + $any,
-            ['name' => 'department_id', 'label' => 'Department', 'type' => 'select', 'options' => Department::orderBy('name')->pluck('name', 'id')->all(), 'col' => 4] + $any,
-            ['name' => 'study_category_id', 'label' => 'Student category', 'type' => 'select', 'options' => StudyCategory::orderBy('name')->pluck('name', 'id')->all(), 'col' => 4] + $any,
-            ['name' => 'programme_id', 'label' => 'Programme', 'type' => 'select', 'options' => $this->programmeOptions(), 'col' => 5] + $any,
+            ['name' => 'faculty_id', 'lookup' => 'faculties', 'label' => 'Faculty / School', 'type' => 'select', 'options' => Faculty::orderBy('name')->pluck('name', 'id')->all(), 'col' => 4, 'help' => 'Leave on All to charge every faculty.'] + $any,
+            ['name' => 'department_id', 'lookup' => 'departments', 'lookup_parent' => 'faculty_id', 'label' => 'Department', 'type' => 'select', 'options' => Department::orderBy('name')->pluck('name', 'id')->all(), 'col' => 4] + $any,
+            ['name' => 'study_category_id', 'lookup' => 'study-categories', 'label' => 'Student category', 'type' => 'select', 'options' => StudyCategory::orderBy('name')->pluck('name', 'id')->all(), 'col' => 4] + $any,
+            ['name' => 'programme_id', 'lookup' => 'programmes', 'lookup_parent' => 'department_id', 'label' => 'Programme', 'type' => 'select', 'options' => $this->programmeOptions(), 'col' => 5] + $any,
             ['name' => 'level', 'label' => 'Level', 'type' => 'select', 'options' => $this->levelOptions(), 'col' => 3] + $any,
-            ['name' => 'semester_type_id', 'label' => 'Billed for', 'type' => 'select', 'options' => \App\Models\SemesterType::options(), 'col' => 4, 'blank' => 'The whole session', 'help' => 'Pick a semester to bill this on a separate semester invoice.'],
+            ['name' => 'semester_type_id', 'lookup' => 'semester-orders', 'label' => 'Billed for', 'type' => 'select', 'options' => \App\Models\SemesterType::options(), 'col' => 4, 'blank' => 'The whole session', 'help' => 'Pick a semester to bill this on a separate semester invoice.'],
             ['name' => 'student_type', 'label' => 'Fresh or returning', 'type' => 'select', 'options' => Bill::STUDENT_TYPES, 'required' => true, 'col' => 6, 'default' => 'all'],
             ['name' => 'nationality', 'label' => 'Nationality', 'type' => 'select', 'options' => Bill::NATIONALITIES, 'required' => true, 'col' => 6, 'default' => 'any', 'help' => 'Add a second bill for the same item marked "Foreign students only" to charge them a different amount.'],
 

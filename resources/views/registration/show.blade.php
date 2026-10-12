@@ -3,7 +3,7 @@
 @section('content')
 <div class="main-content">
     <div class="page-content">
-        <div class="container-fluid" style="max-width:900px">
+        <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">{{ $form->student->full_name }} <span class="badge {{ \App\Models\RegistrationForm::BADGES[$form->status] }} fs-12 align-middle">{{ \App\Models\RegistrationForm::STATUSES[$form->status] }}</span></h4>
                 <a href="{{ route('registrations.index') }}" class="btn btn-light">Back</a>

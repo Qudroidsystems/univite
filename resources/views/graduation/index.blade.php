@@ -11,8 +11,8 @@
                 <form method="POST" action="{{ route('graduation.run') }}" class="card">
                     @csrf
                     <div class="card-body d-flex flex-wrap gap-2 align-items-end">
-                        <div><label class="form-label mb-1">Programme</label><select name="programme_id" class="form-select" required><option value="">Select…</option>@foreach ($programmes as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></div>
-                        <div><label class="form-label mb-1">Session</label><select name="academic_session_id" class="form-select">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected($current == $id)>{{ $n }}</option>@endforeach</select></div>
+                        <div><label class="form-label mb-1">Programme</label><select name="programme_id" data-lookup="programmes" class="form-select" required><option value="">Select…</option>@foreach ($programmes as $id => $n)<option value="{{ $id }}">{{ $n }}</option>@endforeach</select></div>
+                        <div><label class="form-label mb-1">Session</label><select name="academic_session_id" data-lookup="sessions" class="form-select">@foreach ($sessions as $id => $n)<option value="{{ $id }}" @selected($current == $id)>{{ $n }}</option>@endforeach</select></div>
                         <button class="btn btn-primary" type="submit"><i class="ri-play-line me-1"></i>Check final-year students</button>
                     </div>
                     <div class="card-footer text-muted fs-13">Every enrolled student of the programme in its final level is checked: all registered results published, no failed course outstanding, compulsory courses taken and enough units passed (see Result Settings and the programme's "units needed to graduate"). Running it again refreshes the list.</div>

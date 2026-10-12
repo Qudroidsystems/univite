@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
-<div class="main-content"><div class="page-content"><div class="container-fluid" style="max-width:800px">
+<div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'Import catalogue', 'icon' => 'ri-upload-2-line', 'back' => [route('library.items.index'), 'Catalogue']])
     @include('academics.partials.alerts')
     <form method="POST" action="{{ route('library.import.store') }}" enctype="multipart/form-data" class="card">@csrf

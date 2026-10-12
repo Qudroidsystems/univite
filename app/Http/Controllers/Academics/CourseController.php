@@ -98,7 +98,7 @@ class CourseController extends CrudController
     protected function fields(): array
     {
         return [
-            ['name' => 'department_id', 'label' => 'Owning department', 'type' => 'select', 'options' => $this->departmentOptions(), 'required' => true, 'col' => 12],
+            ['name' => 'department_id', 'lookup' => 'departments', 'label' => 'Owning department', 'type' => 'select', 'options' => $this->departmentOptions(), 'required' => true, 'col' => 12],
             ['name' => 'code', 'label' => 'Course code', 'type' => 'text', 'required' => true, 'col' => 4, 'placeholder' => 'CSC 101'],
             ['name' => 'title', 'label' => 'Course title', 'type' => 'text', 'required' => true, 'col' => 8, 'placeholder' => 'Introduction to Computer Science'],
             ['name' => 'credit_units', 'label' => 'Credit units', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 2],

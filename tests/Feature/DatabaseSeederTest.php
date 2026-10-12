@@ -70,7 +70,7 @@ it('runs repeatable seeders every time, one-off seeders once, protects tables th
         ->and(Permission::count())->toBeGreaterThan(100)
         ->and(DB::table('seeder_log')->where('seeder_name', CountingOnceSeeder::class)->value('success'))->toBeTruthy()
         ->and(DB::table('seeder_log')->where('seeder_name', BrokenOnceSeeder::class)->value('error_message'))->toBe('boom')
-        ->and(DB::table('seeder_log')->where('seeder_name', 'Database\Seeders\PermissionTableSeeder')->exists())->toBeTrue()
+        ->and(DB::table('seeder_log')->where('seeder_name', 'Database\Seeders\PermissionSeeder')->exists())->toBeTrue()
         ->and(DB::table('seeder_log')->where('seeder_name', DuplicateSeeder::class)->value('success'))->toBeTruthy()
         ->and(WipingSeeder::$runs)->toBe(0)
         ->and(DB::table('seeder_log')->where('seeder_name', WipingSeeder::class)->value('error_message'))->toBe('Skipped: users already had data')

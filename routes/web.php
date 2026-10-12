@@ -93,6 +93,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('custom-fields/files/{value}', [\App\Http\Controllers\CustomFieldFileController::class, 'download'])->name('custom-fields.download');
     Route::get('/home', fn () => redirect()->route('dashboard'))->name('home');
+    Route::get('/search', \App\Http\Controllers\SearchController::class)->middleware('throttle:60,1')->name('search');
 
     // ---- Users, roles & permissions ----
     Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');

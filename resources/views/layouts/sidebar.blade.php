@@ -1,143 +1,14 @@
+{{-- The sidebar: sections with collapsible groups, built by App\Support\Navigation\Menu (see ShellComposer). --}}
 @php
     $u = auth()->user();
-    $scoped = app(\App\Services\Access\ScopedAccess::class);   // roles held for one department, faculty or unit
-    $on = fn (string ...$patterns) => request()->routeIs(...$patterns);
-
-    // [label, route name, permission, route pattern]
-    $academic = [
-        ['Institution Profile', 'institution.edit',              'View institution profile', 'institution.*'],
-        ['Academic Sessions', 'academics.sessions.index',    'View academic sessions',    'academics.sessions.*'],
-        ['Semesters',         'academics.semesters.index',   'View semesters',   'academics.semesters.*'],
-        ['Faculties',         'academics.faculties.index',   'View faculties',    'academics.faculties.*'],
-        ['Departments',       'academics.departments.index', 'View departments', 'academics.departments.*'],
-        ['Programmes',        'academics.programmes.index',  'View programmes',  'academics.programmes.*'],
-        ['Courses',           'academics.courses.index',     'View courses',     'academics.courses.*'],
-        ['Curriculum',        'academics.curriculum.index',  'View programme curriculum', 'academics.curriculum.*'],
-        ['Study Categories',  'academics.study-categories.index', 'View study categories', 'academics.study-categories.*'],
-        ['Semester Types',    'academics.semester-types.index',   'View semester types',   'academics.semester-types.*'],
-        ['Student Statuses',  'academics.student-statuses.index', 'View student statuses', 'academics.student-statuses.*'],
-        ['Entry Modes',       'academics.entry-modes.index',      'View entry modes',      'academics.entry-modes.*'],
-        ['Clearance Items',   'academics.clearance-items.index',  'View clearance items',  'academics.clearance-items.*'],
-        ['Custom Form Fields','academics.custom-fields.index',   'View custom fields',    'academics.custom-fields.*'],
-        ['Grading Scale',     'academics.grade-bands.index',      'View grade bands',      'academics.grade-bands.*'],
-        ['Classes of Degree', 'academics.degree-classes.index',   'View degree classes',   'academics.degree-classes.*'],
-        ['Academic Rules',    'academics.rules.index',            ['View academic rules', 'Edit academic rules', 'Edit department academic rules'], 'academics.rules.*'],
-        ['Course Lecturers',  'academics.course-assignments.index','View course assignments','academics.course-assignments.*'],
-        ['Result Approval Steps','academics.result-stages.index', 'View result stages',    'academics.result-stages.*'],
-        ['Reference Lists',   'academics.lists.index',            'View reference lists',  'academics.lists.*'],
-        ['Copy Session Setup','sessions.clone',                   'Copy session setup',    'sessions.clone*'],
-        ['Session Rules',     'sessions.rules',                   'View session rules',    'sessions.rules*'],
-        ['Operation History', 'operations.index',                 'View operation history','operations.*'],
-        ['Emailed Documents', 'emails.index',                     'View email log',        'emails.*'],
-    ];
-    $students = [
-        ['Applicants',           'applicants.index',        'View applicants',           'applicants.index', 'applicants.show'],
-        ['New Student Verification', 'verification.index',  'View students',             'verification.*'],
-        ['Clearance',            'clearance.index',         'View clearance',            'clearance.*'],
-        ['Application Settings', 'applicants.settings',     'View application settings', 'applicants.settings*'],
-        ['Students',             'students.index',          'View students',             'students.index', 'students.show'],
-        ['Course Registrations', 'registrations.index',     'View course registrations', 'registrations.index', 'registrations.show'],
-        ['Registration Settings', 'registrations.settings', 'View registration settings', 'registrations.settings*'],
-        ['Score Sheets',      'results.sheets.index',        'View result sheets',        'results.sheets.*', 'results.open'],
-        ['Broadsheet',        'results.broadsheet',          'View student results',      'results.broadsheet'],
-        ['Result Summary',    'results.summary',             ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],
-        ['Result Queries',    'results.complaints',          'View result complaints',    'results.complaints*'],
-        ['Legacy Results',    'legacy.index',                'Import legacy results',     'legacy.*'],
-        ['Graduation Lists',  'graduation.index',            'View graduation lists',     'graduation.*'],
-        ['Result Settings',   'results.settings',            'View result settings',      'results.settings*'],
-        ['Matric Numbers',       'matric.index',            'View matric numbers',       'matric.*'],
-        ['Matric Number Format', 'students.settings',       'View matric number format', 'students.settings*'],
-    ];
-    $bills = [
-        ['Bill Items',   'bills.items.index',     'View bill items', 'bills.items.*'],
-        ['School Bills', 'bills.structure.index', 'View school bills',      'bills.structure.*'],
-    ];
-    $fees = [
-        ['Invoices & Payments', 'invoices.index', 'View invoices', 'invoices.*'],
-        ['Payment Settings', 'payments.settings', 'Edit payment settings', 'payments.settings*'],
-    ];
-    $access = [
-        ['Users',       'users.index',       'View users',       'users.*'],
-        ['Roles',       'roles.index',       'View roles',       'roles.*'],
-        ['Scoped Roles & Heads', 'scoped-roles.index', ['View scoped roles', 'Assign scoped roles'], 'scoped-roles.*'],
-        ['Permissions', 'permissions.index', 'View permissions', 'permissions.*'],
-    ];
-
-    $planning = [
-        ['Venues',             'venues.index',              'View venues',           'venues.index', 'venues.show', 'venues.create', 'venues.edit'],
-        ['Venue Availability', 'venues.availability',       'View venues',           'venues.availability'],
-        ['Venue Usage',        'venues.usage',              'View venues',           'venues.usage'],
-        ['Timetables',         'timetables.index',          'View timetables',       'timetables.*', 'seating.*'],
-        ['Staff Availability', 'staff-availability.index',  'Set staff availability', 'staff-availability.*'],
-    ];
-    $leave = [
-        ['Leave Register',     'leave.register',            ['View leave applications', 'Approve leave for any staff', 'Record staff resumption'], 'leave.register'],
-        ['Leave Balances',     'leave.balances',            ['View leave applications', 'Change leave balances'], 'leave.balances*'],
-        ['Leave Settings',     'leave.settings',            'Set leave policy',      'leave.settings', 'leave.types.*', 'leave.entitlements.*'],
-        ['Holiday Calendar',   'leave.holidays.index',      ['Set leave policy', 'Create timetables'], 'leave.holidays.*'],
-    ];
-    $staff = [
-        ['Staff Records',      'staff.index',               ['View staff records', 'Edit staff profiles'], 'staff.index', 'staff.show'],
-        ['Retirements Due',    'staff.retirements',         ['View staff records', 'Edit staff profiles'], 'staff.retirements'],
-        ['Units',              'units.index',               'View units',            'units.*'],
-        ['Payroll',            'payroll.runs.index',        ['View payroll', 'Prepare payroll', 'Approve payroll'], 'payroll.runs.*', 'payroll.payslips.*'],
-        ['Salary Structures',  'payroll.structures.index',  ['Set payroll policy', 'View payroll'], 'payroll.structures.*', 'payroll.scales.*'],
-        ['Allowances & Deductions', 'payroll.elements.index', ['Set payroll policy', 'View payroll'], 'payroll.elements.*'],
-        ['Payroll Settings',   'payroll.settings',          ['Set payroll policy', 'View payroll'], 'payroll.settings*'],
-    ];
-    $campus = [
-        ['Polls & Elections',  'polls.index',               ['View polls', 'Create polls', 'Publish polls'], 'polls.*'],
-        ['Identity Cards',     'id-cards.index',            ['View identity cards', 'Issue identity cards'], 'id-cards.index', 'id-cards.print'],
-        ['ID Card Design',     'id-cards.settings',         'Set identity card design', 'id-cards.settings*'],
-    ];
-    $health = [
-        ['Health Centre',      'clinic.index',              ['View health records', 'Record clinic visits', 'Record medical examinations'], 'clinic.index', 'clinic.patient', 'clinic.excuse'],
-        ['Clinic Statistics',  'clinic.stats',              'View clinic statistics', 'clinic.stats'],
-    ];
-    $hostels = [
-        ['Hostels',            'hostels.index',             ['View accommodation', 'Set accommodation policy', 'Allocate accommodation', 'Check students in and out of hostels'], 'hostels.*'],
-        ['Allocation',         'accommodation.allocations', ['View accommodation', 'Allocate accommodation', 'Check students in and out of hostels'], 'accommodation.allocations'],
-        ['Accommodation Rules','accommodation.settings',    'Set accommodation policy', 'accommodation.settings*'],
-    ];
-    $teachingPractice = [
-        ['Exercises',          'tp.exercises.index',        ['View teaching practice', 'Set up teaching practice', 'Post students for teaching practice', 'Record teaching practice scores', 'Publish teaching practice scores'], 'tp.exercises.*', 'tp.letter'],
-        ['Partner Schools',    'tp.schools.index',          ['View teaching practice', 'Set up teaching practice'], 'tp.schools.*'],
-    ];
-    $library = [
-        ['Library Desk',       'library.desk',              'Issue library loans',   'library.desk'],
-        ['Catalogue',          'library.items.index',       ['Edit library catalogue', 'Issue library loans', 'View library loans'], 'library.items.*', 'library.import*'],
-        ['Loans',              'library.loans',             ['View library loans', 'Issue library loans'], 'library.loans'],
-        ['Fines',              'library.fines',             ['View library loans', 'Issue library loans'], 'library.fines*'],
-        ['Library Rules',      'library.settings',          'Set library policy',    'library.settings*'],
-    ];
-    $messaging = [
-        ['Messaging Settings', 'messaging.settings',        'Edit messaging settings', 'messaging.settings*'],
-        ['Message Log',        'messaging.log',             'View message log',      'messaging.log'],
-    ];
-    $groups = [
-        ['id' => 'sidebarAcademic', 'label' => 'Academic Setup', 'icon' => 'ri-graduation-cap-line', 'items' => $academic],
-        ['id' => 'sidebarStudents', 'label' => 'Admissions & Students', 'icon' => 'ri-user-star-line', 'items' => $students],
-        ['id' => 'sidebarBills',    'label' => 'School Bills',   'icon' => 'ri-bill-line',           'items' => $bills],
-        ['id' => 'sidebarFees',     'label' => 'Fees & Payments', 'icon' => 'ri-wallet-3-line', 'items' => $fees],
-        ['id' => 'sidebarPlanning', 'label' => 'Venues & Timetables', 'icon' => 'ri-calendar-schedule-line', 'items' => $planning],
-        ['id' => 'sidebarStaff',    'label' => 'Staff & Payroll', 'icon' => 'ri-team-line',          'items' => $staff],
-        ['id' => 'sidebarLeave',    'label' => 'Staff Leave',    'icon' => 'ri-suitcase-line',       'items' => $leave],
-        ['id' => 'sidebarCampus',   'label' => 'Campus Services', 'icon' => 'ri-building-4-line',   'items' => $campus],
-        ['id' => 'sidebarLibrary',  'label' => 'Library',        'icon' => 'ri-book-2-line',         'items' => $library],
-        ['id' => 'sidebarHostels',  'label' => 'Accommodation',  'icon' => 'ri-hotel-bed-line',      'items' => $hostels],
-        ['id' => 'sidebarTp',       'label' => 'Teaching Practice', 'icon' => 'ri-presentation-line', 'items' => $teachingPractice],
-        ['id' => 'sidebarHealth',   'label' => 'Health Centre',  'icon' => 'ri-heart-pulse-line',    'items' => $health],
-        ['id' => 'sidebarMessaging','label' => 'Messaging',      'icon' => 'ri-message-3-line',      'items' => $messaging],
-        ['id' => 'sidebarAccess',   'label' => 'Users & Access', 'icon' => 'ri-shield-user-line',    'items' => $access],
-    ];
+    $logo = \App\Support\Institution::image('logo');
+    $avatar = $u->student?->photo_url;
 @endphp
-
 <div class="app-menu navbar-menu">
     <div class="navbar-brand-box">
         <a href="{{ route('dashboard') }}" class="logo">
-            @php $logo = \App\Support\Institution::image('logo'); @endphp
-            <span class="logo-sm">@if ($logo)<img src="{{ $logo }}" alt="" height="30">@else<span class="fs-4 fw-bold text-white">{{ \App\Support\Institution::initials() }}</span>@endif</span>
-            <span class="logo-lg d-inline-flex align-items-center gap-2">@if ($logo)<img src="{{ $logo }}" alt="" height="34">@endif<span class="fs-5 fw-bold text-white text-truncate" style="max-width:170px" title="{{ \App\Support\Institution::get('name') }}">{{ \App\Support\Institution::get('short_name') ?: \App\Support\Institution::get('name') }}</span></span>
+            <span class="logo-sm">@if ($logo)<img src="{{ $logo }}" alt="" class="uv-logo-img" style="height:34px">@else<span class="fs-4 fw-bold text-white">{{ \App\Support\Institution::initials() }}</span>@endif</span>
+            <span class="logo-lg d-inline-flex align-items-center gap-2">@if ($logo)<img src="{{ $logo }}" alt="" class="uv-logo-img" style="height:46px">@endif<span class="fs-5 fw-bold text-white text-truncate" style="max-width:150px" title="{{ \App\Support\Institution::get('name') }}">{{ \App\Support\Institution::get('short_name') ?: \App\Support\Institution::get('name') }}</span></span>
         </a>
         <button type="button" class="btn btn-sm p-0 fs-3xl header-item float-end btn-vertical-sm-hover" id="vertical-hover">
             <i class="ri-record-circle-line"></i>
@@ -146,170 +17,49 @@
 
     <div id="scrollbar">
         <div class="container-fluid">
+            <div id="two-column-menu"></div>
             <ul class="navbar-nav" id="navbar-nav">
-                <li class="menu-title"><span>Menu</span></li>
-
-                @can('View dashboard')
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                            <i class="ri-dashboard-2-line"></i> <span>Dashboard</span>
-                        </a>
-                    </li>
-                @endcan
-
-                @if ($u->student?->needs_onboarding)
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.onboarding*') ? 'active' : '' }}" href="{{ route('my.onboarding') }}">
-                            <i class="ri-flag-line"></i> <span>Getting Started</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->student && (! $u->student->needs_onboarding || $u->student->cleared_at))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.registration*') ? 'active' : '' }}" href="{{ route('my.registration') }}">
-                            <i class="ri-draft-line"></i> <span>Course Registration</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($scoped->scope($u, 'View course registrations')->isEmpty() && \App\Models\CourseAdviser::where('user_id', $u->id)->exists())
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('registrations.*') ? 'active' : '' }}" href="{{ route('registrations.index') }}">
-                            <i class="ri-team-line"></i> <span>My Advisees</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->courseAssignments()->exists() && ! $u->can('View result sheets'))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('results.*') ? 'active' : '' }}" href="{{ route('results.sheets.index') }}">
-                            <i class="ri-file-list-3-line"></i> <span>My Courses &amp; Scores</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->student && (! $u->student->needs_onboarding || $u->student->cleared_at))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.results*') ? 'active' : '' }}" href="{{ route('my.results') }}">
-                            <i class="ri-award-line"></i> <span>My Results</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->student)
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.fees*') ? 'active' : '' }}" href="{{ route('my.fees') }}">
-                            <i class="ri-wallet-3-line"></i> <span>My Fees</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->student && (! $u->student->needs_onboarding || $u->student->cleared_at))
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.timetable') ? 'active' : '' }}" href="{{ route('my.timetable') }}">
-                            <i class="ri-calendar-2-line"></i> <span>My Timetable</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.exams*') ? 'active' : '' }}" href="{{ route('my.exams') }}">
-                            <i class="ri-file-edit-line"></i> <span>My Examinations</span>
-                        </a>
-                    </li>
-                @endif
-                @unless ($u->student)
-                    @if ($u->courseAssignments()->exists() || \App\Models\TimetableInvigilator::where('user_id', $u->id)->exists())
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ $on('my.teaching') ? 'active' : '' }}" href="{{ route('my.teaching') }}">
-                                <i class="ri-presentation-line"></i> <span>My Teaching &amp; Duties</span>
-                            </a>
-                        </li>
-                    @endif
-                    @if (\App\Models\Payslip::where('user_id', $u->id)->exists())
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ $on('my.payslips*') ? 'active' : '' }}" href="{{ route('my.payslips') }}">
-                                <i class="ri-money-dollar-box-line"></i> <span>My Payslips</span>
-                            </a>
-                        </li>
-                    @endif
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('leave.index', 'leave.create', 'leave.edit', 'leave.show', 'leave.calendar') ? 'active' : '' }}" href="{{ route('leave.index') }}">
-                            <i class="ri-suitcase-line"></i> <span>My Leave</span>
-                        </a>
-                    </li>
-                    @if ($u->can('Approve leave for any staff') || \App\Models\Department::where('hod_id', $u->id)->exists() || \App\Models\Faculty::where('dean_id', $u->id)->exists() || \App\Models\StaffProfile::where('supervisor_id', $u->id)->exists() || ($u->roles->isNotEmpty() && \App\Models\LeaveApprovalStep::whereIn('role_name', $u->roles->pluck('name'))->exists()))
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ $on('leave.approvals') ? 'active' : '' }}" href="{{ route('leave.approvals') }}">
-                                <i class="ri-inbox-line"></i> <span>Leave Approvals</span>
-                            </a>
-                        </li>
-                    @endif
-                @endunless
-
-                @php $openPolls = app(\App\Services\Polls\PollService::class)->waiting($u); @endphp
-                <li class="nav-item">
-                    <a class="nav-link menu-link {{ $on('my.polls*') ? 'active' : '' }}" href="{{ route('my.polls') }}">
-                        <i class="ri-checkbox-multiple-line"></i> <span>Polls &amp; Elections</span>@if ($openPolls)<span class="badge bg-danger ms-auto">{{ $openPolls }}</span>@endif
-                    </a>
-                </li>
-
-                @if ($u->student && \App\Models\TpPosting::where('student_id', $u->student->id)->exists())
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.tp*') ? 'active' : '' }}" href="{{ route('my.tp') }}">
-                            <i class="ri-presentation-line"></i> <span>Teaching Practice</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->staffProfile && \App\Models\TpSupervisor::where('user_id', $u->id)->exists())
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('tp.supervise', 'tp.assess*') ? 'active' : '' }}" href="{{ route('tp.supervise') }}">
-                            <i class="ri-presentation-line"></i> <span>TP Supervision</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->student)
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.accommodation*') ? 'active' : '' }}" href="{{ route('my.accommodation') }}">
-                            <i class="ri-hotel-bed-line"></i> <span>My Accommodation</span>
-                        </a>
-                    </li>
-                @endif
-                @if ($u->student || $u->staffProfile)
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.id-card*') ? 'active' : '' }}" href="{{ route('my.id-card') }}">
-                            <i class="ri-id-card-line"></i> <span>My ID Card</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.library*') ? 'active' : '' }}" href="{{ route('my.library') }}">
-                            <i class="ri-book-2-line"></i> <span>My Library</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link menu-link {{ $on('my.health*') ? 'active' : '' }}" href="{{ route('my.health') }}">
-                            <i class="ri-heart-pulse-line"></i> <span>My Health</span>
-                        </a>
-                    </li>
-                @endif
-
-                @foreach ($groups as $g)
-                    @php
-                        $visible = collect($g['items'])->filter(fn ($i) => $u->canAny((array) $i[2]) || $scoped->any($u, ...(array) $i[2]));
-                        $open = $visible->contains(fn ($i) => $on(...array_slice($i, 3)));
-                    @endphp
-                    @if ($visible->isNotEmpty())
-                        <li class="nav-item">
-                            <a class="nav-link menu-link {{ $open ? '' : 'collapsed' }}" href="#{{ $g['id'] }}" data-bs-toggle="collapse" role="button" aria-expanded="{{ $open ? 'true' : 'false' }}" aria-controls="{{ $g['id'] }}">
-                                <i class="{{ $g['icon'] }}"></i> <span>{{ $g['label'] }}</span>
-                            </a>
-                            <div class="collapse menu-dropdown {{ $open ? 'show' : '' }}" id="{{ $g['id'] }}">
-                                <ul class="nav nav-sm flex-column">
-                                    @foreach ($visible as $i)
-                                        <li class="nav-item">
-                                            <a href="{{ route($i[1]) }}" class="nav-link {{ $on(...array_slice($i, 3)) ? 'active' : '' }}">{{ $i[0] }}</a>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </li>
-                    @endif
+                @foreach ($menuSections as $section)
+                    <li class="menu-title">@unless ($loop->first)<i class="ri-more-fill"></i> @endunless<span>{{ $section->title }}</span></li>
+                    @foreach ($section->items as $item)
+                        @if ($item instanceof \App\Data\Navigation\MenuGroup)
+                            @php $open = $item->open(); @endphp
+                            <li class="nav-item">
+                                <a class="nav-link menu-link {{ $open ? 'nav-active-parent' : 'collapsed' }}" href="#{{ $item->id }}" data-bs-toggle="collapse" role="button" aria-expanded="{{ $open ? 'true' : 'false' }}" aria-controls="{{ $item->id }}">
+                                    <i class="{{ $item->icon }}"></i> <span>{{ $item->label }}</span>
+                                </a>
+                                <div class="collapse menu-dropdown {{ $open ? 'show' : '' }}" id="{{ $item->id }}">
+                                    <ul class="nav nav-sm flex-column">
+                                        @foreach ($item->links as $link)
+                                            <li class="nav-item"><a href="{{ $link->url }}" class="nav-link {{ $link->active ? 'active nav-active-child' : '' }}">{{ $link->label }}</a></li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </li>
+                        @else
+                            <li class="nav-item">
+                                <a class="nav-link menu-link {{ $item->active ? 'active nav-active-parent' : '' }}" href="{{ $item->url }}">
+                                    <i class="{{ $item->icon }}"></i> <span>{{ $item->label }}</span>@if ($item->badge)<span class="badge bg-danger ms-auto">{{ $item->badge }}</span>@endif
+                                </a>
+                            </li>
+                        @endif
+                    @endforeach
                 @endforeach
             </ul>
         </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-footer-user">
+            @if ($avatar)<img src="{{ $avatar }}" alt="">@else<span class="sidebar-footer-avatar-initials">{{ $u->initials }}</span>@endif
+            <div class="sidebar-footer-user-info">
+                <div class="sidebar-footer-user-name">{{ $u->name }}</div>
+                <div class="sidebar-footer-user-role">{{ $u->roles->first()->name ?? ($u->student ? 'Student' : 'User') }}</div>
+            </div>
+        </div>
+        <form method="POST" action="{{ route('logout') }}" data-no-ajax>@csrf
+            <button type="submit" class="sidebar-logout-btn"><i class="ri-logout-box-r-line"></i><span>Sign Out</span></button>
+        </form>
     </div>
     <div class="sidebar-background"></div>
 </div>

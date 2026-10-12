@@ -151,3 +151,11 @@ it('lets the head roles be renamed, and keeps people with no role out', function
     $this->actingAs($this->hod)->get(route('staff.index'))->assertForbidden();
     $this->actingAs($this->hod)->get(route('students.index'))->assertOk();
 });
+
+it('lets a head search only the students and staff of their own department', function () {
+    $hits = $this->actingAs($this->hod)->getJson(route('search', ['q' => 'Student']))->assertOk()->json('results');
+    expect(collect($hits)->where('category', 'Students')->pluck('title')->all())->toBe([$this->studentA->full_name]);
+
+    $staff = collect($this->getJson(route('search', ['q' => 'SP/00']))->json('results'))->where('category', 'Staff')->pluck('title')->sort()->values()->all();
+    expect($staff)->toBe(['Hod Bola', 'Staff Alpha']);
+});

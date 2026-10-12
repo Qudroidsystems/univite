@@ -35,6 +35,9 @@ class AppServiceProvider extends ServiceProvider
             // no database yet (fresh install / migrations)
         }
 
+        // The sidebar and the search box are built from one menu (App\Support\Navigation\Menu).
+        \Illuminate\Support\Facades\View::composer('layouts.master', \App\View\Composers\ShellComposer::class);
+
         // Super Admin passes every permission check (including future permissions).
         Gate::before(fn ($user) => $user->hasRole('Super Admin') ? true : null);
     }

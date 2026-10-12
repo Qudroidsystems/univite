@@ -287,6 +287,14 @@ Students (under *My Fees*) and applicants (on their application page) can pay wi
 
 Another gateway is added by implementing `App\Services\Payments\PaymentGateway` and listing it in `config/payments.php`.
 
+## The portal shell: sidebar, top bar and search
+
+The layout follows the topclass-portal look. The sidebar is split into sections (My Portal, Academics, Bursary & Finance, Staff, Campus Life, Administration) with collapsible groups, highlights the page you are on, and ends with your name, role and a Sign Out button. The top bar has the search box, a light/dark switch (remembered per browser), notifications and your account menu.
+
+The sidebar is built in one place, `App\Support\Navigation\Menu`; add a page there with its route and permission(s). The same menu feeds the search box, so people only ever see pages they may open.
+
+The search box opens with **Ctrl+K** (⌘K on a Mac) or **/**. It finds pages as you type, then asks `GET /search` (`App\Services\Search\GlobalSearch`) for records: students (by name or matric number), applicants, staff, user accounts, courses, programmes, departments, invoices and payment references, library titles, venues and hostels. Each kind is searched only for people with the matching permission, and heads with a department or unit role only find their own students and staff. Recent searches are remembered in the browser.
+
 ## Code conventions
 
 - **Dependency injection.** Services, reversal handlers, listeners and controllers receive their collaborators through the constructor (or a controller action's parameters). Nothing calls `app(...)` or `new SomeService()` inside them. The only exceptions are the two registries that pick a class from configuration: `App\Services\Payments\Gateways` and `App\Support\Reversals`. `tests/Feature/ConventionsTest.php` fails if this slips.

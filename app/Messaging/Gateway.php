@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Log;
 class Gateway
 {
     public const PROVIDERS = ['log' => 'Not set up (write to the log only)', 'twilio' => 'Twilio', 'termii' => 'Termii', 'webhook' => 'Other provider (webhook)'];
-    public const SECRETS = ['twilio_token', 'termii_key', 'webhook_token'];
-    public const KEYS = ['sms_provider', 'whatsapp_provider', 'country_code', 'twilio_sid', 'twilio_from', 'twilio_whatsapp_from', 'termii_sender', 'webhook_url', 'twilio_token', 'termii_key', 'webhook_token'];
+    public const SECRETS = ['twilio_token', 'termii_key', 'webhook_token', 'fcm_service_account'];
+    public const KEYS = ['sms_provider', 'whatsapp_provider', 'country_code', 'twilio_sid', 'twilio_from', 'twilio_whatsapp_from', 'termii_sender', 'webhook_url', 'twilio_token', 'termii_key', 'webhook_token', 'push_provider', 'fcm_project_id', 'fcm_service_account'];
 
     public static function get(string $key): ?string
     {

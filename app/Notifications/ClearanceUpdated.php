@@ -5,7 +5,8 @@ namespace App\Notifications;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-/** Tells a student that a clearance item was cleared or rejected, or that they are fully cleared. */
+/** Emails a student that a clearance item was cleared or rejected, or that they are fully cleared (the bell and the
+ * mobile app get the notice through Messenger). */
 class ClearanceUpdated extends Notification
 {
     public function __construct(private string $title, private string $body, private string $level = 'info')
@@ -16,7 +17,7 @@ class ClearanceUpdated extends Notification
     {
         $mailable = ! in_array(config('mail.default'), ['log', 'array'], true) && $notifiable->email;
 
-        return $mailable ? ['database', 'mail'] : ['database'];
+        return $mailable ? ['mail'] : [];
     }
 
     public function toArray(object $notifiable): array

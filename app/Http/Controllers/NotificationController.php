@@ -38,16 +38,16 @@ class NotificationController extends Controller
         $sms = collect(Messenger::TOPICS)->filter(fn ($l, $t) => Messenger::channelOn($t, 'sms'));
         $wa = collect(Messenger::TOPICS)->filter(fn ($l, $t) => Messenger::channelOn($t, 'whatsapp'));
 
-        return view('notifications.preferences', ['pagetitle' => 'Notification settings', 'u' => $request->user(), 'sms' => $sms, 'whatsapp' => $wa]);
+        return view('notifications.preferences', ['pagetitle' => 'Notification settings', 'u' => $request->user(), 'sms' => $sms, 'whatsapp' => $wa, 'devices' => $request->user()->deviceTokens()->count()]);
     }
 
     public function savePreferences(Request $request): RedirectResponse
     {
         $d = $request->validate([
             'phone_number' => ['nullable', 'string', 'max:30', 'regex:/^[+0-9 ()-]{7,30}$/'], 'whatsapp_number' => ['nullable', 'string', 'max:30', 'regex:/^[+0-9 ()-]{7,30}$/'],
-            'notify_sms' => ['nullable', 'boolean'], 'notify_whatsapp' => ['nullable', 'boolean'],
+            'notify_sms' => ['nullable', 'boolean'], 'notify_whatsapp' => ['nullable', 'boolean'], 'notify_push' => ['nullable', 'boolean'],
         ], ['regex' => 'Enter a phone number using digits only (a leading + is fine).']);
-        $request->user()->update(['phone_number' => $d['phone_number'] ?? null, 'whatsapp_number' => $d['whatsapp_number'] ?? null, 'notify_sms' => $request->boolean('notify_sms'), 'notify_whatsapp' => $request->boolean('notify_whatsapp')]);
+        $request->user()->update(['phone_number' => $d['phone_number'] ?? null, 'whatsapp_number' => $d['whatsapp_number'] ?? null, 'notify_sms' => $request->boolean('notify_sms'), 'notify_whatsapp' => $request->boolean('notify_whatsapp'), 'notify_push' => $request->boolean('notify_push')]);
 
         return back()->with('success', 'Saved.' . (($d['phone_number'] ?? null) && ! Gateway::normalise($d['phone_number']) ? ' That phone number does not look complete.' : ''));
     }

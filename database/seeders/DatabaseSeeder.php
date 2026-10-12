@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
     protected function demoSeeders(): array
     {
         return [
-            // 'DemoStudentsSeeder' => '👨‍🎓 Seeding demo students...',
+            'DemoDataSeeder' => '🧪 Seeding a sample university: structure, staff, students, results, fees, hostels and library...',
         ];
     }
 

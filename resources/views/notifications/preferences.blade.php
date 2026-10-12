@@ -14,6 +14,8 @@
                     <div class="text-muted fs-12 mt-1">{{ $sms->isEmpty() ? 'The institution does not send text messages at the moment.' : 'Used for: ' . $sms->implode('; ') . '.' }}</div></div>
                 <div class="col-md-6"><div class="form-check form-switch"><input type="checkbox" class="form-check-input" name="notify_whatsapp" value="1" id="nw" @checked($u->notify_whatsapp)><label class="form-check-label" for="nw">Send me WhatsApp messages</label></div>
                     <div class="text-muted fs-12 mt-1">{{ $whatsapp->isEmpty() ? 'The institution does not send WhatsApp messages at the moment.' : 'Used for: ' . $whatsapp->implode('; ') . '.' }}</div></div>
+                <div class="col-md-6"><div class="form-check form-switch"><input type="checkbox" class="form-check-input" name="notify_push" value="1" id="np" @checked($u->notify_push ?? true)><label class="form-check-label" for="np">Send notifications to my phone (mobile app)</label></div>
+                    <div class="text-muted fs-12 mt-1">{{ $devices ? 'Signed in to the app on ' . $devices . ' ' . \Illuminate\Support\Str::plural('phone', $devices) . '.' : 'You are not signed in to the mobile app on any phone yet.' }}</div></div>
             </div>
             <div class="text-muted fs-12 mt-3">Portal notices and important emails (letters, slips) always go out.</div>
             <button class="btn btn-primary mt-3">Save</button>

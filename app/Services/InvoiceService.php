@@ -18,7 +18,7 @@ use RuntimeException;
 
 class InvoiceService
 {
-    public function __construct(private OperationAudit $audit, private DocumentMailer $mailer, private BillMatcher $matcher)
+    public function __construct(private OperationAudit $audit, private DocumentMailer $mailer, private BillMatcher $matcher, private Messenger $messenger)
     {
     }
 
@@ -215,6 +215,20 @@ class InvoiceService
         $audit->record($op, 'payment_recorded', $payment, null, ['amount' => (string) $payment->amount, 'status' => 'successful', 'invoice' => $payment->invoice->reference, 'channel' => $payment->channel, 'gateway_reference' => $payment->gateway_reference]);
         $audit->finish($op, 1);
         DB::afterCommit(fn () => $this->mailer->receipt($payment->fresh(), $by));
+        $this->tellPayer($payment);
+    }
+
+    /** The student is told a payment was received (an applicant sees it on the application page). */
+    private function tellPayer(Payment $payment): void
+    {
+        $invoice = $payment->invoice;
+        $user = $invoice->payable instanceof Student ? $invoice->payable->user : null;
+        if (! $user) {
+            return;
+        }
+        $this->messenger->notify($user, 'fees', 'Payment received',
+            'We received ' . number_format((float) $payment->amount, 2) . " for {$invoice->reference}." . ((float) $invoice->fresh()->outstanding > 0 ? ' Balance left: ' . number_format((float) $invoice->fresh()->outstanding, 2) . '.' : ' This invoice is fully paid.'),
+            $payment, route('my.fees.show', $invoice), 'success', 'payment:' . $payment->id);
     }
 
     /**

@@ -153,6 +153,9 @@ it('reads session and semester spellings from old systems', function () {
 });
 
 it('reads an Excel export as well as CSV', function () {
+    if (! class_exists(\PhpOffice\PhpSpreadsheet\Spreadsheet::class)) {
+        $this->markTestSkipped('phpoffice/phpspreadsheet is not installed (Excel files are optional; CSV always works).');
+    }
     $book = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     $book->getActiveSheet()->fromArray([['Reg No', 'Session', 'Semester', 'Course', 'Total'], ['AFE/2016/0002', '2017/2018', 'Rain', 'EDF 111', 71.5]]);
     $path = tempnam(sys_get_temp_dir(), 'xl') . '.xlsx';

@@ -21,7 +21,7 @@ use RuntimeException;
  */
 class ClearanceService
 {
-    public function __construct(private OnboardingService $onboarding, private MatricNumberGenerator $matric, private DocumentMailer $mailer)
+    public function __construct(private OnboardingService $onboarding, private MatricNumberGenerator $matric, private DocumentMailer $mailer, private Messenger $messenger)
     {
     }
 
@@ -233,6 +233,11 @@ class ClearanceService
 
     public function notify(Student $student, string $title, string $body, string $level = 'info'): void
     {
-        $student->user?->notify(new ClearanceUpdated($title, $body, $level));
+        if (! $user = $student->user) {
+            return;
+        }
+        // The bell, the mobile app (and text/WhatsApp if switched on) through the messenger; the email copy as before.
+        $this->messenger->notify($user, 'clearance', $title, $body, $student, route('my.clearance'), $level);
+        $user->notify(new ClearanceUpdated($title, $body, $level));
     }
 }

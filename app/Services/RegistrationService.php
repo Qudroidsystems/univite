@@ -28,6 +28,7 @@ class RegistrationService
         private AcademicRules $rules,
         private OperationAudit $audit,
         private DocumentMailer $mailer,
+        private Messenger $messenger,
     ) {
     }
 
@@ -322,6 +323,14 @@ class RegistrationService
         $this->audit->note($approve ? 'registration_approve' : 'registration_return', 'registration', $by, $approve ? 'form_approved' : 'form_returned', $form, ['status' => 'submitted'], ['status' => $form->status], $note, $form->academic_session_id);
         if ($approve) {
             $this->mailer->courseForm($form->fresh(), $by);
+        }
+        if ($user = $form->student?->user) {
+            $form->loadMissing('session', 'semesterType');
+            $term = trim(($form->session?->name ?? '') . ' ' . ($form->semesterType?->name ?? ''));
+            $this->messenger->notify($user, 'registration', $approve ? 'Course registration approved' : 'Course registration returned',
+                $approve ? "Your course registration for {$term} has been approved. You can print your course form."
+                    : "Your course registration for {$term} was returned: {$note}. Make the changes and submit it again.",
+                $form, route('my.registration'), $approve ? 'success' : 'warning');
         }
 
         return $form;

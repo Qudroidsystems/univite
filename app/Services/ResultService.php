@@ -29,6 +29,7 @@ class ResultService
         private DocumentMailer $mailer,
         private \App\Support\AcademicRules $rules,
         private \App\Support\SpreadsheetReader $reader,
+        private Messenger $messenger,
     ) {
     }
 
@@ -246,8 +247,24 @@ class ResultService
         $this->mirror($sheet);
         $this->log($sheet, $user, 'published');
         $this->audit->note('result_publish', 'results', $user, 'published', $sheet, ['status' => 'approved'], ['status' => 'published', 'course_id' => $sheet->course_id], null, $sheet->academic_session_id);
+        $this->tellStudents($sheet);
 
         return $sheet;
+    }
+
+    /** Each student on a newly published sheet is told their result is out (the grade itself stays in the portal). */
+    private function tellStudents(ResultSheet $sheet): void
+    {
+        $sheet->loadMissing('course', 'session', 'semesterType');
+        $what = trim("{$sheet->course?->code} {$sheet->course?->title}");
+        $when = trim(($sheet->session?->name ?? '') . ' ' . ($sheet->semesterType?->name ?? ''));
+        foreach ($sheet->results()->with('student.user')->get() as $result) {
+            if ($user = $result->student?->user) {
+                $this->messenger->notify($user, 'results', "Your {$sheet->course?->code} result is out",
+                    "Your result for {$what}" . ($when ? " ({$when})" : '') . ' has been published. Open My Results to see it.',
+                    $result, route('my.results'), 'success', "result:{$sheet->id}:{$result->id}:" . $sheet->published_at?->timestamp);
+            }
+        }
     }
 
     /** Formally withdraw a published sheet: it goes back to "approved" and stops counting until published again. */

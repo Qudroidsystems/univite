@@ -12,7 +12,7 @@
     </div>
     <div class="card"><div class="card-header"><form method="GET" class="d-flex flex-wrap gap-2">
         <input type="search" name="q" value="{{ request('q') }}" class="form-control form-control-sm" style="width:200px" placeholder="Number or text">
-        <select name="channel" class="form-select form-select-sm" style="width:auto"><option value="">SMS and WhatsApp</option><option value="sms" @selected(request('channel') === 'sms')>SMS</option><option value="whatsapp" @selected(request('channel') === 'whatsapp')>WhatsApp</option></select>
+        <select name="channel" class="form-select form-select-sm" style="width:auto"><option value="">All channels</option><option value="push" @selected(request('channel') === 'push')>Mobile app push</option><option value="sms" @selected(request('channel') === 'sms')>SMS</option><option value="whatsapp" @selected(request('channel') === 'whatsapp')>WhatsApp</option></select>
         <select name="status" class="form-select form-select-sm" style="width:auto"><option value="">Any status</option>@foreach (['sent', 'logged', 'failed'] as $s)<option @selected(request('status') === $s)>{{ $s }}</option>@endforeach</select>
         <select name="topic" class="form-select form-select-sm" style="width:auto"><option value="">Any topic</option>@foreach ($topics as $k => $l)<option value="{{ $k }}" @selected(request('topic') === $k)>{{ $l }}</option>@endforeach</select>
         <button class="btn btn-sm btn-primary">Filter</button></form></div>
@@ -20,8 +20,8 @@
             <thead class="table-light"><tr><th>When</th><th>To</th><th>Channel</th><th>Message</th><th>Status</th></tr></thead>
             <tbody>
             @forelse ($messages as $m)
-                <tr><td class="text-nowrap">{{ $m->created_at->format('j M H:i') }}</td><td>{{ $m->user?->name }}<div class="text-muted">{{ $m->recipient }}</div></td><td>{{ $m->channel === 'sms' ? 'SMS' : 'WhatsApp' }}</td>
-                    <td style="max-width:460px">{{ Str::limit($m->body, 200) }}</td>
+                <tr><td class="text-nowrap">{{ $m->created_at->format('j M H:i') }}</td><td>{{ $m->user?->name }}<div class="text-muted">{{ $m->recipient }}</div></td><td>{{ ['sms' => 'SMS', 'whatsapp' => 'WhatsApp', 'push' => 'Push'][$m->channel] ?? $m->channel }}</td>
+                    <td style="max-width:460px">@if ($m->channel === 'push') @php $p = json_decode($m->body, true) ?: []; @endphp<b>{{ $p['title'] ?? '' }}</b> {{ Str::limit($p['body'] ?? '', 180) }} @else {{ Str::limit($m->body, 200) }} @endif</td>
                     <td><span class="badge {{ $badge[$m->status] ?? 'bg-light' }}">{{ $m->status }}</span>@if ($m->error)<div class="text-danger fs-12">{{ Str::limit($m->error, 120) }}</div>@endif @if ($m->attempts > 1)<div class="text-muted fs-12">{{ $m->attempts }} attempts</div>@endif</td></tr>
             @empty
                 <tr><td colspan="5" class="text-center text-muted py-4">No messages yet.</td></tr>

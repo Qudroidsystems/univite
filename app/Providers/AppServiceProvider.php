@@ -18,6 +18,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Mobile API: sign-in attempts are limited per account and per address; other calls per person.
+        \Illuminate\Support\Facades\RateLimiter::for('mobile-login', fn (\Illuminate\Http\Request $r) => [
+            \Illuminate\Cache\RateLimiting\Limit::perMinute(5)->by('login|' . mb_strtolower((string) $r->input('login')) . '|' . $r->ip()),
+            \Illuminate\Cache\RateLimiting\Limit::perMinute(30)->by('login-ip|' . $r->ip()),
+        ]);
+        \Illuminate\Support\Facades\RateLimiter::for('mobile-api', fn (\Illuminate\Http\Request $r) => \Illuminate\Cache\RateLimiting\Limit::perMinute(180)->by('api|' . ($r->user()?->id ?: $r->ip())));
+
         // Render pagination with the Bootstrap 5 theme (matches the Velzon UI).
         Paginator::useBootstrapFive();
 

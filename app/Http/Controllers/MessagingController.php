@@ -25,9 +25,10 @@ class MessagingController extends Controller
     {
         $values = collect(Gateway::KEYS)->mapWithKeys(fn ($k) => [$k => in_array($k, Gateway::SECRETS, true) ? null : Gateway::get($k)]);
         $secretSet = collect(Gateway::SECRETS)->mapWithKeys(fn ($k) => [$k => (bool) Setting::get("messaging.{$k}")]);
-        $topics = collect(Messenger::TOPICS)->map(fn ($label, $t) => ['label' => $label, 'sms' => Messenger::channelOn($t, 'sms'), 'whatsapp' => Messenger::channelOn($t, 'whatsapp')]);
+        $topics = collect(Messenger::TOPICS)->map(fn ($label, $t) => ['label' => $label, 'push' => Messenger::channelOn($t, 'push'), 'sms' => Messenger::channelOn($t, 'sms'), 'whatsapp' => Messenger::channelOn($t, 'whatsapp')]);
+        $devices = \App\Models\DeviceToken::count();
 
-        return view('messaging.settings', ['pagetitle' => 'Messaging settings', 'values' => $values, 'secretSet' => $secretSet, 'topics' => $topics, 'providers' => Gateway::PROVIDERS]);
+        return view('messaging.settings', ['pagetitle' => 'Messaging settings', 'values' => $values, 'secretSet' => $secretSet, 'topics' => $topics, 'providers' => Gateway::PROVIDERS, 'pushProviders' => \App\Messaging\PushGateway::PROVIDERS, 'devices' => $devices]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -37,8 +38,20 @@ class MessagingController extends Controller
             'country_code' => ['required', 'digits_between:1,4'], 'twilio_sid' => ['nullable', 'string', 'max:64'], 'twilio_from' => ['nullable', 'string', 'max:30'],
             'twilio_whatsapp_from' => ['nullable', 'string', 'max:30'], 'termii_sender' => ['nullable', 'string', 'max:11'], 'webhook_url' => ['nullable', 'url:https', 'max:255'],
             'twilio_token' => ['nullable', 'string', 'max:255'], 'termii_key' => ['nullable', 'string', 'max:255'], 'webhook_token' => ['nullable', 'string', 'max:255'],
+            'push_provider' => ['nullable', Rule::in(array_keys(\App\Messaging\PushGateway::PROVIDERS))], 'fcm_project_id' => ['nullable', 'string', 'max:120', 'regex:/^[a-z0-9-]+$/'],
+            'fcm_service_account' => ['nullable', 'string', 'max:20000', 'json'],
             'topics' => ['nullable', 'array'],
-        ]);
+        ], ['fcm_project_id.regex' => 'The Firebase project id is lower-case letters, digits and dashes, e.g. univite-app.', 'fcm_service_account.json' => 'Paste the whole service account key file (JSON) from Firebase.']);
+        $d['push_provider'] ??= 'log';
+        if (! empty($d['fcm_service_account'])) {
+            $sa = json_decode($d['fcm_service_account'], true);
+            if (empty($sa['client_email']) || empty($sa['private_key'])) {
+                return back()->withInput()->with('error', 'That is not a Firebase service account key. In Firebase open Project settings, Service accounts, Generate new private key, and paste the whole file.');
+            }
+        }
+        if ($d['push_provider'] === 'fcm' && (! ($d['fcm_project_id'] ?? null) || (! ($d['fcm_service_account'] ?? null) && ! Setting::get('messaging.fcm_service_account')))) {
+            return back()->withInput()->with('error', 'Fill in the Firebase project id and service account key for push notifications first.');
+        }
         foreach (['sms', 'whatsapp'] as $ch) {
             $p = $d[$ch . '_provider'];
             $missing = match ($p) {
@@ -53,12 +66,12 @@ class MessagingController extends Controller
         }
         Gateway::put(collect($d)->except('topics')->all());
         foreach (array_keys(Messenger::TOPICS) as $t) {
-            foreach (['sms', 'whatsapp'] as $ch) {
+            foreach (['push', 'sms', 'whatsapp'] as $ch) {
                 Setting::put("messaging.topic.{$t}.{$ch}", ! empty($d['topics'][$t][$ch]) ? '1' : '0');
             }
         }
         // Secrets are never written to the audit trail.
-        $this->audit->note('messaging_settings', 'messaging', $request->user(), 'messaging settings changed', null, null, ['sms' => $d['sms_provider'], 'whatsapp' => $d['whatsapp_provider']]);
+        $this->audit->note('messaging_settings', 'messaging', $request->user(), 'messaging settings changed', null, null, ['sms' => $d['sms_provider'], 'whatsapp' => $d['whatsapp_provider'], 'push' => $d['push_provider']]);
 
         return back()->with('success', 'Messaging settings saved.');
     }

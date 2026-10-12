@@ -36,10 +36,17 @@
             </div></div>
         @endforeach
 
-        <div class="card"><div class="card-header"><h6 class="card-title mb-1">What goes out by text and WhatsApp</h6><div class="text-muted fs-12">Every notice also appears under the bell in the portal. Each person can turn text or WhatsApp off for themselves.</div></div>
+        <div class="card"><div class="card-header"><h6 class="card-title mb-1">Mobile app push notifications</h6><div class="text-muted fs-12">Sent through Firebase Cloud Messaging to every phone signed in to the mobile app ({{ number_format($devices) }} now). Until Firebase is set up, pushes are only written to the message log.</div></div><div class="card-body row g-3">
+            <div class="col-md-4"><label class="form-label">Push provider</label><select name="push_provider" class="form-select">@foreach ($pushProviders as $k => $l)<option value="{{ $k }}" @selected(old('push_provider', $values['push_provider'] ?? 'log') === $k)>{{ $l }}</option>@endforeach</select></div>
+            <div class="col-md-4"><label class="form-label">Firebase project id</label><input name="fcm_project_id" value="{{ old('fcm_project_id', $values['fcm_project_id']) }}" class="form-control" placeholder="univite-app"><div class="form-text">Firebase console, Project settings, General.</div></div>
+            <div class="col-12"><label class="form-label">Service account key (JSON)</label><textarea name="fcm_service_account" rows="3" class="form-control font-monospace fs-12" autocomplete="off" placeholder="{{ $secretSet['fcm_service_account'] ? 'Saved. Leave empty to keep it.' : 'Project settings, Service accounts, Generate new private key, then paste the whole file here.' }}"></textarea><div class="form-text">Stored encrypted and never shown again.</div></div>
+        </div></div>
+
+        <div class="card"><div class="card-header"><h6 class="card-title mb-1">What goes out by push, text and WhatsApp</h6><div class="text-muted fs-12">Every notice also appears under the bell in the portal. Each person can turn text or WhatsApp off for themselves.</div></div>
             <div class="table-responsive"><table class="table align-middle mb-0">
-                <thead class="table-light"><tr><th>Topic</th><th class="text-center">SMS</th><th class="text-center">WhatsApp</th></tr></thead>
+                <thead class="table-light"><tr><th>Topic</th><th class="text-center">Mobile app</th><th class="text-center">SMS</th><th class="text-center">WhatsApp</th></tr></thead>
                 <tbody>@foreach ($topics as $t => $row)<tr><td>{{ $row['label'] }}</td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="topics[{{ $t }}][push]" value="1" @checked($row['push'])></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="topics[{{ $t }}][sms]" value="1" @checked($row['sms'])></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="topics[{{ $t }}][whatsapp]" value="1" @checked($row['whatsapp'])></td></tr>@endforeach</tbody>
             </table></div></div>

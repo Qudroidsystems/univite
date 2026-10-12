@@ -172,10 +172,11 @@ it('confirms an online payment once even if the gateway reports it twice', funct
 });
 
 it('exposes the manual gateway and rejects unknown ones', function () {
-    expect(Gateways::get('manual'))->toBeInstanceOf(ManualGateway::class)
-        ->and(Gateways::online())->toBe([])
-        ->and(fn () => Gateways::get('nope'))->toThrow(InvalidArgumentException::class)
-        ->and(fn () => Gateways::get('manual')->initialize(new Payment))->toThrow(LogicException::class);
+    $gateways = app(Gateways::class);
+    expect($gateways->get('manual'))->toBeInstanceOf(ManualGateway::class)
+        ->and($gateways->enabled())->toBe([]) // no online gateway is switched on until its keys are entered
+        ->and(fn () => $gateways->get('nope'))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $gateways->get('manual')->initialize(new Payment, new \App\Data\Payments\Payer('A', 'a@x.com'), '/'))->toThrow(LogicException::class);
 });
 
 it('lists, searches and shows invoices and receipts to staff', function () {

@@ -15,6 +15,7 @@ class ClearanceItem extends Model
         'documents_uploaded'  => 'All required documents are uploaded',
         'verified'            => 'Physical verification was done',
         'fees_paid'           => 'The school fees invoice for the entry session is paid',
+        'medical_examined'    => 'The health centre recorded a medical examination',
     ];
 
     protected $fillable = ['name', 'code', 'description', 'mode', 'auto_rule', 'office_role', 'is_required', 'is_active', 'sort_order'];

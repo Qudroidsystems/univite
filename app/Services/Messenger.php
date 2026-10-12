@@ -26,6 +26,11 @@ class Messenger
         'seating' => 'Examination seat numbers',
         'venues' => 'Venue closures that affect timetables',
         'payslip' => 'Payslips ready',
+        'id_cards' => 'Identity cards ready and collected',
+        'library' => 'Library books due, overdue and ready to collect, and library charges',
+        'health' => 'Health centre notices',
+        'accommodation' => 'Hostel allocations, payment deadlines and check-in',
+        'teaching_practice' => 'Teaching practice postings, supervisors and scores',
     ];
 
     public function __construct(private Gateway $gateway)

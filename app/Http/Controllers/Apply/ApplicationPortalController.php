@@ -11,6 +11,7 @@ use App\Models\Programme;
 use App\Models\User;
 use App\Services\ApplicationService;
 use App\Services\ApplicationSettings;
+use App\Services\Payments\OnlinePaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -132,15 +133,18 @@ class ApplicationPortalController extends Controller
 
     // ---- The application itself ----
 
-    public function dashboard(Request $request): View
+    public function dashboard(Request $request, OnlinePaymentService $online): View
     {
         $applicant = $request->attributes->get('applicant')->load('programme.department.faculty', 'session', 'results', 'documents');
+        $invoice = $this->applications->screeningInvoice($applicant)?->load('payments');
 
         return view('apply.dashboard', [
             'applicant'  => $applicant,
             'editable'   => $this->applications->isEditable($applicant),
             'checklist'  => $this->applications->checklist($applicant),
-            'invoice'    => $this->applications->screeningInvoice($applicant),
+            'invoice'    => $invoice,
+            'choices'    => $online->choices(),
+            'blocker'    => $invoice ? $online->blocker($invoice) : null,
             'documents'  => ApplicantDocument::TYPES,
             'required'   => $this->applications->requiredDocuments($applicant),
             'states'     => $this->states(),

@@ -20,7 +20,7 @@
             <span class="badge fs-6 {{ ['draft' => 'bg-secondary-subtle text-secondary', 'pending' => 'bg-warning-subtle text-warning', 'admitted' => 'bg-success-subtle text-success', 'rejected' => 'bg-danger-subtle text-danger'][$applicant->status] }}">{{ \App\Models\Applicant::STATUSES[$applicant->status] }}</span>
         </div>
 
-        @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)
+        @foreach (['success' => 'success', 'warning' => 'warning', 'error' => 'danger'] as $key => $cls)
             @if (session($key))<div class="alert alert-{{ $cls }}">{{ session($key) }}</div>@endif
         @endforeach
         @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0 ps-3">@foreach ($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
@@ -70,7 +70,9 @@
                 </div>
                 @if ($invoice->status !== 'paid')
                     <hr>
-                    @if ($paymentInstructions)<div style="white-space:pre-line">{{ $paymentInstructions }}</div>@else<p class="mb-0 text-muted">Pay at the bursary or the bank you are told about and quote the payment reference above.</p>@endif
+                    @include('payments.partials.pay-form', ['action' => route('apply.pay')])
+                    @unless ($blocker)<hr>@endunless
+                    @if ($paymentInstructions)<div style="white-space:pre-line">{{ $paymentInstructions }}</div>@else<p class="mb-0 text-muted">{{ $blocker ? 'Pay' : 'You can also pay' }} at the bursary or the bank you are told about and quote the payment reference above.</p>@endif
                     <p class="text-muted fs-12 mt-2 mb-0">Once the payment is confirmed this page updates by itself. Refresh it to check.</p>
                 @endif
             </div>

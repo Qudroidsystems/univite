@@ -54,6 +54,7 @@
     ];
     $fees = [
         ['Invoices & Payments', 'invoices.index', 'View invoices', 'invoices.*'],
+        ['Payment Settings', 'payments.settings', 'Edit payment settings', 'payments.settings*'],
     ];
     $access = [
         ['Users',       'users.index',       'View users',       'users.*'],
@@ -84,6 +85,31 @@
         ['Allowances & Deductions', 'payroll.elements.index', ['Set payroll policy', 'View payroll'], 'payroll.elements.*'],
         ['Payroll Settings',   'payroll.settings',          ['Set payroll policy', 'View payroll'], 'payroll.settings*'],
     ];
+    $campus = [
+        ['Polls & Elections',  'polls.index',               ['View polls', 'Create polls', 'Publish polls'], 'polls.*'],
+        ['Identity Cards',     'id-cards.index',            ['View identity cards', 'Issue identity cards'], 'id-cards.index', 'id-cards.print'],
+        ['ID Card Design',     'id-cards.settings',         'Set identity card design', 'id-cards.settings*'],
+    ];
+    $health = [
+        ['Health Centre',      'clinic.index',              ['View health records', 'Record clinic visits', 'Record medical examinations'], 'clinic.index', 'clinic.patient', 'clinic.excuse'],
+        ['Clinic Statistics',  'clinic.stats',              'View clinic statistics', 'clinic.stats'],
+    ];
+    $hostels = [
+        ['Hostels',            'hostels.index',             ['View accommodation', 'Set accommodation policy', 'Allocate accommodation', 'Check students in and out of hostels'], 'hostels.*'],
+        ['Allocation',         'accommodation.allocations', ['View accommodation', 'Allocate accommodation', 'Check students in and out of hostels'], 'accommodation.allocations'],
+        ['Accommodation Rules','accommodation.settings',    'Set accommodation policy', 'accommodation.settings*'],
+    ];
+    $teachingPractice = [
+        ['Exercises',          'tp.exercises.index',        ['View teaching practice', 'Set up teaching practice', 'Post students for teaching practice', 'Record teaching practice scores', 'Publish teaching practice scores'], 'tp.exercises.*', 'tp.letter'],
+        ['Partner Schools',    'tp.schools.index',          ['View teaching practice', 'Set up teaching practice'], 'tp.schools.*'],
+    ];
+    $library = [
+        ['Library Desk',       'library.desk',              'Issue library loans',   'library.desk'],
+        ['Catalogue',          'library.items.index',       ['Edit library catalogue', 'Issue library loans', 'View library loans'], 'library.items.*', 'library.import*'],
+        ['Loans',              'library.loans',             ['View library loans', 'Issue library loans'], 'library.loans'],
+        ['Fines',              'library.fines',             ['View library loans', 'Issue library loans'], 'library.fines*'],
+        ['Library Rules',      'library.settings',          'Set library policy',    'library.settings*'],
+    ];
     $messaging = [
         ['Messaging Settings', 'messaging.settings',        'Edit messaging settings', 'messaging.settings*'],
         ['Message Log',        'messaging.log',             'View message log',      'messaging.log'],
@@ -96,6 +122,11 @@
         ['id' => 'sidebarPlanning', 'label' => 'Venues & Timetables', 'icon' => 'ri-calendar-schedule-line', 'items' => $planning],
         ['id' => 'sidebarStaff',    'label' => 'Staff & Payroll', 'icon' => 'ri-team-line',          'items' => $staff],
         ['id' => 'sidebarLeave',    'label' => 'Staff Leave',    'icon' => 'ri-suitcase-line',       'items' => $leave],
+        ['id' => 'sidebarCampus',   'label' => 'Campus Services', 'icon' => 'ri-building-4-line',   'items' => $campus],
+        ['id' => 'sidebarLibrary',  'label' => 'Library',        'icon' => 'ri-book-2-line',         'items' => $library],
+        ['id' => 'sidebarHostels',  'label' => 'Accommodation',  'icon' => 'ri-hotel-bed-line',      'items' => $hostels],
+        ['id' => 'sidebarTp',       'label' => 'Teaching Practice', 'icon' => 'ri-presentation-line', 'items' => $teachingPractice],
+        ['id' => 'sidebarHealth',   'label' => 'Health Centre',  'icon' => 'ri-heart-pulse-line',    'items' => $health],
         ['id' => 'sidebarMessaging','label' => 'Messaging',      'icon' => 'ri-message-3-line',      'items' => $messaging],
         ['id' => 'sidebarAccess',   'label' => 'Users & Access', 'icon' => 'ri-shield-user-line',    'items' => $access],
     ];
@@ -208,6 +239,52 @@
                         </li>
                     @endif
                 @endunless
+
+                @php $openPolls = app(\App\Services\Polls\PollService::class)->waiting($u); @endphp
+                <li class="nav-item">
+                    <a class="nav-link menu-link {{ $on('my.polls*') ? 'active' : '' }}" href="{{ route('my.polls') }}">
+                        <i class="ri-checkbox-multiple-line"></i> <span>Polls &amp; Elections</span>@if ($openPolls)<span class="badge bg-danger ms-auto">{{ $openPolls }}</span>@endif
+                    </a>
+                </li>
+
+                @if ($u->student && \App\Models\TpPosting::where('student_id', $u->student->id)->exists())
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.tp*') ? 'active' : '' }}" href="{{ route('my.tp') }}">
+                            <i class="ri-presentation-line"></i> <span>Teaching Practice</span>
+                        </a>
+                    </li>
+                @endif
+                @if ($u->staffProfile && \App\Models\TpSupervisor::where('user_id', $u->id)->exists())
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('tp.supervise', 'tp.assess*') ? 'active' : '' }}" href="{{ route('tp.supervise') }}">
+                            <i class="ri-presentation-line"></i> <span>TP Supervision</span>
+                        </a>
+                    </li>
+                @endif
+                @if ($u->student)
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.accommodation*') ? 'active' : '' }}" href="{{ route('my.accommodation') }}">
+                            <i class="ri-hotel-bed-line"></i> <span>My Accommodation</span>
+                        </a>
+                    </li>
+                @endif
+                @if ($u->student || $u->staffProfile)
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.id-card*') ? 'active' : '' }}" href="{{ route('my.id-card') }}">
+                            <i class="ri-id-card-line"></i> <span>My ID Card</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.library*') ? 'active' : '' }}" href="{{ route('my.library') }}">
+                            <i class="ri-book-2-line"></i> <span>My Library</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link menu-link {{ $on('my.health*') ? 'active' : '' }}" href="{{ route('my.health') }}">
+                            <i class="ri-heart-pulse-line"></i> <span>My Health</span>
+                        </a>
+                    </li>
+                @endif
 
                 @foreach ($groups as $g)
                     @php

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ClearanceItem;
+use App\Models\HealthRecord;
 use App\Models\MatricBatch;
 use App\Models\MatricEvent;
 use App\Models\Student;
@@ -42,6 +43,7 @@ class ClearanceService
             'documents_uploaded'  => collect($this->onboarding->requiredDocuments($student))->keys()->every(fn ($t) => $this->onboarding->documents($student)->has($t)),
             'verified'            => $student->verified_at !== null,
             'fees_paid'           => $this->feesPaid($student),
+            'medical_examined'    => HealthRecord::where('user_id', $student->user_id)->whereNotNull('examined_at')->whereNotNull('fitness')->exists(),
             default               => false,
         };
     }

@@ -526,6 +526,69 @@ class PermissionCatalog
                 ],
             ],
 
+            'Polls & elections' => [
+                'about' => 'Surveys, opinion polls and student or staff elections. Everyone in a poll\'s audience can vote in it without any permission.',
+                'permissions' => [
+                    ['View polls', 'View', 'See every poll and election, including drafts, who may vote in each, turnout and the results at any time, and download the results.'],
+                    ['Create polls', 'Create', 'Set up a poll or election: its audience, voting times, whether the ballot is secret, the questions or offices and the answers or candidates. Questions are fixed once anyone has voted.'],
+                    ['Publish polls', 'Publish', 'Publish a poll so its audience can vote when it opens, take it back to draft before anyone votes, close voting early and publish the results.'],
+                    ['Delete polls', 'Delete', 'Delete a poll or election nobody has voted in. One with votes is kept as a record.'],
+                ],
+            ],
+
+            'Identity cards' => [
+                'about' => 'Student and staff identity cards with a QR code anyone can scan to check the card is genuine and still valid.',
+                'permissions' => [
+                    ['View identity cards', 'View', 'See the register of identity cards: who has one, when it was issued and expires, whether it was printed or collected, and replacement requests.'],
+                    ['Issue identity cards', 'Issue', 'Issue cards one at a time or for a whole group, print them, mark them printed or collected, and approve replacement requests. Issuing a new card replaces the holder\'s old one.'],
+                    ['Cancel identity cards', 'Cancel', 'Cancel a card that was lost, stolen or belongs to someone who has left. Scanning a cancelled card says it is not valid.'],
+                    ['Set identity card design', 'Set', 'Choose the card colours, wording, signatory, what is printed on the back, how long cards are valid and the fee item for replacements.'],
+                ],
+            ],
+
+            'Library' => [
+                'about' => 'The library catalogue, lending and returns, holds, overdue fines and library clearance. Every signed-in user can search the catalogue, see their own loans and place holds.',
+                'permissions' => [
+                    ['Edit library catalogue', 'Edit', 'Add, change and withdraw titles and copies (with accession numbers), and import the catalogue from a spreadsheet.'],
+                    ['Issue library loans', 'Issue', 'Lend copies to students and staff at the desk, receive returns, renew loans and manage holds. Loan limits and suspended borrowers are checked.'],
+                    ['View library loans', 'View', 'See every loan, overdue list, hold and fine, and any borrower\'s library history and clearance.'],
+                    ['Record library fine payments', 'Record', 'Record that a fine was paid at the library desk. Student fines are normally billed to the student\'s fees and clear themselves when paid.'],
+                    ['Waive library fines', 'Waive', 'Waive or reduce an overdue fine with a reason. Every waiver is kept on the operation history.'],
+                    ['Set library policy', 'Set', 'Set loan periods and limits for students and staff, renewals, how long holds wait, the overdue fine per day (none unless set) and the bill item fines are charged under.'],
+                ],
+            ],
+
+            'Health & clinic' => [
+                'about' => 'Health records, medical examinations for new students, and clinic visits. Records are confidential: clinical notes are stored encrypted and every time a record is opened it is logged. Everyone sees their own record without any permission.',
+                'permissions' => [
+                    ['View health records', 'View', 'Open the health record, medical examination result and clinic visits of any student or member of staff. Each opening is logged with the reason given.'],
+                    ['Record clinic visits', 'Record', 'Record a clinic visit (complaint, vital signs, diagnosis, treatment, referral and excuse-from-duty note) and update a person\'s health details such as allergies and conditions.'],
+                    ['Record medical examinations', 'Record', 'Record the outcome of a new student\'s medical examination (fit, fit with conditions or not fit). A fit result clears the medical clearance item.'],
+                    ['View clinic statistics', 'View', 'See counts of clinic visits by month and outcome and of medical examinations, without names.'],
+                ],
+            ],
+
+            'Accommodation' => [
+                'about' => 'Hostels, rooms and bed spaces, students\' applications, allocation, payment and checking in and out.',
+                'permissions' => [
+                    ['View accommodation', 'View', 'See hostels, rooms and who is in each bed space, applications, allocations, payments and occupancy.'],
+                    ['Set accommodation policy', 'Set', 'Set up hostels, rooms and bed spaces, who each hostel is for, the rate for each session, when students may apply, the allocation order and how long a student has to pay.'],
+                    ['Allocate accommodation', 'Allocate', 'Run the allocation for a session, allocate, move or cancel a student\'s bed space, and release bed spaces that were not paid for in time.'],
+                    ['Check students in and out of hostels', 'Check', 'Record that a student has moved into or out of their bed space. Wardens can do this for their own hostel without this permission.'],
+                ],
+            ],
+
+            'Teaching practice' => [
+                'about' => 'The teaching practice exercise: partner schools, students\' postings, supervisors, supervision visits and scores, and posting letters. Supervisors record scores for their own schools without any permission.',
+                'permissions' => [
+                    ['View teaching practice', 'View', 'See exercises, schools, postings, supervisors and every student\'s supervision scores.'],
+                    ['Set up teaching practice', 'Set', 'Create an exercise (dates, who takes part, the course it counts for, the number of visits and the marking guide) and keep the list of partner schools.'],
+                    ['Post students for teaching practice', 'Post', 'Post students to schools (automatically by preference and capacity, or by hand), publish postings so students can print their letters, and assign supervisors to schools.'],
+                    ['Record teaching practice scores', 'Record', 'Record or correct a supervision score for any student, not only those at schools you supervise.'],
+                    ['Publish teaching practice scores', 'Publish', 'Send students\' final teaching practice scores into the score sheet of the teaching practice course, from where they follow the normal result approval.'],
+                ],
+            ],
+
             'Invoices & payments' => [
                 'about' => 'What each student owes (built from the school bills) and the money received against it.',
                 'permissions' => [
@@ -534,6 +597,7 @@ class PermissionCatalog
                     ['Record offline payments', 'Manage', 'Record money received outside the portal (bank teller, transfer, POS or cash) against an invoice. This changes what a student owes, so only give it to bursary staff.'],
                     ['Reverse payments', 'Manage', 'Formally reverse a posted payment after a preview. The original payment and receipt stay on record marked reversed, a reversal entry is added, the balance goes back on the invoice and the payer is emailed. A reason is required.'],
                     ['Cancel invoices', 'Manage', 'Cancel an invoice that has no payments, for example one raised by mistake. The student no longer owes it.'],
+                    ['Edit payment settings', 'Edit', 'Switch online payment with Paystack, Flutterwave or Remita on or off and enter their keys (stored encrypted). This decides where students\' and applicants\' money goes, so only give it to the bursar or ICT.'],
                 ],
             ],
         ];

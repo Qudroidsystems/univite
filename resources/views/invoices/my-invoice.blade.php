@@ -37,12 +37,11 @@
                             <div class="mt-2 text-muted">Pay at least ₦{{ number_format($invoice->minimumPayment(), 2) }} now to stay on schedule.</div>
                         </div>
                     @endif
-                    @if ($state !== 'open')
-                        <div class="card-footer text-warning">{{ $state === 'not_yet' ? 'Payment opens on ' . $invoice->opens_at->format('j M Y, g:i A') . '.' : 'The payment window closed on ' . $invoice->closes_at->format('j M Y, g:i A') . '. Please contact the bursary.' }}</div>
-                    @elseif ($invoice->closes_at)
+                    @if ($state === 'open' && $invoice->closes_at)
                         <div class="card-footer text-muted">Payment closes on {{ $invoice->closes_at->format('j M Y, g:i A') }}.</div>
                     @endif
-                    <div class="card-footer text-muted">To pay, use the payment details given by the bursary and quote <strong>{{ $invoice->reference }}</strong>. Once the bursary records your payment it appears below with a receipt.</div>
+                    <div class="card-footer">@include('payments.partials.pay-form', ['action' => route('my.fees.pay', $invoice->id)])</div>
+                    <div class="card-footer text-muted">You can also pay using the details given by the bursary, quoting <strong>{{ $invoice->reference }}</strong>. Once the bursary records that payment it appears below with a receipt.</div>
                 @endif
             </div>
 

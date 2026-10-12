@@ -79,12 +79,12 @@ class PermissionMeta
     {
         return [
             'View' => 'pm-chip-view', 'Preview' => 'pm-chip-view',
-            'Create' => 'pm-chip-create', 'Add' => 'pm-chip-create',
-            'Edit' => 'pm-chip-edit', 'Assign' => 'pm-chip-edit',
+            'Create' => 'pm-chip-create', 'Add' => 'pm-chip-create', 'Issue' => 'pm-chip-create',
+            'Edit' => 'pm-chip-edit', 'Assign' => 'pm-chip-edit', 'Allocate' => 'pm-chip-edit', 'Check' => 'pm-chip-edit',
             'Manage' => 'pm-chip-manage', 'Set' => 'pm-chip-manage',
             'Delete' => 'pm-chip-delete', 'Remove' => 'pm-chip-delete', 'Close' => 'pm-chip-delete',
             'Approve' => 'pm-chip-approve', 'Submit' => 'pm-chip-approve', 'Post' => 'pm-chip-approve',
-            'Release' => 'pm-chip-money', 'Pay' => 'pm-chip-money',
+            'Release' => 'pm-chip-money', 'Pay' => 'pm-chip-money', 'Waive' => 'pm-chip-money',
         ][$action] ?? 'pm-chip-other';
     }
 }

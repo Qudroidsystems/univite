@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\Payments\OnlinePaymentService;
 use Illuminate\View\View;
 
 /** A signed-in student's own invoices and receipts. Access is by ownership, not by staff permission. */
@@ -27,12 +28,12 @@ class StudentFeesController extends Controller
         ]);
     }
 
-    public function show(Invoice $invoice): View
+    public function show(Invoice $invoice, OnlinePaymentService $online): View
     {
         $student = $this->student();
         abort_unless($invoice->payable_type === $student::class && $invoice->payable_id === $student->id && $invoice->status !== 'cancelled', 404);
 
-        return view('invoices.my-invoice', ['pagetitle' => $invoice->reference, 'student' => $student, 'invoice' => $invoice->load('session', 'lines', 'payments')]);
+        return view('invoices.my-invoice', ['pagetitle' => $invoice->reference, 'student' => $student, 'invoice' => $invoice->load('session', 'lines', 'payments'), 'choices' => $online->choices(), 'blocker' => $online->blocker($invoice)]);
     }
 
     public function receipt(Payment $payment): View

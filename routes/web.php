@@ -72,8 +72,13 @@ Route::prefix('apply')->name('apply.')->group(function () {
         Route::get('application/custom-files/{value}', [ApplicationPortalController::class, 'customFile'])->name('custom-files');
         Route::post('application/submit', [ApplicationPortalController::class, 'submit'])->name('submit');
         Route::get('application/slip', [ApplicationPortalController::class, 'slip'])->name('slip');
+        Route::post('application/pay', [\App\Http\Controllers\Payments\OnlinePaymentController::class, 'applicant'])->middleware('throttle:10,1')->name('pay');
     });
 });
+
+// ---- Online payments: the gateway sends the payer back here, and gateways call the webhook (no CSRF, see bootstrap/app.php) ----
+Route::get('payments/return/{reference}', [\App\Http\Controllers\Payments\OnlinePaymentController::class, 'back'])->middleware('throttle:30,1')->name('payments.return');
+Route::post('webhook/payments/{gateway}', [\App\Http\Controllers\Payments\OnlinePaymentController::class, 'webhook'])->middleware('throttle:120,1')->name('payments.webhook');
 
 // Login, logout and password reset only. Accounts are created by administrators.
 Auth::routes(['register' => false, 'verify' => false, 'confirm' => false]);
@@ -171,6 +176,9 @@ Route::middleware('auth')->group(function () {
     Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'recordPayment'])->name('invoices.payments.store');
     Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
     Route::get('payments/{payment}/receipt', [InvoiceController::class, 'receipt'])->name('payments.receipt');
+    Route::post('payments/{payment}/check', [\App\Http\Controllers\Payments\OnlinePaymentController::class, 'check'])->name('payments.check');
+    Route::get('payment-settings', [\App\Http\Controllers\Payments\PaymentSettingsController::class, 'edit'])->name('payments.settings');
+    Route::put('payment-settings', [\App\Http\Controllers\Payments\PaymentSettingsController::class, 'update'])->name('payments.settings.update');
 
     // ---- New student verification (staff) ----
     Route::get('verification', [VerificationController::class, 'index'])->name('verification.index');
@@ -281,6 +289,7 @@ Route::middleware('auth')->group(function () {
     // ---- A signed-in student's own fees (no staff permission needed) ----
     Route::get('my/fees', [StudentFeesController::class, 'index'])->name('my.fees');
     Route::get('my/fees/{invoice}', [StudentFeesController::class, 'show'])->name('my.fees.show');
+    Route::post('my/fees/{invoice}/pay', [\App\Http\Controllers\Payments\OnlinePaymentController::class, 'student'])->middleware('throttle:10,1')->name('my.fees.pay');
     Route::get('my/receipts/{payment}', [StudentFeesController::class, 'receipt'])->name('my.receipt');
 
     // ---- School bills ----
@@ -445,3 +454,5 @@ Route::middleware('auth')->group(function () {
         Route::delete('{import}', 'destroy')->name('destroy');
     });
 });
+
+require __DIR__ . '/campus.php';

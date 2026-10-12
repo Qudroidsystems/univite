@@ -245,9 +245,9 @@ class InvoiceService
     }
 
     /** Mark a pending online payment as successful (called by gateways) and update the invoice. */
-    public function markSuccessful(Payment $payment, ?string $gatewayReference = null, ?array $payload = null): Payment
+    public function markSuccessful(Payment $payment, ?string $gatewayReference = null, ?array $payload = null, ?string $channel = null): Payment
     {
-        return DB::transaction(function () use ($payment, $gatewayReference, $payload) {
+        return DB::transaction(function () use ($payment, $gatewayReference, $payload, $channel) {
             $payment = Payment::lockForUpdate()->findOrFail($payment->id);
             if ($payment->status === 'successful') {
                 return $payment; // gateways may confirm the same payment twice (return + webhook)
@@ -257,6 +257,7 @@ class InvoiceService
                 'status' => 'successful', 'paid_at' => now(),
                 'gateway_reference' => $gatewayReference ?? $payment->gateway_reference,
                 'payload' => $payload ?? $payment->payload,
+                'channel' => $channel ?? $payment->channel,
             ]);
             $this->refreshTotals(Invoice::lockForUpdate()->findOrFail($payment->invoice_id));
             $this->paid($payment, null);

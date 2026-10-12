@@ -271,3 +271,29 @@ it('corrects single assessments on a published result and can reverse the correc
     expect($r->fresh()->exam)->toBe(30.0)
         ->and(app(AssessmentService::class)->snapshot($r->fresh(), $scheme->fresh('items')))->toEqual(['T1' => 5, 'T2' => 5, 'ASG' => 5, 'EXAM' => 30]);
 });
+
+it('lets the exams office put a sheet that already has CA and exam marks on a scheme', function () {
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    app(ResultService::class)->saveScores($sheet, [$this->students[0]->id => new \App\Data\Results\Score(24, 50)]);
+    $scheme = standardScheme();
+    $small = makeScheme([['name' => 'Test', 'max_score' => 20], ['name' => 'Exam', 'component' => 'exam', 'max_score' => 80]], 'Small CA');
+
+    $this->actingAs($this->lecturer)->post(route('results.sheets.scheme', $sheet->id), ['assessment_scheme_id' => $scheme->id])->assertForbidden();
+    $this->actingAs($this->admin)->get(route('results.sheets.show', $sheet->id))->assertOk()->assertSee('Assessments on this sheet');
+
+    // a CA of 24 does not fit a scheme whose CA is out of 20
+    $this->post(route('results.sheets.scheme', $sheet->id), ['assessment_scheme_id' => $small->id])->assertSessionHas('error', fn ($m) => str_contains($m, '2026/0001'));
+
+    $this->post(route('results.sheets.scheme', $sheet->id), ['assessment_scheme_id' => $scheme->id])->assertSessionHas('success');
+    $r = CourseResult::where('student_id', $this->students[0]->id)->first();
+    expect($sheet->fresh()->assessment_scheme_id)->toBe($scheme->id)->and($r->ca)->toBe(24.0)->and($r->exam)->toBe(50.0)
+        ->and(app(AssessmentService::class)->snapshot($r, $scheme->fresh('items')))->toEqual(['T1' => 8, 'T2' => 8, 'ASG' => 8, 'EXAM' => 50]);
+
+    // and the app shows the assessments to the lecturer
+    $this->actingAs($this->lecturer);
+    expect(\App\Data\Api\ApiScoreSheet::from($sheet->fresh(), true, 0)->toArray()['mode'])->toBe('items');
+
+    // back to plain CA and exam
+    $this->actingAs($this->admin)->post(route('results.sheets.scheme', $sheet->id), ['assessment_scheme_id' => ''])->assertSessionHas('success');
+    expect($sheet->fresh()->assessment_scheme_id)->toBeNull()->and(AssessmentScore::count())->toBe(0);
+});

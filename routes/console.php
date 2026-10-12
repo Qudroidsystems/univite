@@ -44,3 +44,8 @@ Artisan::command('payments:reconcile', function (\App\Services\Payments\OnlinePa
 \Illuminate\Support\Facades\Schedule::command('messages:retry')->everyFifteenMinutes()->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('library:daily')->dailyAt('07:30')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('accommodation:daily')->dailyAt('06:30')->withoutOverlapping();
+
+Artisan::command('market:expire', function (\App\Services\Campus\MarketService $market) {
+    $this->info($market->expire() . ' marketplace listing(s) closed.');
+})->purpose('Close marketplace listings older than the days set in Mobile App settings');
+\Illuminate\Support\Facades\Schedule::command('market:expire')->dailyAt('03:10')->withoutOverlapping();

@@ -91,3 +91,52 @@ notifications use the channel id `portal`. When the app opens a notification it 
 Topics that send notices today: results published, course registration approved or returned, payment received,
 clearance and matric numbers, timetables published or changed, exam seat numbers, hostel places, library due dates,
 ID cards, payslips, leave, teaching practice, health centre, and general announcements.
+
+## App settings from the school (`GET /ping` → `data.mobile`)
+
+`allow_untrusted_certificate` (the school allows the app to connect while the website certificate cannot be verified;
+the app then trusts this server's current certificate and refuses a different one later), `min_app_version`,
+`store_url_android`, `store_url_ios`, `features` (chat, department_groups, course_groups, study_groups, feed, events,
+marketplace, lost_found, materials, polls, id_card, lodging, directory, gpa_planner, reminders: true/false), `pusher`
+(`{key, cluster}` when live chat is set up, else null), `market` (`max_photos`, `rules`, `needs_approval`), `chat` (`max_upload_mb`).
+Edited on the website under **Campus Life → Mobile App**.
+
+## Doing things in the app
+
+| Method | Path | |
+|---|---|---|
+| GET/POST | `/registration` | Course form for this semester: `offered` courses (with `selected`, `blocked`, `carryover`), `limits`, `problems`, `blockers`. POST `{courses: [ids], submit: bool}` |
+| GET | `/fees/{invoice}/pay` | `gateways`, `outstanding`, `minimum`, `blocker` |
+| POST | `/fees/{invoice}/pay` | `{gateway, amount}` → `checkout {url, method, fields}`, `reference`, `return_prefix`. Open the checkout in a web view; when it reaches a URL starting with `return_prefix`, close it and call confirm |
+| POST | `/payments/{reference}/confirm` | `status` (successful, failed, pending), `message`, `receipt_url` |
+| GET | `/results/queries` · POST `/results/{result}/query` | The student's result queries · `{reason}` |
+| GET | `/accommodation/options` · POST `/accommodation/apply` · POST `/accommodation/withdraw` | Hostels open to the student, whether applications are open · `{preferences: [hostel ids]}` |
+| GET | `/library/search?q=` · POST `/library/loans/{loan}/renew` · POST `/library/items/{item}/hold` · POST `/library/holds/{hold}/cancel` | |
+| POST | `/clearance/{item}/resubmit` | `{note}` |
+| GET/POST | `/id-card` | The valid card with `qr` (the verification link security scans), a pending request, `problem`, `reasons` · POST `{reason, note}` |
+| GET | `/polls` · `/polls/{id}` · POST `/polls/{id}/vote` | `{answers: {question id: option id, [option ids] or text}}` |
+| PUT | `/me/password` | `{current_password, password, password_confirmation}`; other phones are signed out |
+
+## Campus life
+
+| Method | Path | |
+|---|---|---|
+| GET/PUT | `/me/profile` | `bio`, `share_lodging` (nobody, mates, everyone), `lodging_note` |
+| POST/DELETE | `/me/photo` | Profile picture (multipart `photo`). `photo_url` appears on `/me` and wherever the person is shown |
+| GET | `/chats` | The person's chats (department and course groups are kept up to date automatically) with `unread`; `meta.open_groups` are study groups they can join |
+| POST | `/chats/direct` · `/chats/groups` | `{user_id}` · `{title, description, course_id (study group), open, members: [ids]}` |
+| GET/PUT | `/chats/{id}` | `{muted, only_admins_post}` |
+| GET/POST | `/chats/{id}/messages` | `?before=` older, `?after=` newer · multipart `body`, `file`, `reply_to` |
+| POST | `/chats/{id}/read` · `/join` · `/leave` · GET/POST `/members` | |
+| DELETE | `/chat/messages/{id}` · GET `/chat/attachments/{id}` | Files are served only to members (send the token) |
+| POST | `/realtime/auth` | Pusher private-channel auth for `private-chat.{id}` |
+| GET/POST | `/market` | `?section=market|lost_found&kind=&category=&q=&min_price=&max_price=&sort=` · multipart `kind, title, description, category, price, negotiable, condition, location, happened_on, photos[]` |
+| GET | `/market/mine` · `/market/{id}` | |
+| POST | `/market/{id}` · DELETE `/market/{id}` · POST `/market/{id}/status` · `/save` · `/contact` | Update (multipart, `remove_photos[]`) · `{status: active|sold|closed}` or `{bump: true}` · save for later · open a chat with the seller with the listing in it |
+| GET/POST | `/feed` | `?only=events` · `{audience, audience_id, title, body, image, is_event, starts_at, ends_at, venue, pinned, allow_comments}`; `meta.can_post` lists where the person may post |
+| GET/DELETE | `/feed/{id}` · POST `/feed/{id}/like` · `/comments` · `/rsvp` · DELETE `/feed/comments/{id}` | `{status: going|interested|none}` |
+| GET | `/materials` · `/materials/courses/{course}` · POST `/materials/courses/{course}` · GET `/materials/{id}/download` · DELETE `/materials/{id}` | Lecturers upload (multipart `title, description, file` or `link`) |
+| GET | `/people?q=&type=students|staff` · `/people/{id}` · POST `/people/{id}/block` | Profile cards; `lodging` only when the student shares it with the viewer |
+| GET | `/reports/reasons` · POST `/reports` | `{type: message|listing|post|comment|user, id, reason, details}` |
+
+Push `screen` values added: `chat` (with `conversation_id`), `marketplace` (`listing_id`), `feed` (`post_id`), `materials` (`course_id`).

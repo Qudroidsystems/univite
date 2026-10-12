@@ -14,8 +14,11 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'username', 'phone_number', 'whatsapp_number', 'notify_sms', 'notify_whatsapp', 'notify_push', 'gender', 'date_of_birth',
-        'avatar', 'password', 'must_change_password', 'is_disabled', 'last_login_at',
+        'avatar', 'password', 'must_change_password', 'is_disabled', 'last_login_at', 'share_lodging', 'lodging_note', 'bio', 'last_seen_at',
     ];
+
+    /** Who may see where a student lives (set by the student in the app). */
+    public const SHARE_LODGING = ['nobody' => 'Nobody', 'mates' => 'My department and course mates', 'everyone' => 'Everyone in the school'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -31,6 +34,7 @@ class User extends Authenticatable
             'notify_sms'           => 'boolean',
             'notify_whatsapp'      => 'boolean',
             'notify_push'          => 'boolean',
+            'last_seen_at'         => 'datetime',
         ];
     }
 
@@ -69,5 +73,33 @@ class User extends Authenticatable
     public function student(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Student::class);
+    }
+
+    /** The department a student studies in or a member of staff works in. */
+    public function departmentId(): ?int
+    {
+        if ($this->student) {
+            return $this->student->programme?->department_id;
+        }
+
+        return $this->staffProfile?->department_id;
+    }
+
+    /**
+     * The picture shown beside the person in the app: their own profile picture if they set one, otherwise a student's
+     * official photo, otherwise null (the app shows their initials). The official photo (ID card) is never changed here.
+     */
+    public function photoUrl(): ?string
+    {
+        if ($this->avatar) {
+            return asset('storage/avatars/' . $this->avatar);
+        }
+
+        return $this->student?->photo_url;
+    }
+
+    public function chatMemberships(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ChatMember::class);
     }
 }

@@ -245,6 +245,23 @@ Route::middleware('auth')->group(function () {
     Route::post('emails/{email}/resend', [$de, 'resend'])->name('emails.resend');
     Route::post('my/documents/{type}/{id}/email', [$de, 'mine'])->name('my.documents.email');
 
+    // ---- Campus life (mobile app) ----
+    Route::prefix('campus')->name('campus.')->controller(\App\Http\Controllers\Campus\CampusAdminController::class)->group(function () {
+        Route::get('mobile-app', 'settings')->name('settings');
+        Route::put('mobile-app', 'saveSettings')->name('settings.save');
+        Route::get('feed', 'feedIndex')->name('feed');
+        Route::post('feed', 'storePost')->name('feed.store');
+        Route::post('feed/{post}', 'moderatePost')->name('feed.moderate');
+        Route::get('marketplace', 'market')->name('market');
+        Route::post('marketplace/{listing}', 'moderateListing')->name('market.moderate');
+        Route::get('reports', 'reportsIndex')->name('reports');
+        Route::post('reports/{report}', 'handleReport')->name('reports.handle');
+        Route::get('materials', 'materialsIndex')->name('materials');
+        Route::post('materials/{course}', 'storeMaterial')->name('materials.store');
+        Route::delete('materials/{material}', 'deleteMaterial')->name('materials.delete');
+        Route::get('materials/{material}/download', 'downloadMaterial')->name('materials.download');
+    });
+
     // ---- Results ----
     $rs = \App\Http\Controllers\ResultSheetController::class;
     Route::get('results', [$rs, 'index'])->name('results.sheets.index');
@@ -272,6 +289,7 @@ Route::middleware('auth')->group(function () {
     Route::get('results/{sheet}/template', [$rs, 'template'])->name('results.sheets.template');
     Route::post('results/{sheet}/submit', [$rs, 'submit'])->name('results.sheets.submit');
     Route::post('results/{sheet}/decide', [$rs, 'decide'])->name('results.sheets.decide');
+    Route::post('results/{sheet}/scheme', [$rs, 'scheme'])->name('results.sheets.scheme');
     Route::get('my/results', [\App\Http\Controllers\StudentResultController::class, 'mine'])->name('my.results');
     Route::get('students/{student}/transcript', [\App\Http\Controllers\StudentResultController::class, 'transcript'])->name('students.transcript');
 

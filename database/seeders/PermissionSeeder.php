@@ -35,6 +35,7 @@ class PermissionSeeder extends ModulePermissionSeeder
         HealthPermissionSeeder::class,
         AccommodationPermissionSeeder::class,
         TeachingPracticePermissionSeeder::class,
+        CampusLifePermissionSeeder::class,
     ];
 
     public function groups(): array

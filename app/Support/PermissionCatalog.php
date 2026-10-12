@@ -537,6 +537,18 @@ class PermissionCatalog
                 ],
             ],
 
+            'Campus life' => [
+                'about' => 'The mobile app\'s campus life: settings, the campus feed and events, the student marketplace and lost & found, chat, course materials, and reports from users.',
+                'permissions' => [
+                    ['Edit mobile app settings', 'Edit', 'Switch app features on or off, allow the app to connect while the website certificate is being fixed, set the oldest app version allowed, live-chat (Pusher) keys and marketplace rules.'],
+                    ['Post to the campus feed', 'Manage', 'Post news and events in the app for everyone, all students, all staff, any faculty or any department, and pin posts to the top. Other staff can post only to their own department.'],
+                    ['Moderate the campus feed', 'Manage', 'Hide or delete anyone\'s posts and comments.'],
+                    ['Moderate the marketplace', 'Manage', 'Approve, reject, hide and restore listings on the student marketplace and lost & found. The student is told why.'],
+                    ['Handle reports', 'Manage', 'See what people reported in the app (messages, listings, posts, comments, people) and dismiss the report or remove the content. Can also delete any chat message.'],
+                    ['Manage course materials', 'Manage', 'Add or remove materials for any course, not only the ones you teach.'],
+                ],
+            ],
+
             'Polls & elections' => [
                 'about' => 'Surveys, opinion polls and student or staff elections. Everyone in a poll\'s audience can vote in it without any permission.',
                 'permissions' => [

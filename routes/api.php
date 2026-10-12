@@ -16,6 +16,8 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
             'motto' => \App\Support\Institution::get('motto'), 'logo_url' => \App\Support\Institution::image('logo'),
             'color' => \App\Support\Institution::get('primary_color', '#405189'),
         ],
+        // Feature switches, the certificate setting and the like, from Settings -> Mobile App.
+        'mobile' => app(\App\Support\MobileAppSettings::class)->config(),
     ]]))->name('ping');
     Route::post('auth/login', [V1\AuthController::class, 'login'])->middleware('throttle:mobile-login')->name('login');
 
@@ -49,6 +51,84 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
         Route::get('notifications/settings', [V1\NotificationsController::class, 'settings'])->name('notifications.settings');
         Route::put('notifications/settings', [V1\NotificationsController::class, 'updateSettings'])->name('notifications.settings.update');
         Route::post('notifications/{id}/read', [V1\NotificationsController::class, 'read'])->name('notifications.read');
+
+        // ---- Doing things in the app (instead of opening the portal) ----
+        $a = V1\ActionsController::class;
+        Route::get('registration', [$a, 'registration'])->name('registration');
+        Route::post('registration', [$a, 'saveRegistration'])->name('registration.save');
+        Route::get('fees/{invoice}/pay', [$a, 'payOptions'])->name('fees.pay.options');
+        Route::post('fees/{invoice}/pay', [$a, 'pay'])->middleware('throttle:10,1')->name('fees.pay');
+        Route::post('payments/{reference}/confirm', [$a, 'confirmPayment'])->middleware('throttle:30,1')->name('payments.confirm');
+        Route::get('results/queries', [$a, 'queries'])->name('results.queries');
+        Route::post('results/{result}/query', [$a, 'query'])->name('results.query');
+        Route::get('accommodation/options', [$a, 'hostelOptions'])->name('accommodation.options');
+        Route::post('accommodation/apply', [$a, 'applyHostel'])->name('accommodation.apply');
+        Route::post('accommodation/withdraw', [$a, 'withdrawHostel'])->name('accommodation.withdraw');
+        Route::get('library/search', [$a, 'librarySearch'])->name('library.search');
+        Route::post('library/loans/{loan}/renew', [$a, 'renew'])->name('library.renew');
+        Route::post('library/items/{item}/hold', [$a, 'hold'])->name('library.hold');
+        Route::post('library/holds/{hold}/cancel', [$a, 'cancelHold'])->name('library.hold.cancel');
+        Route::post('clearance/{item}/resubmit', [$a, 'resubmitClearance'])->name('clearance.resubmit');
+        Route::get('id-card', [$a, 'idCard'])->name('id-card');
+        Route::post('id-card', [$a, 'requestIdCard'])->name('id-card.request');
+        Route::get('polls', [$a, 'polls'])->name('polls');
+        Route::get('polls/{poll}', [$a, 'poll'])->name('polls.show');
+        Route::post('polls/{poll}/vote', [$a, 'vote'])->middleware('throttle:20,1')->name('polls.vote');
+        Route::put('me/password', [$a, 'password'])->middleware('throttle:10,1')->name('me.password');
+
+        // ---- Campus life ----
+        $c = V1\CampusLifeController::class;
+        Route::get('me/profile', [$c, 'myProfile'])->name('me.profile');
+        Route::put('me/profile', [$c, 'updateProfile'])->name('me.profile.update');
+        Route::post('me/photo', [$c, 'photo'])->name('me.photo');
+        Route::delete('me/photo', [$c, 'removePhoto'])->name('me.photo.remove');
+
+        Route::get('chats', [$c, 'chats'])->name('chats');
+        Route::post('chats/direct', [$c, 'direct'])->name('chats.direct');
+        Route::post('chats/groups', [$c, 'createGroup'])->middleware('throttle:20,1')->name('chats.groups');
+        Route::get('chats/{conversation}', [$c, 'chat'])->name('chats.show');
+        Route::put('chats/{conversation}', [$c, 'updateChat'])->name('chats.update');
+        Route::get('chats/{conversation}/messages', [$c, 'messages'])->name('chats.messages');
+        Route::post('chats/{conversation}/messages', [$c, 'send'])->middleware('throttle:60,1')->name('chats.send');
+        Route::post('chats/{conversation}/read', [$c, 'read'])->name('chats.read');
+        Route::get('chats/{conversation}/members', [$c, 'members'])->name('chats.members');
+        Route::post('chats/{conversation}/members', [$c, 'addMembers'])->name('chats.members.add');
+        Route::post('chats/{conversation}/join', [$c, 'join'])->name('chats.join');
+        Route::post('chats/{conversation}/leave', [$c, 'leave'])->name('chats.leave');
+        Route::delete('chat/messages/{message}', [$c, 'deleteMessage'])->name('chat.messages.delete');
+        Route::get('chat/attachments/{message}', [$c, 'attachment'])->name('chat.attachment');
+        Route::post('realtime/auth', [$c, 'realtimeAuth'])->name('realtime.auth');
+
+        Route::get('market', [$c, 'listings'])->name('market');
+        Route::get('market/mine', [$c, 'myListings'])->name('market.mine');
+        Route::post('market', [$c, 'createListing'])->middleware('throttle:20,1')->name('market.store');
+        Route::get('market/{listing}', [$c, 'listing'])->name('market.show');
+        Route::post('market/{listing}', [$c, 'updateListing'])->name('market.update');
+        Route::delete('market/{listing}', [$c, 'deleteListing'])->name('market.delete');
+        Route::post('market/{listing}/status', [$c, 'listingStatus'])->name('market.status');
+        Route::post('market/{listing}/save', [$c, 'saveListing'])->name('market.save');
+        Route::post('market/{listing}/contact', [$c, 'contact'])->name('market.contact');
+
+        Route::get('feed', [$c, 'feedIndex'])->name('feed');
+        Route::post('feed', [$c, 'createPost'])->middleware('throttle:20,1')->name('feed.store');
+        Route::get('feed/{post}', [$c, 'post'])->name('feed.show');
+        Route::delete('feed/{post}', [$c, 'deletePost'])->name('feed.delete');
+        Route::post('feed/{post}/like', [$c, 'like'])->name('feed.like');
+        Route::post('feed/{post}/comments', [$c, 'comment'])->middleware('throttle:30,1')->name('feed.comment');
+        Route::delete('feed/comments/{comment}', [$c, 'deleteComment'])->name('feed.comment.delete');
+        Route::post('feed/{post}/rsvp', [$c, 'rsvp'])->name('feed.rsvp');
+
+        Route::get('materials', [$c, 'materialCourses'])->name('materials');
+        Route::get('materials/courses/{course}', [$c, 'courseMaterials'])->name('materials.course');
+        Route::post('materials/courses/{course}', [$c, 'addMaterial'])->name('materials.store');
+        Route::get('materials/{material}/download', [$c, 'downloadMaterial'])->name('materials.download');
+        Route::delete('materials/{material}', [$c, 'deleteMaterial'])->name('materials.delete');
+
+        Route::get('people', [$c, 'people'])->name('people');
+        Route::get('people/{user}', [$c, 'person'])->name('people.show');
+        Route::post('people/{user}/block', [$c, 'block'])->name('people.block');
+        Route::get('reports/reasons', [$c, 'reportReasons'])->name('reports.reasons');
+        Route::post('reports', [$c, 'report'])->middleware('throttle:20,1')->name('reports.store');
 
         Route::post('devices', [V1\DevicesController::class, 'store'])->name('devices.store');
         Route::delete('devices', [V1\DevicesController::class, 'destroy'])->name('devices.destroy');

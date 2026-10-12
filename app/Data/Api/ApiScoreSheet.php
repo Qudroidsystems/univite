@@ -36,6 +36,8 @@ final readonly class ApiScoreSheet
             'editable' => $sheet->isEditable() && $canEnter,
             'mode' => $scheme ? 'items' : 'ca_exam',
             'scheme' => $scheme ? ['id' => $scheme->id, 'name' => $scheme->name, 'summary' => $scheme->summary()] : null,
+            // Shown to the lecturer when the sheet is on plain CA / exam.
+            'scheme_note' => $scheme ? null : 'No assessment scheme applies to this course, so marks are entered as one CA and one exam. Ask the exams office to assign a scheme (Academic Setup, Assessment Schemes) or to change the assessments on this sheet.',
             'ca_max' => $caMax,
             'exam_max' => $examMax,
             'assessments' => $columns,

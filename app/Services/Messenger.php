@@ -41,6 +41,10 @@ class Messenger
         'health' => 'Health centre notices',
         'accommodation' => 'Hostel allocations, payment deadlines and check-in',
         'teaching_practice' => 'Teaching practice postings, supervisors and scores',
+        'chat' => 'Chat messages (mobile app)',
+        'marketplace' => 'Marketplace and lost & found (mobile app)',
+        'feed' => 'Campus feed, events and comments (mobile app)',
+        'materials' => 'New course materials (mobile app)',
     ];
 
     /** The mobile app screen a notice on each topic opens. */
@@ -48,6 +52,7 @@ class Messenger
         'results' => 'results', 'registration' => 'courses', 'fees' => 'fees', 'clearance' => 'clearance', 'timetable' => 'timetable',
         'seating' => 'exams', 'library' => 'library', 'accommodation' => 'accommodation', 'id_cards' => 'id_card', 'payslip' => 'payslips',
         'leave' => 'leave', 'leave_approvals' => 'leave', 'teaching_practice' => 'teaching_practice', 'health' => 'health',
+        'chat' => 'chat', 'marketplace' => 'marketplace', 'feed' => 'feed', 'materials' => 'materials',
     ];
 
     public const CHANNELS = ['portal', 'push', 'sms', 'whatsapp'];
@@ -102,6 +107,34 @@ class Messenger
         });
 
         return $out;
+    }
+
+    /**
+     * A push only, with no notice under the bell (chat messages, likes ...). $data is merged into the push's data, for
+     * example ['conversation_id' => '12'] so the app opens that chat. Respects the topic's push switch and the person's choice.
+     */
+    public function pushOnly(User $user, string $topic, string $title, string $body, array $data = [], ?string $dedupe = null): string
+    {
+        if (! self::channelOn($topic, 'push') || ! ($user->notify_push ?? true)) {
+            return 'off';
+        }
+        $devices = $user->deviceTokens()->get();
+        if ($devices->isEmpty()) {
+            return 'none';
+        }
+        $payload = json_encode([
+            'title' => Str::limit($title, 120, '…'), 'body' => Str::limit($body, 300, '…'),
+            'data' => array_map('strval', array_filter(['topic' => $topic, 'screen' => self::screen($topic)] + $data, fn ($v) => $v !== null)),
+        ]);
+        foreach ($devices as $device) {
+            $key = $dedupe ? "{$dedupe}:push:{$device->id}" : null;
+            OutboundMessage::create([
+                'user_id' => $user->id, 'channel' => 'push', 'recipient' => 'device:' . $device->id, 'body' => $payload, 'topic' => $topic,
+                'dedupe_key' => $key, 'status' => 'queued',
+            ]);
+        }
+
+        return 'queued';
     }
 
     /** One queued push per phone the person is signed in on. Returns "queued" or "none" (no phones). */

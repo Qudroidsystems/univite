@@ -232,6 +232,55 @@ class AssessmentService
         return $sheet;
     }
 
+    /**
+     * Put a draft sheet on a scheme even though marks are already in (for example the lecturer started before a
+     * scheme was assigned). Every student's CA and exam so far are spread over the new scheme's assessments; a sheet
+     * whose CA or exam no longer fits the new scheme is refused with the students named. $scheme = null puts the
+     * sheet back on the plain CA / exam split.
+     *
+     * @return int students whose marks were moved
+     */
+    public function convert(ResultSheet $sheet, ?AssessmentScheme $scheme, User $user): int
+    {
+        if (! $sheet->isEditable()) {
+            throw new RuntimeException('Only a draft sheet can change its assessments. Return it to the lecturer first.');
+        }
+        if ($scheme && (! $scheme->is_active || $scheme->items()->doesntExist())) {
+            throw new RuntimeException('Choose a scheme that is switched on and has assessments.');
+        }
+        $scheme?->load('items');
+        $rows = $sheet->results()->with('student')->get();
+
+        if ($scheme) {
+            $tooHigh = $rows->filter(fn ($r) => ($r->ca !== null && $r->ca > $scheme->caMax() + 0.001) || ($r->exam !== null && $r->exam > $scheme->examMax() + 0.001));
+            if ($tooHigh->isNotEmpty()) {
+                throw new RuntimeException('These students have marks above what ' . $scheme->name . ' allows (CA ' . $scheme->caMax() . ', exam ' . $scheme->examMax() . '): '
+                    . $tooHigh->map(fn ($r) => $r->student->matric_number . ' (' . $r->ca . '/' . $r->exam . ')')->implode(', ') . '.');
+            }
+        }
+
+        return DB::transaction(function () use ($sheet, $scheme, $rows, $user) {
+            AssessmentScore::whereIn('course_result_id', $rows->pluck('id'))->delete();
+            $sheet->update(['assessment_scheme_id' => $scheme?->id]);
+            $moved = 0;
+            if ($scheme) {
+                foreach ($rows as $row) {
+                    if ($row->ca === null && $row->exam === null) {
+                        continue;
+                    }
+                    $this->distribute($row, $scheme, $row->ca, $row->exam, $user);
+                    [$ca, $exam] = $this->components($row, $scheme);
+                    $total = ($ca !== null && $exam !== null) ? round($ca + $exam, 2) : null;
+                    $g = \App\Support\GradeScale::grade($total);
+                    $row->update(['ca' => $ca, 'exam' => $exam, 'total' => $total, 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null]);
+                    $moved++;
+                }
+            }
+
+            return $moved;
+        });
+    }
+
     // ---- Marks ----------------------------------------------------------------------------------------------
 
     /** @return Collection<int, ?float> item id => mark (null when not entered) for every item of the scheme */

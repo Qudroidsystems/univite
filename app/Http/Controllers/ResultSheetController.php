@@ -81,6 +81,8 @@ class ResultSheetController extends Controller
             'canApprove' => $this->results->canApprove(auth()->user(), $sheet),
             'caMax'      => $caMax, 'examMax' => $examMax,
             'scheme'     => $sheet->scheme,
+            'schemes'    => ($sheet->isEditable() && (auth()->user()->can('Assign assessment schemes') || auth()->user()->can('Enter results for any course')))
+                ? \App\Models\AssessmentScheme::where('is_active', true)->orderBy('name')->get() : collect(),
             'missing'    => $sheet->isEditable() ? $this->results->incomplete($sheet) : 0,
             'complaints' => \App\Models\ResultComplaint::with('student')->whereIn('course_result_id', $sheet->results->pluck('id'))->latest()->get(),
         ]);
@@ -170,6 +172,23 @@ class ResultSheetController extends Controller
         }
 
         return back()->with('success', 'Result corrected and logged.');
+    }
+
+    /** Put a draft sheet on an assessment scheme (or back on plain CA / exam), keeping marks already entered. */
+    public function scheme(Request $request, ResultSheet $sheet, \App\Services\AssessmentService $assessments): RedirectResponse
+    {
+        abort_unless($request->user()->can('Assign assessment schemes') || $request->user()->can('Enter results for any course'), 403);
+        $d = $request->validate(['assessment_scheme_id' => ['nullable', 'exists:assessment_schemes,id']]);
+
+        try {
+            $scheme = ($d['assessment_scheme_id'] ?? null) ? \App\Models\AssessmentScheme::find($d['assessment_scheme_id']) : null;
+            $moved = $assessments->convert($sheet, $scheme, $request->user());
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        $this->results->log($sheet, $request->user(), 'scheme', null, $sheet->fresh()->scheme?->name ?? 'Plain CA and exam');
+
+        return back()->with('success', 'Assessments changed.' . ($moved ? " The CA and exam already entered for {$moved} student(s) were spread over the new assessments; check them." : ''));
     }
 
     public function decide(Request $request, ResultSheet $sheet): RedirectResponse

@@ -21,6 +21,23 @@
                 <p class="text-muted fs-13 mt-n2"><i class="ri-survey-line me-1"></i>Assessment scheme <strong>{{ $scheme->name }}</strong>: {{ $scheme->summary() }}. Enter each mark; CA and exam are added up for you. Save as often as you like; every mark is needed before you submit.</p>
             @endif
 
+            @if ($schemes->isNotEmpty())
+                <form method="POST" action="{{ route('results.sheets.scheme', $sheet->id) }}" class="card" data-confirm="Change the assessments on this sheet? Marks already entered are kept and spread over the new assessments.">
+                    @csrf
+                    <div class="card-body d-flex flex-wrap gap-2 align-items-end">
+                        <div style="min-width:260px;flex:1"><label class="form-label mb-1">Assessments on this sheet</label>
+                            <select name="assessment_scheme_id" class="form-select">
+                                <option value="">Plain CA and exam (Result Settings)</option>
+                                @foreach ($schemes as $sc)<option value="{{ $sc->id }}" @selected($scheme?->id === $sc->id)>{{ $sc->name }} ({{ $sc->summary() }})</option>@endforeach
+                            </select></div>
+                        <button class="btn btn-soft-primary" type="submit">Change</button>
+                        <div class="text-muted fs-12 w-100">Use this when a sheet was opened before its scheme was assigned. New sheets take their scheme from <a href="{{ route('academics.assessments.index') }}">Assessment Schemes</a> automatically.</div>
+                    </div>
+                </form>
+            @elseif (! $scheme && $edit)
+                <div class="alert alert-info fs-13"><i class="ri-information-line me-1"></i>No assessment scheme applies to this course, so marks are entered as one CA and one exam. Ask the exams office to assign a scheme under Academic Setup, Assessment Schemes.</div>
+            @endif
+
             @if ($edit)
                 <div class="card">
                     <div class="card-body d-flex flex-wrap gap-3 align-items-end">

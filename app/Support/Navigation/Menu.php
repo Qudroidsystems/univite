@@ -107,6 +107,8 @@ class Menu
         $add($settled, 'My Examinations', 'my.exams', 'ph-exam', ['my.exams*'], ['exam', 'seat number']);
         if (! $student) {
             $add($u->courseAssignments()->exists() || TimetableInvigilator::where('user_id', $u->id)->exists(), 'My Teaching & Duties', 'my.teaching', 'ph-chalkboard-teacher', ['my.teaching'], ['invigilation', 'lectures']);
+            $add($u->courseAssignments()->exists() && ! $u->can('Manage course materials'), 'Course Materials', 'campus.materials', 'ph-folder-open', ['campus.materials*'], ['notes', 'slides', 'handouts']);
+            $add((bool) $u->staffProfile?->department_id && ! $u->can('Post to the campus feed') && ! $u->can('Moderate the campus feed'), 'Department Feed', 'campus.feed', 'ph-megaphone', ['campus.feed*'], ['announcement', 'post', 'event']);
             $add(Payslip::where('user_id', $u->id)->exists(), 'My Payslips', 'my.payslips', 'ph-money', ['my.payslips*'], ['salary', 'pay']);
             $add(true, 'My Leave', 'leave.index', 'ph-suitcase', ['leave.index', 'leave.create', 'leave.edit', 'leave.show', 'leave.calendar'], ['holiday', 'annual leave']);
             $approver = $u->can('Approve leave for any staff') || Department::where('hod_id', $u->id)->exists() || Faculty::where('dean_id', $u->id)->exists()
@@ -246,6 +248,13 @@ class Menu
                     ['Roles', 'roles.index', 'View roles', 'roles.*'],
                     ['Scoped Roles & Heads', 'scoped-roles.index', ['View scoped roles', 'Assign scoped roles'], 'scoped-roles.*'],
                     ['Permissions', 'permissions.index', 'View permissions', 'permissions.*'],
+                ]],
+                ['sidebarCampus', 'Campus Life', 'ph-device-mobile', [
+                    ['Mobile App', 'campus.settings', 'Edit mobile app settings', 'campus.settings*'],
+                    ['Campus Feed', 'campus.feed', ['Post to the campus feed', 'Moderate the campus feed'], 'campus.feed*'],
+                    ['Marketplace', 'campus.market', 'Moderate the marketplace', 'campus.market*'],
+                    ['Reports', 'campus.reports', 'Handle reports', 'campus.reports*'],
+                    ['Course Materials', 'campus.materials', 'Manage course materials', 'campus.materials*'],
                 ]],
                 ['sidebarMessaging', 'Messaging', 'ph-chat-circle-text', [
                     ['Messaging Settings', 'messaging.settings', 'Edit messaging settings', 'messaging.settings*'],

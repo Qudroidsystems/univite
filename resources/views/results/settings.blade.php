@@ -9,7 +9,8 @@
             <form method="POST" action="{{ route('results.settings.update') }}" class="card">
                 @csrf @method('PUT')
                 <div class="card-body row g-3">
-                    <p class="text-muted mb-0">How a course's 100 marks are split. Lecturers cannot enter a score above these limits.</p>
+                    <p class="text-muted mb-0">How a course's 100 marks are split when no assessment scheme applies to it. Lecturers cannot enter a score above these limits.
+                        @can('View assessment schemes') To mark courses on several assessments (tests, assignments, practicals ...), use <a href="{{ route('academics.assessments.index') }}">Assessment Schemes</a>.@endcan</p>
                     <div class="col-md-6"><label class="form-label">Continuous assessment (CA) out of</label><input type="number" step="0.01" name="ca_max" value="{{ old('ca_max', $ca) }}" class="form-control @error('ca_max') is-invalid @enderror" required></div>
                     <div class="col-md-6"><label class="form-label">Exam out of</label><input type="number" step="0.01" name="exam_max" value="{{ old('exam_max', $exam) }}" class="form-control @error('exam_max') is-invalid @enderror" required>@error('exam_max')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
                     <hr class="my-1">

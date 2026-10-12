@@ -9,7 +9,14 @@ use Illuminate\Support\Facades\Route;
  * See README "Mobile app API" for the list.
  */
 Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.')->group(function () {
-    Route::get('ping', fn () => response()->json(['data' => ['ok' => true, 'app' => config('app.name'), 'time' => now()->toIso8601String()]]))->name('ping');
+    Route::get('ping', fn () => response()->json(['data' => ['ok' => true, 'app' => config('app.name'), 'time' => now()->toIso8601String(),
+        // The school's name, logo and colour, so the app can brand itself before anyone signs in.
+        'institution' => [
+            'name' => \App\Support\Institution::get('name') ?: config('app.name'), 'short_name' => \App\Support\Institution::get('short_name'),
+            'motto' => \App\Support\Institution::get('motto'), 'logo_url' => \App\Support\Institution::image('logo'),
+            'color' => \App\Support\Institution::get('primary_color', '#405189'),
+        ],
+    ]]))->name('ping');
     Route::post('auth/login', [V1\AuthController::class, 'login'])->middleware('throttle:mobile-login')->name('login');
 
     Route::middleware(['auth:sanctum', 'throttle:mobile-api'])->group(function () {
@@ -22,6 +29,12 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
         Route::get('timetable/lectures', [V1\AcademicsController::class, 'lectures'])->name('timetable.lectures');
         Route::get('timetable/exams', [V1\AcademicsController::class, 'exams'])->name('timetable.exams');
         Route::get('timetable/teaching', [V1\AcademicsController::class, 'teaching'])->name('timetable.teaching');
+
+        Route::get('teaching/courses', [V1\TeachingController::class, 'courses'])->name('teaching.courses');
+        Route::post('teaching/courses/{course}/open', [V1\TeachingController::class, 'open'])->name('teaching.open');
+        Route::get('teaching/sheets/{sheet}', [V1\TeachingController::class, 'show'])->name('teaching.sheets.show');
+        Route::put('teaching/sheets/{sheet}/scores', [V1\TeachingController::class, 'save'])->name('teaching.sheets.save');
+        Route::post('teaching/sheets/{sheet}/submit', [V1\TeachingController::class, 'submit'])->name('teaching.sheets.submit');
 
         Route::get('fees', [V1\FeesController::class, 'index'])->name('fees');
         Route::get('fees/{invoice}', [V1\FeesController::class, 'show'])->name('fees.show');

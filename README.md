@@ -139,6 +139,22 @@ Flow: **assign lecturer → enter / upload scores → submit → approval steps 
 
 Run `php artisan migrate` and `php artisan db:seed`.
 
+**Assessment schemes** (Academic Setup → Assessment Schemes). A scheme lists the assessments a course is marked on (Test 1 /10,
+Assignment /10, Practical /20, Exam /60 ...), each counting towards CA or exam, adding up to 100 (each with a short code used as the
+upload column heading). Assign a scheme to the whole university, a faculty, a department or one course, for every session or one
+session; the most specific assignment wins (course > department > faculty > university; one session > every session). *Which scheme
+does a course use?* on the same page shows the answer and where it comes from. A score sheet takes its scheme when it is opened and
+keeps it once a mark is entered, so later changes never move marks already given; a sheet that already has plain CA/exam marks stays
+on the Result Settings split, and so does any course with no scheme. Lecturers enter one mark per assessment (grid, CSV/Excel upload
+with one column per code, or the mobile app); marks can be saved bit by bit and the CA and exam are the sums, so approval, publishing,
+transcripts, broadsheets, queries and graduation work unchanged. A scheme's assessments are locked once marks exist (rename, switch
+off or copy it instead); a scheme in use cannot be deleted. Where only a CA and exam are known (teaching-practice scores, a correction
+from a result query) they are spread over the assessments in proportion. Correcting a published result on a scheme sheet is per
+assessment, and the operation log keeps every assessment's old and new mark so a reversal restores them exactly. Permissions:
+*View / Create / Edit / Delete / Assign assessment schemes*. Code: `AssessmentService`; tables assessment_schemes,
+assessment_items, assessment_assignments, assessment_scores and result_sheets.assessment_scheme_id. Run `php artisan migrate` and
+`php artisan db:seed --class=PermissionSeeder`.
+
 **Broadsheet and corrections.** *Broadsheet* (Admissions & Students) shows a programme's published results for one level, session and semester:
 every student's score and grade per course, semester GPA and CGPA, printable. A published score can be corrected by someone with
 **Amend published results**: a reason is required and the old and new scores are written to the sheet's history, and the grade is recomputed.
@@ -311,6 +327,7 @@ The search box opens with **Ctrl+K** (⌘K on a Mac) or **/**. It finds pages as
 - After pulling, run `composer install` (Sanctum was added) and `php artisan migrate` (personal access tokens, device tokens, `users.notify_push`).
 - Every notice goes through `App\Services\Messenger`: the bell in the portal (also listed in the app), a push to each phone signed in to the app, and SMS/WhatsApp when switched on. New topics: results published, registration decisions, payments received, clearance, announcements. Messaging settings has a "Mobile app" column per topic and the Firebase setup (project id and service account key, stored encrypted). Each person can turn push off under Notification settings or in the app.
 - Pushes are queued and sent by `php artisan messages:push`, scheduled every minute, so the scheduler (`php artisan schedule:work` on XAMPP, cron on the server) must run. Firebase tells us when an app was removed; that phone is then forgotten.
+- Lecturers use the app to enter marks: `/teaching/courses`, open a course's sheet, save marks per assessment and submit (same rules as the portal).
 - Student schedule logic lives in `App\Services\Schedule\MySchedule`, shared by the portal pages and the API.
 
 ## Sample data for development

@@ -134,6 +134,17 @@ Route::middleware('auth')->group(function () {
         Route::resource('degree-classes', DegreeClassController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('course-assignments', CourseAssignmentController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('result-stages', ResultStageController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::controller(\App\Http\Controllers\Academics\AssessmentSchemeController::class)->prefix('assessments')->name('assessments.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::post('assign', 'assign')->name('assign');
+            Route::delete('assignments/{assignment}', 'unassign')->name('unassign');
+            Route::get('{scheme}/edit', 'edit')->name('edit');
+            Route::put('{scheme}', 'update')->name('update');
+            Route::post('{scheme}/duplicate', 'duplicate')->name('duplicate');
+            Route::delete('{scheme}', 'destroy')->name('destroy');
+        });
         Route::resource('custom-fields', CustomFieldController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('lists', LookupController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('clearance-items', ClearanceItemController::class)->only(['index', 'store', 'update', 'destroy']);

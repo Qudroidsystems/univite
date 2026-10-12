@@ -9,6 +9,7 @@ class ResultPermissionSeeder extends ModulePermissionSeeder
     {
         return [
             'Result stages',
+            'Assessment schemes',
             'Result sheets',
             'Legacy results',
             'Student results',

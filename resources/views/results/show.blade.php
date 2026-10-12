@@ -1,7 +1,12 @@
 @extends('layouts.master')
 
 @section('content')
-@php $edit = $canEnter && $sheet->isEditable(); @endphp
+@php
+    $edit = $canEnter && $sheet->isEditable();
+    $items = $scheme?->items ?? collect();
+    $fmt = fn ($n) => rtrim(rtrim(number_format((float) $n, 2, '.', ''), '0'), '.');
+    $marksOf = fn ($r) => $r->assessmentScores->mapWithKeys(fn ($m) => [$m->assessment_item_id => $fmt($m->score)]);
+@endphp
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
@@ -11,7 +16,10 @@
                 <a href="{{ route('results.sheets.index') }}" class="btn btn-light">Back</a>
             </div>
             @include('academics.partials.alerts')
-            <p class="text-muted">{{ $sheet->session->name }} · {{ $sheet->semesterType->name }} · {{ $sheet->course->credit_units }} units · CA out of {{ rtrim(rtrim(number_format($caMax, 2), '0'), '.') }}, exam out of {{ rtrim(rtrim(number_format($examMax, 2), '0'), '.') }}</p>
+            <p class="text-muted">{{ $sheet->session->name }} · {{ $sheet->semesterType->name }} · {{ $sheet->course->credit_units }} units · CA out of {{ $fmt($caMax) }}, exam out of {{ $fmt($examMax) }}</p>
+            @if ($scheme)
+                <p class="text-muted fs-13 mt-n2"><i class="ri-survey-line me-1"></i>Assessment scheme <strong>{{ $scheme->name }}</strong>: {{ $scheme->summary() }}. Enter each mark; CA and exam are added up for you. Save as often as you like; every mark is needed before you submit.</p>
+            @endif
 
             @if ($edit)
                 <div class="card">
@@ -31,20 +39,35 @@
                 <div class="card">
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0">
-                            <thead class="table-light"><tr><th>#</th><th>Matric number</th><th>Name</th><th style="width:110px">CA</th><th style="width:110px">Exam</th><th>Total</th><th>Grade</th></tr></thead>
+                            <thead class="table-light"><tr><th>#</th><th>Matric number</th><th>Name</th>
+                                @if ($scheme)
+                                    @foreach ($items as $it)<th style="width:96px" class="text-nowrap" title="{{ $it->name }} · {{ \App\Models\AssessmentItem::COMPONENTS[$it->component] }}">{{ $it->code }} <span class="text-muted fw-normal">/{{ $it->maxLabel() }}</span></th>@endforeach
+                                    <th>CA</th><th>Exam</th>
+                                @else
+                                    <th style="width:110px">CA</th><th style="width:110px">Exam</th>
+                                @endif
+                                <th>Total</th><th>Grade</th></tr></thead>
                             <tbody>
                             @forelse ($rows as $i => $r)
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $r->student->matric_label }}</td>
                                     <td>{{ $r->student->full_name }}</td>
+                                    @if ($scheme)
+                                        @php $m = $marksOf($r); @endphp
+                                        @foreach ($items as $it)
+                                            <td>@if ($edit)<input type="number" step="0.01" min="0" max="{{ $it->max_score }}" name="scores[{{ $r->student_id }}][items][{{ $it->id }}]" value="{{ $m[$it->id] ?? '' }}" class="form-control form-control-sm" aria-label="{{ $it->name }}">@else{{ $m[$it->id] ?? '' }}@endif</td>
+                                        @endforeach
+                                        <td>{{ $r->ca }}</td><td>{{ $r->exam }}</td>
+                                    @else
                                     <td>@if ($edit)<input type="number" step="0.01" min="0" max="{{ $caMax }}" name="scores[{{ $r->student_id }}][ca]" value="{{ $r->ca }}" class="form-control form-control-sm">@else{{ $r->ca }}@endif</td>
                                     <td>@if ($edit)<input type="number" step="0.01" min="0" max="{{ $examMax }}" name="scores[{{ $r->student_id }}][exam]" value="{{ $r->exam }}" class="form-control form-control-sm">@else{{ $r->exam }}@endif</td>
+                                    @endif
                                     <td>{{ $r->total }}</td>
                                     <td>@if ($r->grade)<span class="badge {{ $r->is_pass ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }}">{{ $r->grade }}</span>@endif</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-center text-muted py-4">No student has an approved registration for this course yet.</td></tr>
+                                <tr><td colspan="{{ 7 + ($scheme ? $items->count() : 0) }}" class="text-center text-muted py-4">No student has an approved registration for this course yet.</td></tr>
                             @endforelse
                             </tbody>
                         </table>
@@ -81,9 +104,17 @@
                             <form method="POST" action="{{ route('results.amend', $r->id) }}" class="row g-2 align-items-center mb-2" data-confirm="Correct this published score? The change is logged.">
                                 @csrf
                                 <div class="col-md-3">{{ $r->student->matric_label }} · {{ $r->student->full_name }}</div>
+                                @if ($scheme)
+                                    @php $m = $marksOf($r); @endphp
+                                    <div class="col-md-4 d-flex flex-wrap gap-1">
+                                        @foreach ($items as $it)<input type="number" step="0.01" min="0" max="{{ $it->max_score }}" name="items[{{ $it->id }}]" value="{{ $m[$it->id] ?? '' }}" class="form-control form-control-sm" style="width:72px" title="{{ $it->name }} /{{ $it->maxLabel() }}" placeholder="{{ $it->code }}" required>@endforeach
+                                    </div>
+                                    <div class="col-md-3"><input name="reason" class="form-control form-control-sm" placeholder="Reason for the correction" required></div>
+                                @else
                                 <div class="col-md-1"><input type="number" step="0.01" name="ca" value="{{ $r->ca }}" class="form-control form-control-sm" required></div>
                                 <div class="col-md-1"><input type="number" step="0.01" name="exam" value="{{ $r->exam }}" class="form-control form-control-sm" required></div>
                                 <div class="col-md-5"><input name="reason" class="form-control form-control-sm" placeholder="Reason for the correction" required></div>
+                                @endif
                                 <div class="col-md-2"><button class="btn btn-sm btn-soft-warning" type="submit">Correct</button></div>
                             </form>
                         @endforeach

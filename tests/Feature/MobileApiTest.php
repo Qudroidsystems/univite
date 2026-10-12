@@ -170,3 +170,60 @@ it('keeps push settings on the messaging page and the person\'s own choice on th
 
     $this->actingAs($this->student->user)->get(route('notifications.preferences'))->assertOk()->assertSee('Send notifications to my phone');
 });
+
+it('answers ping with the school\'s name and colour for the app', function () {
+    $this->getJson('/api/v1/ping')->assertOk()->assertJsonPath('data.ok', true)->assertJsonStructure(['data' => ['institution' => ['name', 'short_name', 'logo_url', 'color']]]);
+});
+
+it('lets a lecturer open a course in the app, enter a mark per assessment and submit', function () {
+    $scheme = app(\App\Services\AssessmentService::class)->save(null, ['name' => 'Tests and exam'], [
+        ['name' => 'Test', 'code' => 'T1', 'component' => 'ca', 'max_score' => 20],
+        ['name' => 'Assignment', 'code' => 'ASG', 'component' => 'ca', 'max_score' => 10],
+        ['name' => 'Exam', 'code' => 'EXAM', 'component' => 'exam', 'max_score' => 70],
+    ], $this->admin);
+    app(\App\Services\AssessmentService::class)->assign($scheme, 'university', null, null, $this->admin);
+    RegistrationForm::create(['student_id' => $this->student->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id, 'level' => 100, 'status' => 'approved', 'total_units' => 2])
+        ->courses()->create(['student_id' => $this->student->id, 'course_id' => $this->course->id, 'credit_units' => 2]);
+    \App\Models\ResultStage::query()->delete();
+
+    $staff = makeStaff($this, 'Grace Lecturer');
+    $staff->update(['password' => 'phone-pass-1']);
+    $other = makeStaff($this, 'Other Lecturer');
+    $other->update(['password' => 'phone-pass-1']);
+    \App\Models\CourseAssignment::create(['user_id' => $staff->id, 'course_id' => $this->course->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id]);
+    $token = apiLogin($this, $staff->email);
+
+    $this->withToken($token)->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.teaches', true);
+    $this->withToken($token)->getJson('/api/v1/teaching/courses')->assertOk()->assertJsonPath('data.courses.0.course.code', 'EDU101')->assertJsonPath('data.courses.0.sheet', null);
+    $sheet = $this->withToken($token)->postJson("/api/v1/teaching/courses/{$this->course->id}/open")->assertOk()
+        ->assertJsonPath('data.mode', 'items')->assertJsonPath('data.assessments.0.code', 'T1')->assertJsonPath('data.rows.0.matric_number', $this->student->matric_number)
+        ->assertJsonPath('data.editable', true)->json('data');
+    $ids = collect($sheet['assessments'])->pluck('id', 'code');
+
+    // another lecturer cannot see or change it; a student cannot use the teaching routes
+    $otherToken = apiLogin($this, $other->email);
+    $this->app['auth']->forgetGuards();
+    $this->withToken($otherToken)->getJson("/api/v1/teaching/sheets/{$sheet['id']}")->assertNotFound();
+    $this->withToken($otherToken)->putJson("/api/v1/teaching/sheets/{$sheet['id']}/scores", ['scores' => []])->assertForbidden();
+    $studentToken = apiLogin($this);
+    $this->app['auth']->forgetGuards();
+    $this->withToken($studentToken)->getJson('/api/v1/teaching/courses')->assertForbidden();
+    $this->app['auth']->forgetGuards();
+
+    $sid = (string) $this->student->id;
+    $this->withToken($token)->putJson("/api/v1/teaching/sheets/{$sheet['id']}/scores", ['scores' => [$sid => ['marks' => [$ids['T1'] => 25]]]])
+        ->assertOk()->assertJsonPath('meta.saved', 0)->assertJsonPath('meta.problems.0', fn ($p) => str_contains($p, 'Test must be a number from 0 to 20'));
+    $this->withToken($token)->putJson("/api/v1/teaching/sheets/{$sheet['id']}/scores", ['scores' => [$sid => ['marks' => [$ids['T1'] => 15, $ids['ASG'] => 8]]]])
+        ->assertOk()->assertJsonPath('meta.saved', 1)->assertJsonPath('data.rows.0.ca', 23)->assertJsonPath('data.missing', 1);
+    $this->withToken($token)->postJson("/api/v1/teaching/sheets/{$sheet['id']}/submit")->assertStatus(422);
+    $this->withToken($token)->putJson("/api/v1/teaching/sheets/{$sheet['id']}/scores", ['scores' => [$sid => ['marks' => [$ids['EXAM'] => 50]]]])
+        ->assertOk()->assertJsonPath('data.rows.0.total', 73)->assertJsonPath('data.rows.0.grade', 'A');
+    $this->withToken($token)->postJson("/api/v1/teaching/sheets/{$sheet['id']}/submit")->assertOk()->assertJsonPath('data.status', 'approved')->assertJsonPath('data.editable', false);
+
+    // once published, the student sees each assessment in the app
+    app(ResultService::class)->publish(ResultSheet::find($sheet['id']), $this->admin);
+    $this->app['auth']->forgetGuards();
+    $this->withToken($studentToken)->getJson('/api/v1/results')->assertOk()
+        ->assertJsonPath('data.semesters.0.courses.0.assessments.0.code', 'T1')
+        ->assertJsonPath('data.semesters.0.courses.0.assessments.2.score', 50);
+});

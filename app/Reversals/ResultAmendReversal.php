@@ -61,7 +61,7 @@ class ResultAmendReversal extends BaseReversal
         $result = CourseResult::findOrFail($event->subject_id);
         $before = ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade];
         $new = $this->begin($op, 'result_amend_reverse', $by, $reason);
-        $this->results->amend($result, $event->before['ca'], $event->before['exam'], 'Correction ' . $op->operation_id . ' reversed: ' . $reason, $by, record: false);
+        $this->results->amend($result, $event->before['ca'], $event->before['exam'], 'Correction ' . $op->operation_id . ' reversed: ' . $reason, $by, record: false, items: $event->before['items'] ?? null);
         $result->refresh();
         $this->audit->record($new, 'score_restored', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $event->id);
         $this->audit->finish($new, 1);

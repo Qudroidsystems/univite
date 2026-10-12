@@ -70,7 +70,8 @@ class ResultSheetController extends Controller
         if ($sheet->isEditable() && $this->results->canEnter(auth()->user(), $sheet)) {
             $this->results->syncRows($sheet);
         }
-        $sheet->load('course', 'session', 'semesterType', 'stage', 'events.user', 'results.student');
+        $sheet->load('course', 'session', 'semesterType', 'stage', 'events.user', 'results.student', 'results.assessmentScores', 'scheme.items');
+        [$caMax, $examMax] = ResultService::limits($sheet);
 
         return view('results.show', [
             'pagetitle'  => $sheet->course->code . ' results',
@@ -78,7 +79,8 @@ class ResultSheetController extends Controller
             'rows'       => $sheet->results->sortBy(fn ($r) => $r->student->last_name . $r->student->first_name),
             'canEnter'   => $this->results->canEnter(auth()->user(), $sheet),
             'canApprove' => $this->results->canApprove(auth()->user(), $sheet),
-            'caMax'      => ResultService::caMax(), 'examMax' => ResultService::examMax(),
+            'caMax'      => $caMax, 'examMax' => $examMax,
+            'scheme'     => $sheet->scheme,
             'missing'    => $sheet->isEditable() ? $this->results->incomplete($sheet) : 0,
             'complaints' => \App\Models\ResultComplaint::with('student')->whereIn('course_result_id', $sheet->results->pluck('id'))->latest()->get(),
         ]);
@@ -87,7 +89,7 @@ class ResultSheetController extends Controller
     public function save(Request $request, ResultSheet $sheet): RedirectResponse
     {
         $this->authorizeEntry($sheet);
-        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable']]);
+        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array']]);
 
         try {
             $problems = $this->results->saveScores($sheet, Score::many($data['scores']), $request->user());
@@ -122,9 +124,20 @@ class ResultSheetController extends Controller
     public function template(ResultSheet $sheet): Response
     {
         abort_unless($this->mayView($sheet), 403);
-        $out = "Matric Number,Name,CA,Exam\n";
-        foreach ($sheet->results()->with('student')->get()->sortBy(fn ($r) => $r->student->last_name) as $r) {
-            $out .= sprintf("%s,\"%s\",%s,%s\n", $r->student->matric_number, str_replace('"', '""', $r->student->full_name), $r->ca, $r->exam);
+        $rows = $sheet->results()->with('student', 'assessmentScores')->get()->sortBy(fn ($r) => $r->student->last_name);
+        $cell = fn ($v) => '"' . str_replace('"', '""', (string) $v) . '"';
+        if ($scheme = $sheet->scheme?->load('items')) {
+            $out = implode(',', array_merge(['Matric Number', 'Name'], $scheme->items->map(fn ($i) => $cell("{$i->code} ({$i->maxLabel()})"))->all())) . "\n";
+            foreach ($rows as $r) {
+                $have = $r->assessmentScores->keyBy('assessment_item_id');
+                $out .= implode(',', array_merge([$cell($r->student->matric_number), $cell($r->student->full_name)],
+                    $scheme->items->map(fn ($i) => $have->has($i->id) ? (string) (float) $have[$i->id]->score : '')->all())) . "\n";
+            }
+        } else {
+            $out = "Matric Number,Name,CA,Exam\n";
+            foreach ($rows as $r) {
+                $out .= sprintf("%s,\"%s\",%s,%s\n", $r->student->matric_number, str_replace('"', '""', $r->student->full_name), $r->ca, $r->exam);
+            }
         }
 
         return response($out, 200, ['Content-Type' => 'text/csv', 'Content-Disposition' => 'attachment; filename="' . str_replace(' ', '_', $sheet->course->code) . '_scores.csv"']);
@@ -147,10 +160,11 @@ class ResultSheetController extends Controller
     public function amend(Request $request, \App\Models\CourseResult $result): RedirectResponse
     {
         abort_unless($request->user()->can('Amend published results'), 403);
-        $d = $request->validate(['ca' => ['required', 'numeric'], 'exam' => ['required', 'numeric'], 'reason' => ['required', 'string', 'max:400']]);
+        $d = $request->validate(['ca' => ['required_without:items', 'nullable', 'numeric'], 'exam' => ['required_without:items', 'nullable', 'numeric'],
+            'items' => ['nullable', 'array'], 'items.*' => ['nullable', 'numeric'], 'reason' => ['required', 'string', 'max:400']]);
 
         try {
-            $this->results->amend($result, $d['ca'], $d['exam'], $d['reason'], $request->user());
+            $this->results->amend($result, $d['ca'] ?? null, $d['exam'] ?? null, $d['reason'], $request->user(), items: $d['items'] ?? null);
         } catch (RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

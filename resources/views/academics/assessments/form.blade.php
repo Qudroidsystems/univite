@@ -1,0 +1,112 @@
+@extends('layouts.master')
+
+@section('content')
+@php
+    $rows = old('items', $scheme->items->map(fn ($i) => ['name' => $i->name, 'code' => $i->code, 'component' => $i->component, 'max_score' => $i->maxLabel()])->all());
+    $action = $scheme->exists ? route('academics.assessments.update', $scheme->id) : route('academics.assessments.store');
+@endphp
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                <h4 class="mb-sm-0"><i class="ri-survey-line me-1 align-middle"></i>{{ $scheme->exists ? $scheme->name : 'New assessment scheme' }}</h4>
+                <a href="{{ route('academics.assessments.index') }}" class="btn btn-light">Back</a>
+            </div>
+            @include('academics.partials.alerts')
+            @if ($locked)
+                <div class="alert alert-info"><i class="ri-lock-line me-1"></i>Marks have already been entered with this scheme, so its assessments are locked. You can still rename it or switch it off. To change the assessments, make a copy.</div>
+            @endif
+
+            <form method="POST" action="{{ $action }}" id="scheme-form" data-no-ajax>
+                @csrf
+                @if ($scheme->exists) @method('PUT') @endif
+                <div class="card"><div class="card-body row g-3">
+                    <div class="col-md-6"><label class="form-label">Name</label><input name="name" class="form-control" required maxlength="120" value="{{ old('name', $scheme->name) }}" placeholder="Science courses (with practicals)"></div>
+                    <div class="col-md-6"><label class="form-label">Description</label><input name="description" class="form-control" maxlength="500" value="{{ old('description', $scheme->description) }}" placeholder="Optional"></div>
+                    <div class="col-12"><div class="form-check form-switch"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $scheme->is_active))><label class="form-check-label" for="is_active">On (can be assigned and given to new score sheets)</label></div></div>
+                </div></div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">Assessments</h6>
+                        <span class="fs-13">CA <strong data-sum="ca">0</strong> + Exam <strong data-sum="exam">0</strong> = <strong data-sum="all">0</strong> <span data-sum-note class="ms-1"></span></span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light"><tr><th>Assessment</th><th style="width:140px">Short code</th><th style="width:200px">Counts towards</th><th style="width:130px">Out of</th><th style="width:60px"></th></tr></thead>
+                            <tbody data-items></tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        @unless ($locked)<button type="button" class="btn btn-soft-primary" data-add><i class="ri-add-line me-1"></i>Add assessment</button>@else<span></span>@endunless
+                        <button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save scheme</button>
+                    </div>
+                </div>
+                <p class="text-muted fs-13">The short code is the column heading in score uploads (for example T1, ASG, PRAC, EXAM). Leave it blank to make one from the name.</p>
+            </form>
+
+            <template id="item-row">
+                <tr>
+                    <td><input class="form-control" data-f="name" maxlength="80" placeholder="Test 1"></td>
+                    <td><input class="form-control text-uppercase" data-f="code" maxlength="20" placeholder="T1"></td>
+                    <td><select class="form-select" data-f="component"><option value="ca">Continuous assessment</option><option value="exam">Examination</option></select></td>
+                    <td><input class="form-control" type="number" step="0.01" min="0.01" max="100" data-f="max_score"></td>
+                    <td>@unless ($locked)<button type="button" class="btn btn-sm btn-soft-danger" data-remove title="Remove"><i class="ri-delete-bin-line"></i></button>@endunless</td>
+                </tr>
+            </template>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+(function () {
+    var rows = @json(array_values($rows));
+    var locked = @json($locked);
+    var body = document.querySelector('[data-items]');
+    var tpl = document.getElementById('item-row');
+
+    function renumber() {
+        body.querySelectorAll('tr').forEach(function (tr, n) {
+            tr.querySelectorAll('[data-f]').forEach(function (el) { el.name = 'items[' + n + '][' + el.getAttribute('data-f') + ']'; });
+        });
+        sum();
+    }
+    function add(r) {
+        var tr = tpl.content.firstElementChild.cloneNode(true);
+        r = r || {component: 'ca'};
+        tr.querySelectorAll('[data-f]').forEach(function (el) {
+            var f = el.getAttribute('data-f');
+            if (r[f] !== undefined && r[f] !== null) el.value = r[f];
+            if (locked) { el.readOnly = true; if (el.tagName === 'SELECT') { el.style.pointerEvents = 'none'; el.tabIndex = -1; } }
+        });
+        body.appendChild(tr);
+        renumber();
+    }
+    function sum() {
+        var t = {ca: 0, exam: 0};
+        body.querySelectorAll('tr').forEach(function (tr) {
+            var c = tr.querySelector('[data-f=component]').value, v = parseFloat(tr.querySelector('[data-f=max_score]').value) || 0;
+            t[c] += v;
+        });
+        var all = Math.round((t.ca + t.exam) * 100) / 100;
+        document.querySelector('[data-sum=ca]').textContent = Math.round(t.ca * 100) / 100;
+        document.querySelector('[data-sum=exam]').textContent = Math.round(t.exam * 100) / 100;
+        document.querySelector('[data-sum=all]').textContent = all;
+        var note = document.querySelector('[data-sum-note]');
+        note.className = 'ms-1 badge ' + (all === 100 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger');
+        note.textContent = all === 100 ? 'Adds up to 100' : 'Must add up to 100';
+    }
+    body.addEventListener('input', sum);
+    body.addEventListener('change', sum);
+    body.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-remove]');
+        if (b) { b.closest('tr').remove(); renumber(); }
+    });
+    var addBtn = document.querySelector('[data-add]');
+    if (addBtn) addBtn.addEventListener('click', function () { add(); });
+    (rows.length ? rows : [{}]).forEach(add);
+})();
+</script>
+@endpush

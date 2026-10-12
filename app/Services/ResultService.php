@@ -7,6 +7,7 @@ use App\Data\Results\Score;
 use App\Data\Results\ScoreImport;
 use App\Data\Results\Transcript;
 use App\Data\Results\TranscriptTerm;
+use App\Models\AssessmentScheme;
 use App\Models\CourseResult;
 use App\Models\RegistrationForm;
 use App\Models\ResultSheet;
@@ -30,6 +31,7 @@ class ResultService
         private \App\Support\AcademicRules $rules,
         private \App\Support\SpreadsheetReader $reader,
         private Messenger $messenger,
+        private AssessmentService $assessments,
     ) {
     }
 
@@ -41,6 +43,23 @@ class ResultService
     public static function examMax(): float
     {
         return (float) Setting::get('results.exam_max', '70');
+    }
+
+    /**
+     * The most a CA and an exam can be on this sheet: from its assessment scheme, or the Result Settings split.
+     *
+     * @return array{0: float, 1: float}
+     */
+    public static function limits(ResultSheet $sheet): array
+    {
+        $scheme = $sheet->scheme;
+        if ($scheme) {
+            $scheme->loadMissing('items');
+
+            return [$scheme->caMax(), $scheme->examMax()];
+        }
+
+        return [self::caMax(), self::examMax()];
     }
 
     /** The sheet for a course in a session/semester, with a row for every student registered (approved forms only). */
@@ -56,6 +75,7 @@ class ResultService
 
     public function syncRows(ResultSheet $sheet): void
     {
+        $this->assessments->attach($sheet);
         $registered = RegistrationForm::where('status', 'approved')->where('academic_session_id', $sheet->academic_session_id)
             ->where('semester_type_id', $sheet->semester_type_id)
             ->whereHas('courses', fn ($q) => $q->where('course_id', $sheet->course_id))
@@ -80,14 +100,24 @@ class ResultService
             ->where('course_id', $sheet->course_id)->where('academic_session_id', $sheet->academic_session_id)->where('semester_type_id', $sheet->semester_type_id)->exists();
     }
 
-    /** Set one student's scores. Blank clears. Throws RuntimeException with a readable message when a score is out of range. */
-    private function apply(CourseResult $row, $ca, $exam): void
+    /**
+     * Set one student's scores. Blank clears. Throws RuntimeException with a readable message when a score is out of range.
+     * On a sheet with an assessment scheme the marks go on its items ($items when given, otherwise the CA and exam are
+     * spread over the items) and the CA and exam become what the items add up to.
+     */
+    private function apply(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null): void
     {
-        $ca = ($ca === null || $ca === '') ? null : $ca;
-        $exam = ($exam === null || $exam === '') ? null : $exam;
-        foreach ([[$ca, self::caMax(), 'CA'], [$exam, self::examMax(), 'Exam']] as [$v, $max, $label]) {
-            if ($v !== null && (! is_numeric($v) || $v < 0 || $v > $max)) {
-                throw new RuntimeException("{$label} score must be a number from 0 to {$max}.");
+        if ($scheme) {
+            [$ca, $exam] = $items !== null
+                ? $this->assessments->applyItems($row, $scheme, $items, $user)
+                : $this->assessments->distribute($row, $scheme, $ca, $exam, $user);
+        } else {
+            $ca = ($ca === null || $ca === '') ? null : $ca;
+            $exam = ($exam === null || $exam === '') ? null : $exam;
+            foreach ([[$ca, self::caMax(), 'CA'], [$exam, self::examMax(), 'Exam']] as [$v, $max, $label]) {
+                if ($v !== null && (! is_numeric($v) || $v < 0 || $v > $max)) {
+                    throw new RuntimeException("{$label} score must be a number from 0 to {$max}.");
+                }
             }
         }
 
@@ -109,16 +139,17 @@ class ResultService
             throw new RuntimeException('This sheet has been submitted and can no longer be changed.');
         }
         $rows = $sheet->results()->with('student')->get()->keyBy('student_id');
+        $scheme = $sheet->scheme?->loadMissing('items');
         $problems = [];
 
-        DB::transaction(function () use ($scores, $rows, &$problems) {
+        DB::transaction(function () use ($scores, $rows, $scheme, $user, &$problems) {
             foreach ($scores as $studentId => $s) {
                 $row = $rows->get((int) $studentId);
                 if (! $row) {
                     continue;
                 }
                 try {
-                    $this->apply($row, $s->ca, $s->exam);
+                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user));
                 } catch (RuntimeException $e) {
                     $problems[] = $row->student->matric_number . ': ' . $e->getMessage();
                 }
@@ -129,20 +160,41 @@ class ResultService
         return $problems;
     }
 
+    /** A column heading reduced to letters and digits, without a "(out of …)" note: "Test 1 (10)" => "test1". */
+    public static function headKey($h): string
+    {
+        return strtolower(preg_replace('/[^a-z0-9]/i', '', preg_replace('/\(.*?\)/', '', (string) $h)));
+    }
+
     /**
-     * Read a CSV or Excel upload (columns: matric number, CA, exam; first row is the header) and save the scores.
-     *
+     * Read a CSV or Excel upload and save the scores. The first row is the header: Matric Number, then CA and Exam, or
+     * on a sheet with an assessment scheme one column per assessment (its code or name). Columns left out keep their marks.
      */
     public function import(ResultSheet $sheet, UploadedFile $file, ?User $user = null): ScoreImport
     {
         $table = $this->readTable($file);
-        $head = array_map(fn ($h) => strtolower(preg_replace('/[^a-z0-9]/i', '', (string) $h)), array_shift($table) ?? []);
+        $head = array_map(fn ($h) => self::headKey($h), array_shift($table) ?? []);
         $col = fn (array $names) => collect($names)->map(fn ($n) => array_search($n, $head, true))->first(fn ($i) => $i !== false);
         $m = $col(['matricnumber', 'matricno', 'matric', 'regno', 'regnumber']);
         $ca = $col(['ca', 'continuousassessment', 'testscore', 'catest']);
         $ex = $col(['exam', 'examscore', 'examination']);
-        if ($m === null || ($ca === null && $ex === null)) {
-            throw new RuntimeException('The first row must name the columns: Matric Number, CA and Exam.');
+
+        $itemCols = [];
+        if ($scheme = $sheet->scheme?->loadMissing('items')) {
+            foreach ($scheme->items as $item) {
+                $i = $col(array_unique([self::headKey($item->code), self::headKey($item->name)]));
+                if ($i !== null) {
+                    $itemCols[$item->id] = $i;
+                }
+            }
+        }
+        if ($itemCols) {
+            $ca = $ex = null;   // per-item columns win over CA / Exam totals
+        }
+        if ($m === null || (! $itemCols && $ca === null && $ex === null)) {
+            throw new RuntimeException($scheme
+                ? 'The first row must name the columns: Matric Number and the assessments (' . $scheme->items->pluck('code')->implode(', ') . ').'
+                : 'The first row must name the columns: Matric Number, CA and Exam.');
         }
 
         $byMatric = $sheet->results()->with('student')->get()->keyBy(fn ($r) => strtoupper(trim((string) $r->student->matric_number)));
@@ -158,10 +210,12 @@ class ResultService
                 $problems[] = 'Row ' . ($n + 2) . ": {$matric} is not registered for this course.";
                 continue;
             }
-            $scores[$row->student_id] = new Score(
-                $ca !== null ? ($line[$ca] ?? null) : $row->ca,
-                $ex !== null ? ($line[$ex] ?? null) : $row->exam,
-            );
+            $scores[$row->student_id] = $itemCols
+                ? new Score(items: array_map(fn ($i) => $line[$i] ?? null, $itemCols))
+                : new Score(
+                    $ca !== null ? ($line[$ca] ?? null) : $row->ca,
+                    $ex !== null ? ($line[$ex] ?? null) : $row->exam,
+                );
         }
 
         return new ScoreImport(count($scores), array_merge($problems, $this->saveScores($sheet, $scores, $user, 'imported')));
@@ -172,7 +226,7 @@ class ResultService
         return $this->reader->read($file->getRealPath(), $file->getClientOriginalExtension());
     }
 
-    /** Rows that still lack a CA or exam score. */
+    /** Rows that still lack a CA or exam score (on a scheme sheet: a mark for one of the assessments). */
     public function incomplete(ResultSheet $sheet): int
     {
         return $sheet->results()->where(fn ($q) => $q->whereNull('ca')->orWhereNull('exam'))->count();
@@ -187,7 +241,9 @@ class ResultService
             throw new RuntimeException('No student has registered for this course yet.');
         }
         if ($n = $this->incomplete($sheet)) {
-            throw new RuntimeException("{$n} student(s) still have no CA or exam score. Enter every score (use 0 for an absent student) before submitting.");
+            throw new RuntimeException($sheet->assessment_scheme_id
+                ? "{$n} student(s) still have no mark for one or more assessments. Enter every mark (use 0 for an absent student) before submitting."
+                : "{$n} student(s) still have no CA or exam score. Enter every score (use 0 for an absent student) before submitting.");
         }
 
         $first = ResultStage::chain()->first();
@@ -285,8 +341,12 @@ class ResultService
         $sheet->results()->update(['status' => $sheet->status === 'submitted' ? 'submitted' : $sheet->status]);
     }
 
-    /** Correct one published score. The reason and the old/new values go on the sheet's history. */
-    public function amend(CourseResult $result, $ca, $exam, string $reason, User $user, bool $record = true): CourseResult
+    /**
+     * Correct one published score. The reason and the old/new values go on the sheet's history. On a sheet with an
+     * assessment scheme, $items (code or id => mark) corrects single assessments; without it the CA and exam are spread
+     * over the items. Nothing changes unless the corrected result is complete.
+     */
+    public function amend(CourseResult $result, $ca, $exam, string $reason, User $user, bool $record = true, ?array $items = null): CourseResult
     {
         if ($result->status !== 'published') {
             throw new RuntimeException('Only published results are amended this way. Return the sheet to the lecturer instead.');
@@ -294,15 +354,20 @@ class ResultService
         if (blank($reason)) {
             throw new RuntimeException('Give the reason for the correction.');
         }
+        $scheme = $result->sheet?->scheme?->loadMissing('items');
         $old = "{$result->ca}/{$result->exam} ({$result->grade})";
-        $before = ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade];
-        $this->apply($result, $ca, $exam);
-        $result->refresh();
-        if ($result->total === null) {
-            throw new RuntimeException('Both the CA and exam scores are required.');
-        }
+        $before = ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade] + ($scheme ? ['items' => $this->assessments->snapshot($result, $scheme)] : []);
+
+        DB::transaction(function () use ($result, $ca, $exam, $scheme, $items, $user) {
+            $this->apply($result, $ca, $exam, $scheme, $items, $user);
+            $result->refresh();
+            if ($result->total === null) {
+                throw new RuntimeException($scheme ? 'Every assessment needs a mark.' : 'Both the CA and exam scores are required.');
+            }
+        });
+        $after = ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade] + ($scheme ? ['items' => $this->assessments->snapshot($result, $scheme)] : []);
         if ($record) {
-            $this->audit->note('result_amend', 'results', $user, 'score_amended', $result, $before, ['ca' => $result->ca, 'exam' => $result->exam, 'grade' => $result->grade], $reason, $result->academic_session_id);
+            $this->audit->note('result_amend', 'results', $user, 'score_amended', $result, $before, $after, $reason, $result->academic_session_id);
             DB::afterCommit(fn () => $this->mailer->resultNotice($result->fresh(), 'amended', $before, $reason, $user));
         }
         if ($result->result_sheet_id) {
@@ -379,7 +444,7 @@ class ResultService
      */
     public function transcript(Student $student): Transcript
     {
-        $all = CourseResult::with('course', 'session', 'semesterType')->where('student_id', $student->id)->where('status', 'published')
+        $all = CourseResult::with('course', 'session', 'semesterType', 'assessmentScores.item')->where('student_id', $student->id)->where('status', 'published')
             ->get()->sortBy(fn ($r) => [$r->session->name, $r->semesterType->sort_order, $r->id])->values();   // session names sort chronologically (2025/2026 < 2026/2027)
 
         $terms = $all->groupBy(fn ($r) => $r->academic_session_id . '-' . $r->semester_type_id)->map(fn ($rows) => new TranscriptTerm(

@@ -18,6 +18,11 @@ class CourseResult extends Model
         return $this->belongsTo(ResultSheet::class, 'result_sheet_id');
     }
 
+    public function assessmentScores(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AssessmentScore::class);
+    }
+
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);

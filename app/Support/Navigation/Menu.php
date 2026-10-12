@@ -152,6 +152,7 @@ class Menu
                     ['Classes of Degree', 'academics.degree-classes.index', 'View degree classes', 'academics.degree-classes.*'],
                     ['Academic Rules', 'academics.rules.index', ['View academic rules', 'Edit academic rules', 'Edit department academic rules'], 'academics.rules.*'],
                     ['Course Lecturers', 'academics.course-assignments.index', 'View course assignments', 'academics.course-assignments.*'],
+                    ['Assessment Schemes', 'academics.assessments.index', 'View assessment schemes', 'academics.assessments.*'],
                     ['Result Approval Steps', 'academics.result-stages.index', 'View result stages', 'academics.result-stages.*'],
                     ['Reference Lists', 'academics.lists.index', 'View reference lists', 'academics.lists.*'],
                     ['Copy Session Setup', 'sessions.clone', 'Copy session setup', 'sessions.clone*'],

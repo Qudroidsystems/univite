@@ -224,6 +224,17 @@ class PermissionCatalog
                 ],
             ],
 
+            'Assessment schemes' => [
+                'about' => 'The assessments a course is marked on (tests, assignments, practicals, exam ...) and which courses use which scheme. Lecturers enter a mark per assessment; the marks add up to the CA and exam.',
+                'permissions' => [
+                    ['View assessment schemes', 'View', 'See every assessment scheme, its assessments and marks, and which faculties, departments and courses use it.'],
+                    ['Create assessment schemes', 'Create', 'Build a new assessment scheme or copy an existing one. The assessments must add up to 100.'],
+                    ['Edit assessment schemes', 'Edit', 'Rename a scheme, switch it on or off, or change its assessments. Assessments are locked once marks have been entered with the scheme.'],
+                    ['Delete assessment schemes', 'Delete', 'Delete a scheme. Refused while any score sheet uses it.'],
+                    ['Assign assessment schemes', 'Assign', 'Choose the scheme the whole university, a faculty, a department or one course uses, for every session or one session. Sheets that already have marks keep their scheme.'],
+                ],
+            ],
+
             'Result sheets' => [
                 'about' => 'Course score sheets: lecturers enter or upload CA and exam scores, then the sheet is approved step by step and published to students.',
                 'permissions' => [
@@ -252,7 +263,7 @@ class PermissionCatalog
             ],
 
             'Result settings' => [
-                'about' => 'How a course\'s marks are split between continuous assessment and exam.',
+                'about' => 'How a course\'s marks are split between continuous assessment and exam when no assessment scheme applies to it.',
                 'permissions' => [
                     ['View result settings', 'View', 'See the CA and exam mark split used for score entry.'],
                     ['Edit result settings', 'Edit', 'Change the CA and exam mark split (it must add up to 100), how long students may query a result, and the graduation rules.'],

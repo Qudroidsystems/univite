@@ -22,9 +22,9 @@ to that phone. Disabling an account in the portal ends all its tokens at once.
 
 | Method | Path | What it returns |
 |---|---|---|
-| GET | `/me` | The person: name, email, phone, avatar, roles, `type` (student or staff), student record, push choice |
+| GET | `/me` | The person: name, email, phone, avatar, roles, `type` (student or staff), student record, push choice, `teaches` (staff who can enter scores) |
 | GET | `/dashboard` | Home screen: session, semester, unread count; for students CGPA, class, standing, fees outstanding, registration status, next class, next exam |
-| GET | `/results` | Published results by semester: GPA per semester, CGPA, units, class, standing, each course's CA, exam, total, grade |
+| GET | `/results` | Published results by semester: GPA per semester, CGPA, units, class, standing, each course's CA, exam, total, grade, and `assessments` (code, name, component, max, score) when the course was marked on an assessment scheme |
 | GET | `/courses` | This semester's course form and its courses, whether registration is open (and why not), earlier forms, `register_url` |
 | GET | `/timetable/lectures` | Weekly classes for the student's courses (day, time, course, venue, group) |
 | GET | `/timetable/exams` | Papers with date, time, venues, and the student's hall and seat once seating is published; `meta.slip_url` |
@@ -34,6 +34,11 @@ to that phone. Disabling an account in the portal ends all its tokens at once.
 | GET | `/clearance` | Clearance items and their status; `meta.cleared`, `meta.matric_number` |
 | GET | `/library` | Books on loan (due date, overdue) and holds |
 | GET | `/accommodation` | Hostel place and application for the current session |
+| GET | `/teaching/courses` | Staff only: courses assigned this semester (each with its score sheet once opened) and recent sheets |
+| POST | `/teaching/courses/{course}/open` | Staff only: the score sheet for an assigned course this semester, created if needed |
+| GET | `/teaching/sheets/{id}` | Staff only: a score sheet with its assessments and one row per student (see below) |
+| PUT | `/teaching/sheets/{id}/scores` | Staff only: save marks; `meta.saved`, `meta.problems` |
+| POST | `/teaching/sheets/{id}/submit` | Staff only: submit for approval (`422` with the reason when marks are missing) |
 | GET | `/notifications?unread=1&page=1&per_page=20` | Notices (newest first) with `topic`, `screen`, `url`, `read_at`; `meta.unread` |
 | GET | `/notifications/unread-count` | `{unread}` for the badge |
 | POST | `/notifications/{id}/read` | Marks one as read |
@@ -43,10 +48,30 @@ to that phone. Disabling an account in the portal ends all its tokens at once.
 | POST | `/devices` | Register or refresh this phone's push token: `{token, platform, device_name, app_version}` |
 | DELETE | `/devices` | Stop pushes to a token: `{token}` |
 
-`GET /ping` needs no token and answers `{ok, app, time}` (useful to check the address and the connection).
+`GET /ping` needs no token and answers `{ok, app, time, institution: {name, short_name, motto, logo_url, color}}` (useful to
+check the address and the connection; the app uses `institution` for its sign-in screen and colours).
 
 Actions that need forms or payment pages (registering courses, paying, renewing books, applying for a hostel) open the
 portal page given in the response (`pay_url`, `register_url`, `meta.url`) in the browser.
+
+## Score sheets (lecturers)
+
+A sheet has `mode`: `items` when an assessment scheme applies (one mark per assessment) or `ca_exam` (plain CA and exam
+from Result Settings). `assessments` lists the columns: `{id, code, name, component (ca|exam), max}`; in `ca_exam` mode
+they are `CA` and `EXAM` with `id: null`. Each row: `{student_id, matric_number, name, marks, ca, exam, total, grade, passed}`
+where `marks` is keyed by assessment id (`items`) or by `CA` / `EXAM`. `editable` is true while the sheet is a draft and
+this person may enter marks; `missing` counts students still lacking a mark. `status`: draft, submitted (waiting at
+`stage`), approved, published.
+
+Saving (only what is sent changes; `null` clears a mark):
+
+```json
+{ "scores": { "812": { "marks": { "41": 8.5, "42": 9, "44": 55 } } } }
+{ "scores": { "812": { "ca": 24, "exam": 55 } } }
+```
+
+Each mark must be from 0 to its assessment's `max`; a student with a bad mark is skipped and named in `meta.problems`,
+the rest are saved. The CA and exam are what the assessments add up to (null until every assessment of that part has a mark).
 
 ## Push notifications
 

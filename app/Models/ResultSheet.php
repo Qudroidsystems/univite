@@ -16,7 +16,7 @@ class ResultSheet extends Model
 
     protected $attributes = ['status' => 'draft'];
 
-    protected $fillable = ['course_id', 'academic_session_id', 'semester_type_id', 'status', 'stage_id', 'submitted_by', 'submitted_at', 'published_at'];
+    protected $fillable = ['course_id', 'academic_session_id', 'semester_type_id', 'assessment_scheme_id', 'status', 'stage_id', 'submitted_by', 'submitted_at', 'published_at'];
 
     protected $casts = ['submitted_at' => 'datetime', 'published_at' => 'datetime'];
 
@@ -38,6 +38,12 @@ class ResultSheet extends Model
     public function stage(): BelongsTo
     {
         return $this->belongsTo(ResultStage::class, 'stage_id');
+    }
+
+    /** The assessment scheme the sheet's marks are entered in; null = the plain CA / exam split from Result Settings. */
+    public function scheme(): BelongsTo
+    {
+        return $this->belongsTo(AssessmentScheme::class, 'assessment_scheme_id');
     }
 
     public function results(): HasMany

@@ -10,21 +10,22 @@ final readonly class ApiClass
 {
     public function __construct(
         public int $id, public int $day, public string $dayName, public string $startsAt, public string $endsAt,
-        public ?string $code, public ?string $title, public ?string $venue, public ?string $group,
+        public ?string $code, public ?string $title, public ?string $venue, public ?string $group, public ?array $location = null, public ?string $venueName = null, public ?int $courseId = null,
     ) {
     }
 
     public static function from(TimetableEntry $e): self
     {
         return new self($e->id, (int) $e->day, Timetable::DAYS[$e->day] ?? '', substr((string) $e->starts_at, 0, 5), substr((string) $e->ends_at, 0, 5),
-            $e->course?->code, $e->course?->title, $e->venue?->code, $e->item?->group_label);
+            $e->course?->code, $e->course?->title, $e->venue?->code, $e->item?->group_label, $e->venue?->location(), $e->venue?->name, $e->course_id);
     }
 
     public function toArray(): array
     {
         return [
             'id' => $this->id, 'day' => $this->day, 'day_name' => $this->dayName, 'starts_at' => $this->startsAt, 'ends_at' => $this->endsAt,
-            'course_code' => $this->code, 'course_title' => $this->title, 'venue' => $this->venue, 'group' => $this->group,
+            'course_id' => $this->courseId, 'course_code' => $this->code, 'course_title' => $this->title, 'venue' => $this->venue, 'venue_name' => $this->venueName, 'group' => $this->group,
+            'location' => $this->location,
         ];
     }
 }

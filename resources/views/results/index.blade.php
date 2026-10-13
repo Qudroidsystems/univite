@@ -12,9 +12,21 @@
                     <div class="card-header"><h6 class="card-title mb-0">My courses{{ $ctx ? ' · ' . $ctx->session->name . ' ' . $ctx->type->name : '' }}</h6></div>
                     <ul class="list-group list-group-flush">
                         @foreach ($mine as $a)
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><span class="fw-semibold">{{ $a->course->code }}</span> {{ $a->course->title }}</span>
-                                <a href="{{ route('results.open', $a->course_id) }}" class="btn btn-sm btn-primary">Enter scores</a>
+                            @php $sc = $schemes[$a->course_id]['scheme'] ?? null; $sh = $schemes[$a->course_id]['sheet'] ?? null; @endphp
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                                <span>
+                                    <span class="fw-semibold">{{ $a->course->code }}</span> {{ $a->course->title }}
+                                    @if ($sh)<span class="badge {{ \App\Models\ResultSheet::BADGES[$sh->status] }} ms-1">{{ \App\Models\ResultSheet::STATUSES[$sh->status] }}</span>@endif
+                                    <span class="d-block mt-1">
+                                        @if ($sc)
+                                            <span class="text-muted fs-12 me-1"><i class="ri-survey-line"></i> {{ $sc->name }}:</span>
+                                            @foreach ($sc->items as $it)<span class="badge {{ $it->component === 'exam' ? 'bg-primary-subtle text-primary' : 'bg-info-subtle text-info' }} me-1">{{ $it->name }} /{{ $it->maxLabel() }}</span>@endforeach
+                                        @else
+                                            <span class="text-muted fs-12 me-1">No assessment scheme:</span><span class="badge bg-info-subtle text-info me-1">CA /{{ rtrim(rtrim(number_format($caMax, 2), '0'), '.') }}</span><span class="badge bg-primary-subtle text-primary">Exam /{{ rtrim(rtrim(number_format($examMax, 2), '0'), '.') }}</span>
+                                        @endif
+                                    </span>
+                                </span>
+                                <a href="{{ route('results.open', $a->course_id) }}" class="btn btn-sm btn-primary text-nowrap">Enter scores</a>
                             </li>
                         @endforeach
                     </ul>

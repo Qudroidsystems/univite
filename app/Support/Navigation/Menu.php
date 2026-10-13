@@ -25,7 +25,7 @@ use Illuminate\Routing\Router;
  */
 class Menu
 {
-    public function __construct(private ScopedAccess $scoped, private PollService $polls, private Router $router)
+    public function __construct(private ScopedAccess $scoped, private PollService $polls, private Router $router, private \App\Support\MobileAppSettings $mobile)
     {
     }
 
@@ -102,6 +102,7 @@ class Menu
         $add($this->scoped->scope($u, 'View course registrations')->isEmpty() && CourseAdviser::where('user_id', $u->id)->exists(), 'My Advisees', 'registrations.index', 'ph-users-three', ['registrations.*'], ['course adviser']);
         $add($u->courseAssignments()->exists() && ! $u->can('View result sheets'), 'My Courses & Scores', 'results.sheets.index', 'ph-list-checks', ['results.*'], ['score sheet', 'results']);
         $add($settled, 'My Results', 'my.results', 'ph-medal', ['my.results*'], ['grades', 'gpa', 'cgpa', 'transcript']);
+        $add($settled && $this->mobile->feature('gpa_planner'), 'GPA Planner', 'my.gpa-planner', 'ph-target', ['my.gpa-planner'], ['target', 'gpa', 'cgpa', 'grades needed']);
         $add((bool) $student, 'My Fees', 'my.fees', 'ph-wallet', ['my.fees*', 'my.receipt'], ['pay', 'invoice', 'receipt', 'school fees']);
         $add($settled, 'My Timetable', 'my.timetable', 'ph-calendar', ['my.timetable'], ['lectures', 'classes']);
         $add($settled, 'My Examinations', 'my.exams', 'ph-exam', ['my.exams*'], ['exam', 'seat number']);

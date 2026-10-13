@@ -98,6 +98,8 @@ class VenueController extends Controller
             'facilities' => ['nullable', 'array'], 'facilities.*' => ['string', 'max:100'],
             'shared_exams' => ['nullable', 'boolean'], 'wheelchair_access' => ['nullable', 'boolean'],
             'entry_info' => ['nullable', 'string', 'max:150'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'status' => ['required', Rule::in(array_keys(Venue::STATUSES))],
             'notes' => ['nullable', 'string', 'max:2000'], 'is_active' => ['nullable', 'boolean'],
         ];

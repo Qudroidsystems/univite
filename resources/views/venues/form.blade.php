@@ -17,6 +17,13 @@
             <div class="col-md-2"><label class="form-label">Floor</label><input name="floor" value="{{ $old('floor') }}" class="form-control"></div>
             <div class="col-md-2"><label class="form-label">Room number</label><input name="room_number" value="{{ $old('room_number') }}" class="form-control"></div>
             <div class="col-md-2"><label class="form-label">Hall entry</label><input name="entry_info" value="{{ $old('entry_info') }}" class="form-control" placeholder="North entrance"></div>
+            <div class="col-md-3"><label class="form-label">Latitude</label><input name="latitude" id="venue-lat" value="{{ $old('latitude') }}" class="form-control" inputmode="decimal" placeholder="7.8231450"></div>
+            <div class="col-md-3"><label class="form-label">Longitude</label><input name="longitude" id="venue-lng" value="{{ $old('longitude') }}" class="form-control" inputmode="decimal" placeholder="6.0687210"></div>
+            <div class="col-md-6 d-flex align-items-end gap-2 flex-wrap">
+                <button type="button" class="btn btn-soft-primary" id="venue-locate"><i class="ri-map-pin-user-line me-1"></i>Use my current location</button>
+                @if ($v->latitude && $v->longitude)<a class="btn btn-light" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query={{ $v->latitude }},{{ $v->longitude }}"><i class="ri-map-2-line me-1"></i>See on the map</a>@endif
+                <div class="form-text w-100">Stand at the hall's entrance with a phone and tap the button, or copy the numbers from Google Maps (long-press the spot). Students' app uses this to show how far the hall is and give walking directions.</div>
+            </div>
             <div class="col-md-6"><label class="form-label">Owning department <span class="text-muted">(optional)</span></label><select name="department_id" data-lookup="departments" data-lookup-active="1" class="form-select"><option value="">Shared by everyone</option>@foreach ($departments as $id => $n)<option value="{{ $id }}" @selected((int) $old('department_id') === $id)>{{ $n }}</option>@endforeach</select><div class="form-text">Timetables prefer giving a department its own rooms.</div></div>
             <div class="col-md-3"><label class="form-label">Status</label><select name="status" class="form-select">@foreach (\App\Models\Venue::STATUSES as $k => $s)<option value="{{ $k }}" @selected($old('status', 'available') === $k)>{{ $s }}</option>@endforeach</select></div>
             <div class="col-md-3 d-flex align-items-end"><div class="form-check form-switch"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="active" @checked($old('is_active', true))><label class="form-check-label" for="active">In the register (active)</label></div></div>
@@ -47,3 +54,22 @@
     </form>
 </div></div></div>
 @endsection
+
+@push('scripts')
+<script>
+document.getElementById('venue-locate')?.addEventListener('click', function () {
+    const btn = this;
+    if (!navigator.geolocation) { alert('This browser cannot read your location.'); return; }
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(function (p) {
+        document.getElementById('venue-lat').value = p.coords.latitude.toFixed(7);
+        document.getElementById('venue-lng').value = p.coords.longitude.toFixed(7);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-check-line me-1"></i>Location filled in (about ' + Math.round(p.coords.accuracy) + ' m accurate)';
+    }, function (e) {
+        btn.disabled = false;
+        alert('Could not read your location: ' + e.message);
+    }, {enableHighAccuracy: true, timeout: 20000});
+});
+</script>
+@endpush

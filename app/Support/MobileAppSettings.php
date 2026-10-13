@@ -25,7 +25,16 @@ class MobileAppSettings extends SettingsGroup
         'directory' => 'Find people (students and staff)',
         'gpa_planner' => 'GPA planner',
         'reminders' => 'Class and exam reminders',
+        'reading_planner' => 'Reading planner (weekly study timetable with reminders)',
+        'study_companion' => 'AI study companion (practice questions and answers from course materials)',
+        'campus_map' => 'Distance and walking directions to lecture and exam venues',
+        'health_reminders' => 'Medication and clinic appointment reminders (kept only on the student\'s phone)',
     ];
+
+    /** AI services the study companion can use; the school brings its own key. */
+    public const AI_PROVIDERS = ['none' => 'Off', 'anthropic' => 'Anthropic Claude', 'openai' => 'OpenAI', 'gemini' => 'Google Gemini'];
+
+    public const AI_DEFAULT_MODELS = ['anthropic' => 'claude-sonnet-5-5', 'openai' => 'gpt-4o-mini', 'gemini' => 'gemini-2.5-flash'];
 
     protected function prefix(): string
     {
@@ -69,12 +78,50 @@ class MobileAppSettings extends SettingsGroup
 
             'feed' => ['Campus feed', 'heading', null, 'Staff with "Post to the campus feed" may post to anyone; other staff may post to their own department.'],
             'students_post_feed' => ['Students may post in their department\'s feed', 'switch', false, null],
+
+            'study' => ['Academic companion', 'heading', null, 'The GPA planner, reading planner and reminders work without anything else. The AI tutor needs an account with one of the AI services below; the key stays on this server and is never sent to phones.'],
+            'show_running_ca' => ['Students see their CA marks in the GPA planner before results are published', 'switch', false,
+                'The planner can then work out the exam score each student needs for a grade. Leave off if continuous assessment marks must stay private until approval.'],
+            'ai_provider' => ['AI service for the study companion', 'select', 'none', null, self::AI_PROVIDERS, ['nullable', 'in:' . implode(',', array_keys(self::AI_PROVIDERS))]],
+            'ai_model' => ['AI model', 'text', null, 'Leave empty for the default: ' . implode(', ', array_map(fn ($p, $m) => self::AI_PROVIDERS[$p] . ' ' . $m, array_keys(self::AI_DEFAULT_MODELS), self::AI_DEFAULT_MODELS)) . '.', null, ['nullable', 'string', 'max:100']],
+            'ai_api_key' => ['AI service API key', 'secret', null, 'From console.anthropic.com, platform.openai.com or aistudio.google.com.'],
+            'ai_daily_limit' => ['AI requests per student per day', 'number', 40, 'Each question asked, quiz made or answer marked counts as one. Protects the school\'s AI bill.', null, ['nullable', 'integer', 'min:1', 'max:1000']],
+            'study_upload_mb' => ['Largest study document a student may upload (MB)', 'number', 15, null, null, ['nullable', 'integer', 'min:1', 'max:50']],
+
+            'health' => ['Health centre', 'heading', null, 'Shown with the app\'s medication and appointment reminders, which stay on the student\'s phone and are never sent to the portal.'],
+            'health_centre_name' => ['Health centre name', 'text', 'University Health Centre', null],
+            'health_centre_phone' => ['Health centre phone (emergencies)', 'text', null, null],
+            'health_centre_latitude' => ['Health centre latitude', 'text', null, 'For directions in the app, e.g. 7.8231450.', null, ['nullable', 'numeric', 'between:-90,90']],
+            'health_centre_longitude' => ['Health centre longitude', 'text', null, null, null, ['nullable', 'numeric', 'between:-180,180']],
         ];
     }
 
     public function feature(string $key): bool
     {
         return $this->on('feature_' . $key);
+    }
+
+    public function aiProvider(): ?string
+    {
+        $p = $this->get('ai_provider');
+
+        return ($p && $p !== 'none' && isset(self::AI_DEFAULT_MODELS[$p]) && filled($this->get('ai_api_key'))) ? $p : null;
+    }
+
+    public function aiModel(): ?string
+    {
+        $p = $this->aiProvider();
+
+        return $p ? (trim((string) $this->get('ai_model')) ?: self::AI_DEFAULT_MODELS[$p]) : null;
+    }
+
+    public function healthCentre(): array
+    {
+        $lat = $this->get('health_centre_latitude');
+        $lng = $this->get('health_centre_longitude');
+
+        return ['name' => $this->get('health_centre_name') ?: 'Health centre', 'phone' => $this->get('health_centre_phone'),
+            'lat' => is_numeric($lat) ? (float) $lat : null, 'lng' => is_numeric($lng) ? (float) $lng : null];
     }
 
     public function pusherReady(): bool
@@ -94,6 +141,9 @@ class MobileAppSettings extends SettingsGroup
             'pusher' => $this->pusherReady() ? ['key' => $this->get('pusher_key'), 'cluster' => $this->get('pusher_cluster') ?: 'eu'] : null,
             'market' => ['max_photos' => $this->int('market_max_photos'), 'rules' => $this->get('market_rules'), 'needs_approval' => $this->on('market_needs_approval')],
             'chat' => ['max_upload_mb' => $this->int('chat_max_upload_mb')],
+            'study' => ['ai' => $this->feature('study_companion') && $this->aiProvider() !== null, 'running_ca' => $this->on('show_running_ca'),
+                'daily_limit' => $this->int('ai_daily_limit'), 'upload_mb' => $this->int('study_upload_mb')],
+            'health_centre' => $this->healthCentre(),
         ];
     }
 }

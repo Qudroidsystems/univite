@@ -18,8 +18,32 @@ use RuntimeException;
  */
 class TeachingController extends ApiController
 {
-    public function __construct(private ResultService $results, private RegistrationService $registration)
+    public function __construct(private ResultService $results, private RegistrationService $registration, private \App\Services\AssessmentService $assessments)
     {
+    }
+
+    /**
+     * The assessments a course is marked on this semester (Test 1 /10, Assignment /20, Exam /70 ...), so the lecturer's
+     * course list shows them before the sheet is opened. An opened sheet keeps the scheme it started with.
+     */
+    private function assessmentsFor(Course $course, ?ResultSheet $sheet, ?int $sessionId): array
+    {
+        if ($sheet) {
+            $sheet->loadMissing('scheme.items');
+            [$caMax, $examMax] = ResultService::limits($sheet);
+            $scheme = $sheet->scheme;
+        } else {
+            [$scheme] = $this->assessments->resolve($course, $sessionId);
+            [$caMax, $examMax] = $scheme ? [$scheme->caMax(), $scheme->examMax()] : [ResultService::caMax(), ResultService::examMax()];
+        }
+
+        return [
+            'scheme' => $scheme ? ['id' => $scheme->id, 'name' => $scheme->name, 'summary' => $scheme->summary()] : null,
+            'assessments' => $scheme
+                ? $scheme->items->map(fn ($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name, 'component' => $i->component, 'max' => (float) $i->max_score])->values()->all()
+                : [['id' => null, 'code' => 'CA', 'name' => 'Continuous assessment', 'component' => 'ca', 'max' => (float) $caMax],
+                    ['id' => null, 'code' => 'EXAM', 'name' => 'Examination', 'component' => 'exam', 'max' => (float) $examMax]],
+        ];
     }
 
     private function staff(Request $request): void
@@ -54,7 +78,7 @@ class TeachingController extends ApiController
             'courses' => $mine->map(fn ($a) => [
                 'course' => ['id' => $a->course->id, 'code' => $a->course->code, 'title' => $a->course->title, 'units' => (int) $a->course->credit_units],
                 'sheet' => ($s = $current->get($a->course_id)) ? $this->sheetData($request, $s, false) : null,
-            ])->sortBy('course.code')->values()->all(),
+            ] + $this->assessmentsFor($a->course, $s, $ctx?->session->id))->sortBy('course.code')->values()->all(),
             'sheets' => $sheets->map(fn ($s) => $this->sheetData($request, $s, false))->values()->all(),
         ]);
     }

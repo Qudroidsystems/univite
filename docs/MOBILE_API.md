@@ -140,3 +140,27 @@ Edited on the website under **Campus Life → Mobile App**.
 | GET | `/reports/reasons` · POST `/reports` | `{type: message|listing|post|comment|user, id, reason, details}` |
 
 Push `screen` values added: `chat` (with `conversation_id`), `marketplace` (`listing_id`), `feed` (`post_id`), `materials` (`course_id`).
+
+## Academic companion
+
+Switched on and off with the features `gpa_planner`, `reading_planner`, `campus_map`, `study_companion` and `health_reminders`
+(Settings → Mobile App). `GET /ping` also returns `mobile.study` (`ai`: the AI tutor is ready, `running_ca`, `daily_limit`,
+`upload_mb`) and `mobile.health_centre` (`name`, `phone`, `lat`, `lng`).
+
+| Method | Path | |
+|---|---|---|
+| GET | `/planner/gpa` | Grading `scale` (letter, min, max, points, pass), `cgpa`, graded `units` and `points` so far, CGPA `method`, this semester's `courses` (units, `ca` so far when "show running CA" is on, `ca_max`, `exam_max`, `retake_of`) |
+| POST | `/planner/gpa` | `{target, kind: gpa|cgpa, strengths: {course id: 1-5}, fixed: {course id: letter}}` → `feasible`, `needed_gpa`, `max_gpa`, `max_cgpa`, `message`, `scenarios: [{key: balanced|units|strengths|pass|best, label, note, gpa, cgpa, courses: [{grade, points, min_score, ca, exam_needed, exam_max}]}]` |
+| GET | `/planner/reading` | The saved `plan`, `courses` (units, `lectures` a week, `exam_date`), `lectures` (kept free), `criteria` |
+| POST | `/planner/reading` | `{free_time: [{day 1-7, start "HH:MM", end}], session_minutes, break_minutes, max_per_day, avoid_lectures, criteria: [units, timetable, priority, difficulty, exams, target], courses: {course id: {priority 1-5, difficulty 1-5, target_grade, skip}}}` → `sessions: [{day, starts_at, ends_at, course_id, code, title, kind: reading|revision|practice}]`, `summary` (minutes per course and why). DELETE removes it |
+| GET | `/campus/places` | `venues: [{code, name, building, campus, entry, lat, lng}]` and `health_centre`. Lecture slots and exam papers also carry `location` / `locations` (and `seat.location`) |
+| GET | `/study` | `ai_ready`, `remaining_today`, `documents`, recent `quizzes`, `progress`, course `materials` the student can study, `courses` |
+| POST | `/study/documents` | multipart `file` (pdf, docx, pptx, txt, md, jpg, png, webp) or `text`, or `{material_id}`; `title`, `course_id`. Scanned PDFs and photos are read by the AI service |
+| GET/DELETE | `/study/documents/{id}` · GET `/study/documents/{id}/sections/{n}` | Document with its `quizzes` and section `outline` · one section's text |
+| POST | `/study/documents/{id}/quiz` | `{count 1-15, type: mcq|short|mixed, difficulty: easy|medium|hard|mixed, topic}` → quiz (answers hidden until answered; `?reveal=1` on GET shows them) |
+| GET/DELETE | `/study/quizzes/{id}` · POST `/study/quizzes/{id}/answer` | `{index, answer}` (option index or text) → `correct`, `score` 0-1, `feedback`, `explanation`, `model_answer`, `quote`, `section`; `meta.score` percent |
+| POST | `/study/ask` | `{question, document_id?, course_id?, history: [{role: user|assistant, content}]}` → `answer`, `from_material`, `sources: [{section, excerpt}]`, `follow_up`, `remaining` |
+| GET | `/study/progress` | Practice results by `topics` and `courses`, weakest first |
+
+Teaching: each course in `GET /teaching/courses` now has `scheme` and `assessments` (the items it will be marked on) even before its sheet is opened.
+Medication and appointment reminders never reach the portal: they are kept and scheduled on the phone.

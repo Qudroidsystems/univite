@@ -130,6 +130,26 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
         Route::get('reports/reasons', [$c, 'reportReasons'])->name('reports.reasons');
         Route::post('reports', [$c, 'report'])->middleware('throttle:20,1')->name('reports.store');
 
+        // ---- Academic companion: GPA targets, reading planner, campus places, AI study companion ----
+        $st = V1\StudyController::class;
+        Route::get('planner/gpa', [$st, 'gpaContext'])->name('planner.gpa');
+        Route::post('planner/gpa', [$st, 'gpaPlan'])->middleware('throttle:60,1')->name('planner.gpa.plan');
+        Route::get('planner/reading', [$st, 'readingShow'])->name('planner.reading');
+        Route::post('planner/reading', [$st, 'readingSave'])->middleware('throttle:30,1')->name('planner.reading.save');
+        Route::delete('planner/reading', [$st, 'readingDelete'])->name('planner.reading.delete');
+        Route::get('campus/places', [$st, 'places'])->name('campus.places');
+        Route::get('study', [$st, 'home'])->name('study');
+        Route::get('study/progress', [$st, 'progress'])->name('study.progress');
+        Route::post('study/documents', [$st, 'addDocument'])->middleware('throttle:20,1')->name('study.documents.store');
+        Route::get('study/documents/{document}', [$st, 'document'])->name('study.documents.show');
+        Route::get('study/documents/{document}/sections/{n}', [$st, 'section'])->whereNumber('n')->name('study.documents.section');
+        Route::delete('study/documents/{document}', [$st, 'deleteDocument'])->name('study.documents.delete');
+        Route::post('study/documents/{document}/quiz', [$st, 'makeQuiz'])->middleware('throttle:20,1')->name('study.quiz.make');
+        Route::get('study/quizzes/{quiz}', [$st, 'quiz'])->name('study.quizzes.show');
+        Route::post('study/quizzes/{quiz}/answer', [$st, 'answer'])->middleware('throttle:60,1')->name('study.quizzes.answer');
+        Route::delete('study/quizzes/{quiz}', [$st, 'deleteQuiz'])->name('study.quizzes.delete');
+        Route::post('study/ask', [$st, 'ask'])->middleware('throttle:30,1')->name('study.ask');
+
         Route::post('devices', [V1\DevicesController::class, 'store'])->name('devices.store');
         Route::delete('devices', [V1\DevicesController::class, 'destroy'])->name('devices.destroy');
     });

@@ -23,6 +23,7 @@
                     <tr><th class="text-muted fw-normal">Accessibility</th><td>{{ $v->wheelchair_access ? 'Wheelchair access' : 'No wheelchair access recorded' }}@if ($v->accessible_seats) · {{ count($v->accessible_seats) }} accessible seat(s)@endif</td></tr>
                     @if ($v->department)<tr><th class="text-muted fw-normal">Department</th><td>{{ $v->department->name }}</td></tr>@endif
                     @if ($v->entry_info)<tr><th class="text-muted fw-normal">Hall entry</th><td>{{ $v->entry_info }}</td></tr>@endif
+                    <tr><th class="text-muted fw-normal">Map position</th><td>@if ($v->latitude && $v->longitude)<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query={{ $v->latitude }},{{ $v->longitude }}">{{ $v->latitude }}, {{ $v->longitude }} <i class="ri-external-link-line"></i></a>@else<span class="text-muted">Not set. Edit the venue to add it, so students see how far it is.</span>@endif</td></tr>
                     @if ($v->notes)<tr><th class="text-muted fw-normal">Notes</th><td>{{ $v->notes }}</td></tr>@endif
                 </table></div></div>
 

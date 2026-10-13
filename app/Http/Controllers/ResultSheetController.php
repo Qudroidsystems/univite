@@ -16,7 +16,7 @@ use RuntimeException;
 /** Lecturers' score sheets and the approval chain. Access is by course assignment or by permission, checked per sheet. */
 class ResultSheetController extends Controller
 {
-    public function __construct(private ResultService $results, private RegistrationService $registration)
+    public function __construct(private ResultService $results, private RegistrationService $registration, private \App\Services\AssessmentService $assessments)
     {
     }
 
@@ -48,8 +48,19 @@ class ResultSheetController extends Controller
         $mySheets = (clone $sheets)->whereIn('course_id', $user->courseAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
             ->filter(fn ($s) => $this->results->canEnter($user, $s));
 
+        // What each of my courses is marked on this semester: the opened sheet's scheme, or the one that applies.
+        $current = $ctx ? ResultSheet::with('scheme.items')->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)
+            ->whereIn('course_id', $mine->pluck('course_id'))->get()->keyBy('course_id') : collect();
+        $schemes = $mine->mapWithKeys(function ($a) use ($current, $ctx) {
+            $sheet = $current->get($a->course_id);
+            $scheme = $sheet ? $sheet->scheme : $this->assessments->resolve($a->course, $ctx?->session->id)[0];
+
+            return [$a->course_id => ['sheet' => $sheet, 'scheme' => $scheme]];
+        });
+
         return view('results.index', [
-            'pagetitle' => 'Results', 'ctx' => $ctx, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status,
+            'pagetitle' => 'Results', 'ctx' => $ctx, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status, 'schemes' => $schemes,
+            'caMax' => ResultService::caMax(), 'examMax' => ResultService::examMax(),
             'counts' => ResultSheet::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status'),
         ]);
     }

@@ -80,3 +80,12 @@ it('opens the venue, timetable and availability pages', function () {
     $student = \App\Models\Student::where('last_name', 'CSC100')->first()->user;
     $this->actingAs($student)->get(route('my.timetable'))->assertOk()->assertSee('CSC 101');
 });
+
+it('keeps a venue\'s map position for the app, both numbers or neither', function () {
+    $base = ['code' => 'GPS1', 'name' => 'Science Hall', 'type' => 'lecture_hall', 'capacity' => 100, 'teaching_capacity' => 100, 'exam_capacity' => 50, 'uses' => ['lecture'], 'status' => 'available'];
+    $this->actingAs($this->admin)->post(route('venues.store'), ['latitude' => '7.8231450'] + $base)->assertSessionHasErrors('longitude');
+    $this->actingAs($this->admin)->post(route('venues.store'), ['latitude' => '7.8231450', 'longitude' => '6.0687210'] + $base)->assertRedirect();
+    $v = Venue::where('code', 'GPS1')->firstOrFail();
+    expect($v->location())->toMatchArray(['code' => 'GPS1', 'lat' => 7.823145, 'lng' => 6.068721]);
+    $this->actingAs($this->admin)->get(route('venues.show', $v))->assertOk()->assertSee('7.823145');
+});

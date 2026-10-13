@@ -17,16 +17,27 @@ class Venue extends Model
 
     protected $fillable = [
         'code', 'name', 'type', 'campus', 'building', 'floor', 'room_number', 'department_id', 'capacity', 'teaching_capacity', 'exam_capacity',
-        'seat_rows', 'seats_per_row', 'blocked_seats', 'accessible_seats', 'uses', 'facilities', 'shared_exams', 'wheelchair_access', 'entry_info',
+        'seat_rows', 'seats_per_row', 'blocked_seats', 'accessible_seats', 'uses', 'facilities', 'shared_exams', 'wheelchair_access', 'entry_info', 'latitude', 'longitude',
         'status', 'notes', 'is_active',
     ];
 
     protected $casts = [
         'blocked_seats' => 'array', 'accessible_seats' => 'array', 'uses' => 'array', 'facilities' => 'array',
-        'shared_exams' => 'boolean', 'wheelchair_access' => 'boolean', 'is_active' => 'boolean',
+        'shared_exams' => 'boolean', 'wheelchair_access' => 'boolean', 'is_active' => 'boolean', 'latitude' => 'float', 'longitude' => 'float',
     ];
 
     protected $attributes = ['status' => 'available'];
+
+    /** Where the venue is on the map, for the app's "how far is it" and directions; null until someone sets it. */
+    public function location(): ?array
+    {
+        if ($this->latitude === null || $this->longitude === null) {
+            return null;
+        }
+
+        return ['code' => $this->code, 'name' => $this->name, 'building' => $this->building, 'campus' => $this->campus, 'entry' => $this->entry_info,
+            'lat' => (float) $this->latitude, 'lng' => (float) $this->longitude];
+    }
 
     public function department(): BelongsTo
     {

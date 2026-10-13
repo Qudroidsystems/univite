@@ -391,6 +391,7 @@ Route::middleware('auth')->group(function () {
     // ---- A student's or lecturer's own timetable, papers and duties ----
     Route::get('my/timetable', [\App\Http\Controllers\MyScheduleController::class, 'timetable'])->name('my.timetable');
     Route::get('my/examinations', [\App\Http\Controllers\MyScheduleController::class, 'exams'])->name('my.exams');
+    Route::get('my/gpa-planner', \App\Http\Controllers\MyGpaPlannerController::class)->name('my.gpa-planner');
     Route::get('my/examinations/slip', [\App\Http\Controllers\MyScheduleController::class, 'slip'])->name('my.exams.slip');
     Route::get('my/teaching', [\App\Http\Controllers\MyScheduleController::class, 'teaching'])->name('my.teaching');
 

@@ -37,6 +37,8 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
         Route::get('teaching/sheets/{sheet}', [V1\TeachingController::class, 'show'])->name('teaching.sheets.show');
         Route::put('teaching/sheets/{sheet}/scores', [V1\TeachingController::class, 'save'])->name('teaching.sheets.save');
         Route::post('teaching/sheets/{sheet}/submit', [V1\TeachingController::class, 'submit'])->name('teaching.sheets.submit');
+        Route::get('teaching/sheets/{sheet}/file', [V1\TeachingController::class, 'download'])->name('teaching.sheets.file');
+        Route::post('teaching/sheets/{sheet}/upload', [V1\TeachingController::class, 'upload'])->middleware('throttle:20,1')->name('teaching.sheets.upload');
 
         Route::get('fees', [V1\FeesController::class, 'index'])->name('fees');
         Route::get('fees/{invoice}', [V1\FeesController::class, 'show'])->name('fees.show');

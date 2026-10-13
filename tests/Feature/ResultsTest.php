@@ -95,7 +95,7 @@ it('reads a CSV upload by matric number and reports rows it cannot place', funct
         ->and(CourseResult::where('student_id', $this->students[1]->id)->value('grade'))->toBe('C');
 
     $this->post(route('results.sheets.upload', $this->sheet->id), ['file' => UploadedFile::fake()->createWithContent('bad.csv', "Foo,Bar\n1,2\n")])->assertSessionHas('error');
-    $this->get(route('results.sheets.template', $this->sheet->id))->assertOk()->assertSee('2026/0001');
+    $this->get(route('results.sheets.template', [$this->sheet->id, 'format' => 'csv']))->assertOk()->assertSee('2026/0001');
 });
 
 it('will not submit until every score is in, then locks the sheet', function () {

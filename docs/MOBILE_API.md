@@ -162,5 +162,5 @@ Switched on and off with the features `gpa_planner`, `reading_planner`, `campus_
 | POST | `/study/ask` | `{question, document_id?, course_id?, history: [{role: user|assistant, content}]}` → `answer`, `from_material`, `sources: [{section, excerpt}]`, `follow_up`, `remaining` |
 | GET | `/study/progress` | Practice results by `topics` and `courses`, weakest first |
 
-Teaching: each course in `GET /teaching/courses` now has `scheme` and `assessments` (the items it will be marked on) even before its sheet is opened.
+Teaching: `GET /teaching/sheets/{id}/file?format=xlsx|csv` downloads the sheet to fill in offline (Excel by default: a column per assessment with its maximum, marks already entered, Excel refuses out-of-range marks); `POST /teaching/sheets/{id}/upload` (multipart `file`, .xlsx or .csv) reads it back → the sheet, `meta.read`, `meta.problems`. Each course in `GET /teaching/courses` now has `scheme` and `assessments` (the items it will be marked on) even before its sheet is opened.
 Medication and appointment reminders never reach the portal: they are kept and scheduled on the phone.

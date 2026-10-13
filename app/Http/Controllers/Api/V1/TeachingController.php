@@ -144,6 +144,39 @@ class TeachingController extends ApiController
         return $this->ok($this->sheetData($request, $sheet->fresh()), ['saved' => count($scores) - count($problems), 'problems' => $problems]);
     }
 
+    /** GET /api/v1/teaching/sheets/{sheet}/file?format=xlsx|csv: the sheet to fill in offline (Excel by default). */
+    public function download(Request $request, ResultSheet $sheet, \App\Services\ScoreSheetFile $file)
+    {
+        $this->staff($request);
+        abort_unless($this->mayView($request, $sheet), 404);
+        $csv = $request->query('format') === 'csv';
+
+        return response($csv ? $file->csv($sheet) : $file->xlsx($sheet), 200, [
+            'Content-Type' => $csv ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $file->filename($sheet, $csv ? 'csv' : 'xlsx') . '"',
+        ]);
+    }
+
+    /** POST /api/v1/teaching/sheets/{sheet}/upload (multipart "file": .xlsx or .csv filled in from the download) */
+    public function upload(Request $request, ResultSheet $sheet): JsonResponse
+    {
+        $this->staff($request);
+        abort_unless($this->results->canEnter($request->user(), $sheet), 403, 'You are not assigned to this course.');
+        $request->validate(['file' => ['required', 'file', 'max:4096']]);
+        $ext = strtolower($request->file('file')->getClientOriginalExtension());
+        if (! in_array($ext, ['xlsx', 'csv', 'txt'], true)) {
+            return response()->json(['message' => 'Upload the Excel (.xlsx) or CSV file downloaded from this sheet.', 'errors' => ['file' => ['Wrong file type.']]], 422);
+        }
+        try {
+            $out = $this->results->import($sheet, $request->file('file'), $request->user());
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors' => ['file' => [$e->getMessage()]]], 422);
+        }
+
+        return $this->ok($this->sheetData($request, $sheet->fresh()), ['read' => $out->saved, 'problems' => $out->problems,
+            'message' => $out->problems ? $out->saved . ' row(s) read; some marks were not saved.' : $out->saved . ' row(s) read and saved.']);
+    }
+
     /** POST /api/v1/teaching/sheets/{sheet}/submit */
     public function submit(Request $request, ResultSheet $sheet): JsonResponse
     {

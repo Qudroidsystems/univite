@@ -188,7 +188,7 @@ it('reads uploads and writes the fill-in sheet with one column per assessment', 
         ->and(CourseResult::where('student_id', $this->students[1]->id)->first()->ca)->toBe(15.0)
         ->and(CourseResult::where('student_id', $this->students[1]->id)->first()->exam)->toBeNull();
 
-    $out = $this->get(route('results.sheets.template', $sheet->id))->assertOk()->getContent();
+    $out = $this->get(route('results.sheets.template', [$sheet->id, 'format' => 'csv']))->assertOk()->getContent();
     expect($out)->toContain('"T1 (10)"')->toContain('"EXAM (70)"')->toContain('"2026/0001","Adeyemi Tola",7,8,9,55');
 
     $this->post(route('results.sheets.upload', $sheet->id), ['file' => UploadedFile::fake()->createWithContent('bad.csv', "Matric,Foo\n2026/0001,1\n")])

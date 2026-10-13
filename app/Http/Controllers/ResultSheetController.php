@@ -133,27 +133,16 @@ class ResultSheetController extends Controller
             : back()->with('success', $msg . ' Scores saved.');
     }
 
-    /** A CSV the lecturer can fill in and upload again. */
-    public function template(ResultSheet $sheet): Response
+    /** The sheet as an Excel file (or ?format=csv) the lecturer can fill in and upload again. */
+    public function template(Request $request, ResultSheet $sheet, \App\Services\ScoreSheetFile $file): Response
     {
         abort_unless($this->mayView($sheet), 403);
-        $rows = $sheet->results()->with('student', 'assessmentScores')->get()->sortBy(fn ($r) => $r->student->last_name);
-        $cell = fn ($v) => '"' . str_replace('"', '""', (string) $v) . '"';
-        if ($scheme = $sheet->scheme?->load('items')) {
-            $out = implode(',', array_merge(['Matric Number', 'Name'], $scheme->items->map(fn ($i) => $cell("{$i->code} ({$i->maxLabel()})"))->all())) . "\n";
-            foreach ($rows as $r) {
-                $have = $r->assessmentScores->keyBy('assessment_item_id');
-                $out .= implode(',', array_merge([$cell($r->student->matric_number), $cell($r->student->full_name)],
-                    $scheme->items->map(fn ($i) => $have->has($i->id) ? (string) (float) $have[$i->id]->score : '')->all())) . "\n";
-            }
-        } else {
-            $out = "Matric Number,Name,CA,Exam\n";
-            foreach ($rows as $r) {
-                $out .= sprintf("%s,\"%s\",%s,%s\n", $r->student->matric_number, str_replace('"', '""', $r->student->full_name), $r->ca, $r->exam);
-            }
-        }
+        $csv = $request->query('format') === 'csv';
 
-        return response($out, 200, ['Content-Type' => 'text/csv', 'Content-Disposition' => 'attachment; filename="' . str_replace(' ', '_', $sheet->course->code) . '_scores.csv"']);
+        return response($csv ? $file->csv($sheet) : $file->xlsx($sheet), 200, [
+            'Content-Type' => $csv ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $file->filename($sheet, $csv ? 'csv' : 'xlsx') . '"',
+        ]);
     }
 
     public function submit(Request $request, ResultSheet $sheet): RedirectResponse

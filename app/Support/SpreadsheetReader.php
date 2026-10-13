@@ -14,7 +14,11 @@ class SpreadsheetReader
         $ext = strtolower($ext);
         if (in_array($ext, ['xlsx', 'xls'], true)) {
             if (! class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)) {
-                throw new RuntimeException('Excel files are not supported on this server yet. Save the sheet as CSV and upload that.');
+                // Without PhpSpreadsheet, modern .xlsx files are still read by the built-in reader.
+                if ($ext === 'xlsx') {
+                    return Xlsx::read($path);
+                }
+                throw new RuntimeException('Old Excel (.xls) files cannot be read here. Save the sheet as Excel Workbook (.xlsx) or CSV and upload that.');
             }
             $rows = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet()->toArray(null, true, false, false);
 

@@ -46,9 +46,15 @@
                             <div><label class="form-label mb-1">Upload scores (CSV or Excel)</label><input type="file" name="file" class="form-control" accept=".csv,.txt,.xlsx,.xls" required></div>
                             <button class="btn btn-soft-primary" type="submit"><i class="ri-upload-2-line me-1"></i>Upload</button>
                         </form>
-                        <a href="{{ route('results.sheets.template', $sheet->id) }}" class="btn btn-light"><i class="ri-download-2-line me-1"></i>Download sheet to fill in</a>
+                        <div class="btn-group">
+                            <a href="{{ route('results.sheets.template', $sheet->id) }}" class="btn btn-light"><i class="ri-file-excel-2-line me-1 text-success"></i>Download Excel to fill in</a>
+                            <a href="{{ route('results.sheets.template', [$sheet->id, 'format' => 'csv']) }}" class="btn btn-light">CSV</a>
+                        </div>
+                        <div class="text-muted fs-12 w-100">The Excel file has a column per assessment with its maximum, the marks already entered, and refuses marks out of range. Fill it in offline and upload it here or from the UniVite app.</div>
                     </div>
                 </div>
+            @else
+                <div class="d-flex justify-content-end mb-2"><a href="{{ route('results.sheets.template', $sheet->id) }}" class="btn btn-sm btn-light"><i class="ri-file-excel-2-line me-1 text-success"></i>Download as Excel</a></div>
             @endif
 
             <form method="POST" action="{{ route('results.sheets.save', $sheet->id) }}">

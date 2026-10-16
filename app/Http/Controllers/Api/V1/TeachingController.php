@@ -121,6 +121,7 @@ class TeachingController extends ApiController
             'scores.*.marks.*' => ['nullable', 'numeric'],
             'scores.*.ca' => ['nullable', 'numeric'],
             'scores.*.exam' => ['nullable', 'numeric'],
+            'scores.*.total' => ['nullable', 'numeric'],
         ]);
 
         $scores = [];
@@ -130,9 +131,13 @@ class TeachingController extends ApiController
             if (! $row) {
                 continue;
             }
-            $scores[(int) $studentId] = $sheet->assessment_scheme_id
-                ? new Score(items: $s['marks'] ?? [])
-                : new Score(array_key_exists('ca', $s) ? $s['ca'] : $row->ca, array_key_exists('exam', $s) ? $s['exam'] : $row->exam);
+            // A total on its own (no marks, CA or exam) is kept as given and clears the assessments.
+            $total = $s['total'] ?? null;
+            $scores[(int) $studentId] = match (true) {
+                $total !== null && ! array_key_exists('ca', $s) && ! array_key_exists('exam', $s) && ! array_filter($s['marks'] ?? [], fn ($v) => $v !== null) => new Score(total: $total),
+                (bool) $sheet->assessment_scheme_id => new Score(items: $s['marks'] ?? []),
+                default => new Score(array_key_exists('ca', $s) ? $s['ca'] : $row->ca, array_key_exists('exam', $s) ? $s['exam'] : $row->exam),
+            };
         }
 
         try {

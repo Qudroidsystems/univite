@@ -1,7 +1,8 @@
 {{--
     The score entry table, shared by a course's score sheet and Enter Scores. Each mark adds up as it is typed: a part's
     assessments fill its CA or exam total, the total and grade follow, and a lecturer may type a CA or exam total
-    directly instead (the part's assessments are then cleared). Needs: $sheet, $rows, $scheme, $edit, $caMax, $examMax;
+    directly instead (the part's assessments are then cleared), or type only the overall total (every assessment, the
+    CA and the exam are then cleared). Needs: $sheet, $rows, $scheme, $edit, $caMax, $examMax;
     optional $showClass (programme and level column) and $saveLabel.
 --}}
 @php
@@ -73,7 +74,7 @@
                         @php $tv = $fmt($part === 'ca' ? $r->ca : $r->exam); @endphp
                         <td class="{{ $parts[$part]->isEmpty() ? 'border-start' : '' }}">@if ($edit)<input type="number" step="0.01" min="0" max="{{ $max }}" name="scores[{{ $r->student_id }}][{{ $part }}]" value="{{ $tv }}" class="form-control form-control-sm {{ $scheme ? 'uv-total-in' : '' }}" data-total="{{ $part }}" data-has-items="{{ $parts[$part]->isNotEmpty() ? 1 : 0 }}" aria-label="{{ $part === 'ca' ? 'CA' : 'Exam' }} total" title="{{ $scheme && $parts[$part]->isNotEmpty() ? 'Adds up from the assessments, or type the total directly' : '' }}">@else<span data-total-text="{{ $part }}">{{ $tv }}</span>@endif</td>
                     @endforeach
-                    <td class="border-start"><span class="uv-out" data-out="total">{{ $fmt($r->total) }}</span></td>
+                    <td class="border-start">@if ($edit)<input type="number" step="0.01" min="0" max="{{ $caMax + $examMax }}" name="scores[{{ $r->student_id }}][total]" value="{{ $fmt($r->total) }}" class="form-control form-control-sm uv-total-in" style="width:84px" data-out="total" data-grand aria-label="Total" title="Adds up from the CA and exam, or type the total directly">@else<span class="uv-out" data-out="total">{{ $fmt($r->total) }}</span>@endif</td>
                     <td><span class="uv-grade badge {{ $r->grade ? ($r->is_pass ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') : '' }}" data-out="grade">{{ $r->grade }}</span></td>
                 </tr>
             @empty
@@ -84,7 +85,7 @@
     </div>
     @if ($edit && $rows->isNotEmpty())
         <div class="card-footer d-flex flex-wrap gap-2 justify-content-between align-items-center">
-            <span class="text-muted fs-13">Totals and grades update as you type. A part's assessments add up to its total, or type the CA or exam total directly.</span>
+            <span class="text-muted fs-13">Totals and grades update as you type. A part's assessments add up to its total. You can also type the CA total, the exam total or the overall total directly.</span>
             <button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>{{ $saveLabel ?? 'Save scores' }}</button>
         </div>
     @endif

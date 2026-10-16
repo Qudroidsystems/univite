@@ -3,6 +3,7 @@
  *  - a part's assessments (data-item="ca" | "exam") fill its total (data-total); a running sum shows in grey until
  *    every assessment of the part has a mark
  *  - typing a total directly clears that part's assessments, so the total is saved as it is
+ *  - typing the overall total (data-grand) clears every assessment and both part totals; the total is saved as typed
  *  - the total and grade (from the university's grade bands on data-bands) follow, with a short highlight
  *  - the header shows how many students are complete, passed and failed, and the average
  * Works on pages swapped in without a reload (uv:page) as well as on a full load.
@@ -34,7 +35,15 @@
 
     /** Recompute one row. source: the input just typed in, if any. */
     function row(table, tr, source) {
-        var parts = {}, complete = true;
+        var parts = {}, complete = true, any = false;
+        var grand = tr.querySelector('[data-grand]');
+        if (grand && source === grand) {
+            // The overall total typed directly: the assessments and the CA and exam totals no longer apply.
+            tr.querySelectorAll('[data-item], [data-total]').forEach(function (i) { if (i.value !== '') { i.value = ''; i.classList.remove('is-partial'); flash(i.parentNode); } });
+            checkRange(grand);
+            show(table, tr, num(grand.value), source);
+            return;
+        }
         ['ca', 'exam'].forEach(function (part) {
             var items = tr.querySelectorAll('[data-item="' + part + '"]');
             var totalIn = tr.querySelector('[data-total="' + part + '"]');
@@ -48,6 +57,7 @@
                 var sum = 0, filled = 0;
                 items.forEach(function (i) { var v = num(i.value); if (v !== null) { sum += v; filled++; } });
                 if (filled > 0) {
+                    any = true;
                     value = filled === items.length ? sum : null;
                     if (totalIn) {
                         totalIn.value = fmt(sum);
@@ -66,16 +76,28 @@
                 value = num(totalText.textContent);
             }
             if (totalIn) { checkRange(totalIn); }
+            if (totalIn && totalIn.value !== '') { any = true; }
             parts[part] = value;
             if (value === null) { complete = false; }
         });
 
         var total = complete ? parts.ca + parts.exam : null;
+        if (grand && !source && !any && total === null) {
+            // On load, a row with nothing but an overall total (saved that way): keep it.
+            total = num(grand.value);
+        }
+        show(table, tr, total, source);
+    }
+
+    function show(table, tr, total, source) {
         var g = grade(table, total);
         var totalOut = tr.querySelector('[data-out="total"]'), gradeOut = tr.querySelector('[data-out="grade"]');
-        var before = totalOut.textContent;
-        totalOut.textContent = fmt(total);
-        if (source && before !== totalOut.textContent) { flash(totalOut.parentNode); }
+        var isInput = totalOut.tagName === 'INPUT';
+        var before = isInput ? totalOut.value : totalOut.textContent;
+        if (!(isInput && source === totalOut)) {
+            if (isInput) { totalOut.value = fmt(total); } else { totalOut.textContent = fmt(total); }
+            if (source && before !== fmt(total)) { flash(totalOut.parentNode); }
+        }
         var letter = g ? g.grade : '';
         if (gradeOut.textContent !== letter) {
             gradeOut.textContent = letter;
@@ -107,7 +129,7 @@
 
     document.addEventListener('input', function (e) {
         var input = e.target;
-        if (!input.matches || !input.matches('[data-item], [data-total]')) { return; }
+        if (!input.matches || !input.matches('[data-item], [data-total], [data-grand]')) { return; }
         var table = input.closest('[data-score-table]'), tr = input.closest('[data-row]');
         if (!table || !tr) { return; }
         checkRange(input);

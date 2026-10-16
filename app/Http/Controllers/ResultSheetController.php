@@ -105,7 +105,7 @@ class ResultSheetController extends Controller
     public function save(Request $request, ResultSheet $sheet): RedirectResponse
     {
         $this->authorizeEntry($sheet);
-        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array']]);
+        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array'], 'scores.*.total' => ['nullable']]);
 
         try {
             $problems = $this->results->saveScores($sheet, Score::many($data['scores']), $request->user());

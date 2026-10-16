@@ -8,6 +8,7 @@ use App\Data\Results\ScoreImport;
 use App\Data\Results\Transcript;
 use App\Data\Results\TranscriptTerm;
 use App\Models\AssessmentScheme;
+use App\Models\AssessmentScore;
 use App\Models\CourseResult;
 use App\Models\RegistrationForm;
 use App\Models\ResultSheet;
@@ -107,8 +108,27 @@ class ResultService
      * to. When $items is given (typed or uploaded), a part whose assessments are all blank may take its CA or exam total
      * directly (see AssessmentService::applyMixed); when $items is null the CA and exam are spread over the items.
      */
-    private function apply(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null): void
+    private function apply(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null, $total = null): void
     {
+        // Only the overall total given (every CA, exam and assessment mark blank): keep it as typed and clear the
+        // assessments, so the CA and exam are left empty.
+        if (! blank($total) && blank($ca) && blank($exam) && ! array_filter($items ?? [], fn ($v) => ! blank($v))) {
+            $max = $scheme ? $scheme->loadMissing('items')->caMax() + $scheme->examMax() : self::caMax() + self::examMax();
+            if (! is_numeric($total) || $total < 0 || $total > $max) {
+                throw new RuntimeException('Total must be a number from 0 to ' . ($max + 0) . '.');
+            }
+            AssessmentScore::where('course_result_id', $row->id)->delete();
+            $row->unsetRelation('assessmentScores');
+            $total = round((float) $total, 2);
+            $g = GradeScale::grade($total);
+            $row->update([
+                'ca' => null, 'exam' => null, 'total' => $total,
+                'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null,
+            ]);
+
+            return;
+        }
+
         if ($scheme) {
             [$ca, $exam] = $items !== null
                 ? $this->assessments->applyMixed($row, $scheme, $items, $ca, $exam, $user)
@@ -151,7 +171,7 @@ class ResultService
                     continue;
                 }
                 try {
-                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user));
+                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user, $s->total));
                 } catch (RuntimeException $e) {
                     $problems[] = $row->student->matric_number . ': ' . $e->getMessage();
                 }
@@ -171,7 +191,8 @@ class ResultService
     /**
      * Read a CSV or Excel upload and save the scores. The first row is the header: Matric Number, then CA and Exam, or
      * on a sheet with an assessment scheme one column per assessment (its code or name) and/or CA total and Exam total.
-     * Columns left out keep their marks; Total and Grade columns are ignored (they are worked out).
+     * Columns left out keep their marks. Total is worked out, except on a row whose CA, exam and assessments are all
+     * empty: there the Total is kept as typed. Grade is always worked out.
      */
     public function import(ResultSheet $sheet, UploadedFile $file, ?User $user = null): ScoreImport
     {
@@ -181,6 +202,7 @@ class ResultService
         $m = $col(['matricnumber', 'matricno', 'matric', 'regno', 'regnumber']);
         $ca = $col(['ca', 'catotal', 'continuousassessment', 'testscore', 'catest']);
         $ex = $col(['exam', 'examtotal', 'examscore', 'examination']);
+        $tot = $col(['total', 'totalscore']);
 
         $itemCols = [];
         if ($scheme = $sheet->scheme?->loadMissing('items')) {
@@ -191,7 +213,7 @@ class ResultService
                 }
             }
         }
-        if ($m === null || (! $itemCols && $ca === null && $ex === null)) {
+        if ($m === null || (! $itemCols && $ca === null && $ex === null && $tot === null)) {
             throw new RuntimeException($scheme
                 ? 'The first row must name the columns: Matric Number and the assessments (' . $scheme->items->pluck('code')->implode(', ') . ').'
                 : 'The first row must name the columns: Matric Number, CA and Exam.');
@@ -212,11 +234,14 @@ class ResultService
             }
             // On a scheme sheet a part's assessments win; a part with only its total filled in takes the total as it
             // is (a "totals only" download comes back this way). Without a scheme the CA and Exam columns are the marks.
+            $given = $tot !== null ? ($line[$tot] ?? null) : null;
             $scores[$row->student_id] = $scheme
-                ? new Score($ca !== null ? ($line[$ca] ?? null) : null, $ex !== null ? ($line[$ex] ?? null) : null, array_map(fn ($i) => $line[$i] ?? null, $itemCols))
+                ? new Score($ca !== null ? ($line[$ca] ?? null) : null, $ex !== null ? ($line[$ex] ?? null) : null, array_map(fn ($i) => $line[$i] ?? null, $itemCols), $given)
                 : new Score(
-                    $ca !== null ? ($line[$ca] ?? null) : $row->ca,
-                    $ex !== null ? ($line[$ex] ?? null) : $row->exam,
+                    $ca !== null ? ($line[$ca] ?? null) : (blank($given) ? $row->ca : null),
+                    $ex !== null ? ($line[$ex] ?? null) : (blank($given) ? $row->exam : null),
+                    null,
+                    $given,
                 );
         }
 
@@ -228,10 +253,10 @@ class ResultService
         return $this->reader->read($file->getRealPath(), $file->getClientOriginalExtension());
     }
 
-    /** Rows that still lack a CA or exam score (on a scheme sheet: a mark for one of the assessments). */
+    /** Rows that still lack a total: a CA or exam score is missing and no total was typed directly. */
     public function incomplete(ResultSheet $sheet): int
     {
-        return $sheet->results()->where(fn ($q) => $q->whereNull('ca')->orWhereNull('exam'))->count();
+        return $sheet->results()->whereNull('total')->count();
     }
 
     public function submit(ResultSheet $sheet, User $user): ResultSheet

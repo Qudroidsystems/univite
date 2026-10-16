@@ -113,6 +113,51 @@ it('adds up assessments, and takes a CA or exam total typed directly', function 
         ->assertSee('data-score-table', false)->assertSee('CA total')->assertSee('univite-scores.js');
 });
 
+it('takes an overall total typed directly and clears the assessments', function () {
+    $sheet = app(\App\Services\ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    [$ada, $bola, $chidi] = $this->students->all();
+    $items = $this->scheme->items->keyBy('code');
+    $blank = $this->scheme->items->mapWithKeys(fn ($i) => [$i->id => ''])->all();
+
+    // Ada had marks; the lecturer types only her overall total, which clears them
+    $this->actingAs($this->lecturer)->post(route('results.sheets.save', $sheet->id), ['scores' => [
+        $ada->id => ['items' => [$items['CA1']->id => 8, $items['CA2']->id => 12, $items['CA3']->id => 10, $items['Q1']->id => 20, $items['Q2']->id => 25]],
+    ]])->assertSessionHas('success');
+    $this->actingAs($this->lecturer)->post(route('results.sheets.save', $sheet->id), ['scores' => [
+        $ada->id => ['items' => $blank, 'ca' => '', 'exam' => '', 'total' => 64],
+        // Bola: CA and exam given, so the total sent along is worked out again
+        $bola->id => ['items' => $blank, 'ca' => 30, 'exam' => 40, 'total' => 99],
+    ]])->assertSessionHas('success');
+
+    $a = CourseResult::where('student_id', $ada->id)->first();
+    $b = CourseResult::where('student_id', $bola->id)->first();
+    expect($a->ca)->toBeNull()->and($a->exam)->toBeNull()->and((float) $a->total)->toBe(64.0)->and($a->grade)->not->toBeNull()
+        ->and(AssessmentScore::where('course_result_id', $a->id)->count())->toBe(0)
+        ->and((float) $b->total)->toBe(70.0);
+
+    // saving the page again as it is keeps Ada's total
+    $this->actingAs($this->lecturer)->post(route('results.sheets.save', $sheet->id), ['scores' => [$ada->id => ['items' => $blank, 'ca' => '', 'exam' => '', 'total' => '64']]]);
+    expect((float) $a->fresh()->total)->toBe(64.0);
+
+    // above the most a total can be is refused
+    $this->actingAs($this->lecturer)->post(route('results.sheets.save', $sheet->id), ['scores' => [$chidi->id => ['total' => 101]]])
+        ->assertSessionHas('warning', fn ($m) => str_contains($m, 'Total must be a number from 0 to 100'));
+
+    // a row with only a total counts as complete
+    expect(app(\App\Services\ResultService::class)->incomplete($sheet))->toBe(1);
+
+    // an uploaded sheet with only the Total filled in is taken the same way
+    $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
+    file_put_contents($path, Xlsx::write([['Matric Number', 'CA total (40)', 'Exam total (60)', 'Total (100)'], [$chidi->matric_number, null, null, 55]], 'GST101'));
+    $this->actingAs($this->lecturer)->post(route('results.sheets.upload', $sheet->id), ['file' => new UploadedFile($path, 'totals.xlsx', null, null, true)])->assertSessionHas('success');
+    $c = CourseResult::where('student_id', $chidi->id)->first();
+    expect((float) $c->total)->toBe(55.0)->and($c->ca)->toBeNull()
+        ->and(app(\App\Services\ResultService::class)->incomplete($sheet))->toBe(0);
+
+    // the sheet page offers the total as an input
+    $this->actingAs($this->lecturer)->get(route('results.sheets.show', $sheet->id))->assertOk()->assertSee('[total]', false);
+});
+
 it('downloads a totals-only score sheet and reads its totals back', function () {
     $sheet = app(\App\Services\ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
     $res = $this->actingAs($this->lecturer)->get(route('results.sheets.template', [$sheet->id, 'type' => 'total']))->assertOk();

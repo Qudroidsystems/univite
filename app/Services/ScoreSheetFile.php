@@ -41,6 +41,7 @@ class ScoreSheetFile
         $head[] = ($sheet->scheme ? 'Exam total' : 'Exam') . ' (' . ($examMax + 0) . ')';
         $limits[$at] = [0, (float) $caMax];
         $limits[$at + 1] = [0, (float) $examMax];
+        $limits[$at + 2] = [0, (float) ($caMax + $examMax)];
         $head[] = 'Total (' . ($caMax + $examMax + 0) . ')';
         $head[] = 'Grade';
 
@@ -75,7 +76,7 @@ class ScoreSheetFile
             $detailed
                 ? 'Enter each assessment mark. The number in brackets is the most it is out of; Excel refuses anything outside 0 to that number. The CA and exam totals are added up by the portal; you may instead leave a part\'s assessments empty and type its total.'
                 : 'Enter each student\'s CA total and exam total. The number in brackets is the most each is out of; Excel refuses anything outside 0 to that number.',
-            'Total and Grade are worked out by the portal when you upload; changes to them are ignored.',
+            'Total is worked out by the portal from the CA and exam. To give a student only an overall total, leave the CA, exam' . ($detailed ? ' and assessment' : '') . ' cells empty and type the Total; the assessments are then cleared. Grade is always worked out.',
             'Leave a cell empty to keep it as it is on the portal. Type 0 for a student who was absent.',
             'Do not change the Matric Number column or the column headings. Rows can be in any order.',
             'Save the file and upload it on the score sheet (in the app: the menu on the sheet, Upload Excel; on the portal: Upload).',

@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\Access\ScopedAccess;
 use App\Services\ResultService;
 use App\Support\GradeScale;
+use App\Support\Institution;
 use App\Support\Xlsx;
 use Illuminate\Support\Collection;
 use RuntimeException;
@@ -252,7 +253,9 @@ class MasterSheets
         }
         array_push($widths, 6, 6, 8, 6, 9, 9, 9, 7, 8, 7, 40);
 
-        return Xlsx::write($table, 'Master sheet', ['widths' => $widths, 'notes' => $notes, 'notes_title' => 'About this master sheet', 'notes_sheet' => 'About']);
+        return Xlsx::write($table, 'Master sheet', ['widths' => $widths, 'notes' => $notes, 'notes_title' => 'About this master sheet', 'notes_sheet' => 'About',
+            'letterhead' => Institution::letterhead([$sheet->title(), $sheet->provisional ? 'Provisional: includes results still going through approval' : 'Published results']),
+            'freeze' => 3, 'color' => Institution::get('primary_color')]);
     }
 
     public static function score($total): string

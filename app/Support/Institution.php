@@ -102,6 +102,33 @@ class Institution
         return $path ? Storage::disk('public')->url($path) : null;
     }
 
+    /**
+     * The top of a spreadsheet: logo, name, address, contacts, then the document's own title lines.
+     *
+     * @param  string[]  $title
+     * @return array{lines: array<int, array{0: string, 1: string}>, logo: ?string, logo_ext: ?string}
+     */
+    public static function letterhead(array $title = []): array
+    {
+        $contacts = collect([self::get('phone'), self::get('email'), self::get('website')])->filter()->implode('  ·  ');
+        $lines = [[(string) self::get('name'), 'name']];
+        foreach ([self::get('motto'), self::addressLine(), $contacts] as $l) {
+            if ($l) {
+                $lines[] = [$l, 'line'];
+            }
+        }
+        foreach ($title as $t) {
+            if ($t) {
+                $lines[] = [$t, 'title'];
+            }
+        }
+        $path = self::get('logo');
+        $disk = Storage::disk('public');
+        $logo = $path && $disk->exists($path) ? $disk->get($path) : null;
+
+        return ['lines' => $lines, 'logo' => $logo, 'logo_ext' => $logo ? pathinfo($path, PATHINFO_EXTENSION) : null];
+    }
+
     public static function initials(): string
     {
         $short = self::get('short_name');

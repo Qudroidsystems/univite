@@ -366,7 +366,7 @@ Things that used to open the website now happen in the app: course registration,
 
 Either way only the rows shown are saved; submitting sends the whole course's sheet for approval. Lecturers see only the courses assigned to them; *Enter results for any course* sees every course.
 
-**Downloads.** A score sheet downloads (Excel or CSV) as *Detailed* (a column per assessment, then the CA and exam totals, total and grade) or *Totals only* (CA total, exam total, total and grade). Either can be filled in offline and uploaded: a part with assessment marks is added up from them, a part with only its total filled in takes the total, and empty cells keep what is on the portal. Total and Grade in the file are ignored on upload. The app's download takes `type=total` too.
+**Downloads.** A score sheet downloads (Excel or CSV) as *Detailed* (a column per assessment, then the CA and exam totals, total and grade) or *Totals only* (CA total, exam total, total and grade). Either can be filled in offline and uploaded: a part with assessment marks is added up from them, a part with only its total filled in takes the total, and empty cells keep what is on the portal. Grade in the file is ignored on upload, and Total is used only on a row whose other marks are all empty. The app's download takes `type=total` too. Excel downloads (score sheets and master sheets) open with the institution's letterhead from Institution Profile: logo, name, motto, address, contacts and the sheet's title. The header row repeats on every printed page. On a score sheet the Matric Number, Name and Grade columns are locked (the sheet is protected without a password); every mark and total stays editable. CSV downloads stay plain so they import cleanly.
 
 ## Sample data for development
 

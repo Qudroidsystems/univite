@@ -46,6 +46,32 @@ it('writes and reads back an Excel file', function () {
     expect(Xlsx::col(0))->toBe('A')->and(Xlsx::col(27))->toBe('AB');
 });
 
+it('puts the institution\'s letterhead and logo on the sheet and locks matric number, name and grade', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+    $im = imagecreatetruecolor(40, 40);
+    ob_start();
+    imagepng($im);
+    \Illuminate\Support\Facades\Storage::disk('public')->put('branding/logo.png', ob_get_clean());
+    \App\Support\Institution::put('name', 'Adeyemi Federal University of Education');
+    \App\Support\Institution::put('logo', 'branding/logo.png');
+
+    $data = app(\App\Services\ScoreSheetFile::class)->xlsx(\App\Models\ResultSheet::findOrFail($this->sheet['id']));
+    $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
+    file_put_contents($path, $data);
+    $zip = new ZipArchive();
+    $zip->open($path);
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    expect($zip->locateName('xl/media/image1.png'))->not->toBeFalse()
+        ->and($sheet)->toContain('Adeyemi Federal University of Education')->toContain('EDU101')->toContain('<sheetProtection')
+        ->and($zip->getFromName('xl/workbook.xml'))->toContain('_xlnm.Print_Titles');
+    $zip->close();
+
+    // the matric number is locked, a mark is not; reading starts at the header row
+    expect($sheet)->toMatch('/<c r="A\d+" s="0" t="inlineStr"><is><t xml:space="preserve">[^<]+\/[^<]+<\/t>/')
+        ->and($sheet)->toContain('<col min="3" max="3" width="13" customWidth="1" style="7"/>')
+        ->and(Xlsx::read($path)[0][0])->toBe('Matric Number');
+});
+
 it('lets a lecturer download the sheet as Excel, fill it in and upload it from the app', function () {
     $res = $this->withToken($this->token)->get("/api/v1/teaching/sheets/{$this->sheet['id']}/file")->assertOk()
         ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

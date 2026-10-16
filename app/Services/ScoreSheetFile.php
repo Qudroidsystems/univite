@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ResultSheet;
+use App\Support\Institution;
 use App\Support\Xlsx;
 
 /**
@@ -68,7 +69,7 @@ class ScoreSheetFile
     public function xlsx(ResultSheet $sheet, string $type = 'detailed'): string
     {
         [$table, $limits] = $this->table($sheet, $type);
-        $sheet->loadMissing('course', 'session', 'semesterType', 'scheme.items');
+        $sheet->loadMissing('course.department', 'session', 'semesterType', 'scheme.items');
         $widths = [0 => 20, 1 => 34] + array_fill(2, max(1, count($table[0]) - 2), 13);
         $detailed = $type !== 'total' && $sheet->scheme;
         $notes = [
@@ -78,12 +79,19 @@ class ScoreSheetFile
                 : 'Enter each student\'s CA total and exam total. The number in brackets is the most each is out of; Excel refuses anything outside 0 to that number.',
             'Total is worked out by the portal from the CA and exam. To give a student only an overall total, leave the CA, exam' . ($detailed ? ' and assessment' : '') . ' cells empty and type the Total; the assessments are then cleared. Grade is always worked out.',
             'Leave a cell empty to keep it as it is on the portal. Type 0 for a student who was absent.',
-            'Do not change the Matric Number column or the column headings. Rows can be in any order.',
+            'The Matric Number, Name and Grade columns are locked. Do not change the column headings. Rows can be in any order.',
             'Save the file and upload it on the score sheet (in the app: the menu on the sheet, Upload Excel; on the portal: Upload).',
             $sheet->scheme ? 'Assessments: ' . $sheet->scheme->summary() . '.' : 'This sheet has one CA and one exam score per student.',
         ];
 
-        return Xlsx::write($table, $sheet->course->code, ['widths' => $widths, 'limits' => $limits, 'notes' => $notes, 'notes_title' => 'How to fill in this score sheet']);
+        // Matric number, name and grade cannot be changed; every mark and total can.
+        $letterhead = Institution::letterhead([
+            ($type === 'total' ? 'Score sheet (totals)' : 'Score sheet') . ': ' . $sheet->course->code . ' ' . $sheet->course->title . ' (' . $sheet->course->credit_units . ' units)',
+            trim(($sheet->course->department?->name ?? '') . ' · ' . ($sheet->session?->name ?? '') . ' ' . ($sheet->semesterType?->name ?? ''), ' ·'),
+        ]);
+
+        return Xlsx::write($table, $sheet->course->code, ['widths' => $widths, 'limits' => $limits, 'notes' => $notes, 'notes_title' => 'How to fill in this score sheet',
+            'letterhead' => $letterhead, 'locked' => [0, 1, count($table[0]) - 1], 'color' => Institution::get('primary_color')]);
     }
 
     public function csv(ResultSheet $sheet, string $type = 'detailed'): string

@@ -7,6 +7,25 @@
             <div class="page-title-box"><h4 class="mb-0">Results</h4></div>
             @include('academics.partials.alerts')
 
+            @if ($waiting->isNotEmpty())
+                <div class="card">
+                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h6 class="card-title mb-0">Waiting for your approval <span class="badge bg-warning-subtle text-warning ms-1">{{ $waiting->count() }}</span></h6>
+                        <a href="{{ route('results.broadsheet') }}" class="btn btn-sm btn-soft-primary"><i class="ri-table-line me-1"></i>Approve a whole level from the master sheet</a>
+                    </div>
+                    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Course</th><th>Department</th><th>Session</th><th class="text-end">Students</th><th>Step</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach ($waiting as $s)
+                            <tr><td>{{ $s->course->code }} · {{ $s->course->title }}</td><td>{{ $s->course->department?->name }}</td><td>{{ $s->session->name }} {{ $s->semesterType->name }}</td>
+                                <td class="text-end">{{ $s->results_count }}</td><td>{{ $s->stage?->name }}</td>
+                                <td class="text-end"><a href="{{ route('results.sheets.show', $s->id) }}" class="btn btn-sm btn-soft-success">Review</a></td></tr>
+                        @endforeach
+                        </tbody>
+                    </table></div>
+                </div>
+            @endif
+
             @if ($mine->isNotEmpty() || $mySheets->isNotEmpty())
                 <div class="card">
                     <div class="card-header"><h6 class="card-title mb-0">My courses{{ $ctx ? ' · ' . $ctx->session->name . ' ' . $ctx->type->name : '' }}</h6></div>

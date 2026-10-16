@@ -21,6 +21,8 @@ class ScopedAccess
         'View student results' => 'Transcripts of those students',
         'View course registrations' => 'Course registration forms of those students',
         'Approve course registrations' => 'Approving or returning those forms',
+        'Approve results' => 'Approving score sheets of courses the department or faculty owns, at the steps the role signs',
+        'Waive carryover courses' => 'Waiving carry-overs of those students',
         'View leave applications' => 'Leave of staff in the department, faculty or unit',
         'View staff records' => 'Records of staff in the department, faculty or unit (pay details stay hidden)',
     ];

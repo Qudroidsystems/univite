@@ -270,7 +270,15 @@ Route::middleware('auth')->group(function () {
     Route::put('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'update'])->name('results.settings.update');
     Route::get('results/summary', [\App\Http\Controllers\ResultSummaryController::class, 'index'])->name('results.summary');
     Route::post('results/summary/allow/{student}', [\App\Http\Controllers\ResultSummaryController::class, 'waive'])->name('results.summary.waive');
-    Route::get('results/broadsheet', [\App\Http\Controllers\StudentResultController::class, 'broadsheet'])->name('results.broadsheet');
+    $ms = \App\Http\Controllers\MasterSheetController::class;
+    Route::get('results/broadsheet', [$ms, 'index'])->name('results.broadsheet');
+    Route::get('results/broadsheet/excel', [$ms, 'excel'])->name('results.broadsheet.excel');
+    Route::get('results/broadsheet/print', [$ms, 'print'])->name('results.broadsheet.print');
+    Route::post('results/broadsheet/decide', [$ms, 'decide'])->name('results.broadsheet.decide');
+    $cw = \App\Http\Controllers\CarryoverWaiverController::class;
+    Route::get('results/carryover-waivers', [$cw, 'index'])->name('results.waivers.index');
+    Route::post('results/carryover-waivers', [$cw, 'store'])->name('results.waivers.store');
+    Route::post('results/carryover-waivers/{waiver}/withdraw', [$cw, 'withdraw'])->name('results.waivers.withdraw');
     Route::post('results/amend/{result}', [$rs, 'amend'])->name('results.amend');
     Route::get('results/complaints', [\App\Http\Controllers\ResultComplaintController::class, 'index'])->name('results.complaints');
     Route::post('results/complaints/{complaint}', [\App\Http\Controllers\ResultComplaintController::class, 'respond'])->name('results.complaints.respond');

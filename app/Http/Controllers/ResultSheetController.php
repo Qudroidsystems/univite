@@ -24,7 +24,7 @@ class ResultSheetController extends Controller
     {
         $u = auth()->user();
 
-        return $this->results->canEnter($u, $sheet) || $u->can('View result sheets');
+        return $this->results->canEnter($u, $sheet) || $u->can('View result sheets') || $this->results->canApprove($u, $sheet);
     }
 
     private function authorizeEntry(ResultSheet $sheet): void
@@ -45,6 +45,9 @@ class ResultSheetController extends Controller
         if ($user->can('View result sheets')) {
             $all = (clone $sheets)->when($status !== 'all', fn ($q) => $q->where('status', $status))->latest('updated_at')->paginate(25)->withQueryString();
         }
+        // Sheets waiting at a step this person signs (heads see their department's or faculty's courses).
+        $waiting = (clone $sheets)->with('course.department')->where('status', 'submitted')->oldest('submitted_at')->get()
+            ->filter(fn ($s) => $this->results->canApprove($user, $s))->values();
         $mySheets = (clone $sheets)->whereIn('course_id', $user->courseAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
             ->filter(fn ($s) => $this->results->canEnter($user, $s));
 
@@ -59,7 +62,7 @@ class ResultSheetController extends Controller
         });
 
         return view('results.index', [
-            'pagetitle' => 'Results', 'ctx' => $ctx, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status, 'schemes' => $schemes,
+            'pagetitle' => 'Results', 'ctx' => $ctx, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status, 'schemes' => $schemes, 'waiting' => $waiting,
             'caMax' => ResultService::caMax(), 'examMax' => ResultService::examMax(),
             'counts' => ResultSheet::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status'),
         ]);

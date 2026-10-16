@@ -32,6 +32,7 @@ class ResultService
         private \App\Support\SpreadsheetReader $reader,
         private Messenger $messenger,
         private AssessmentService $assessments,
+        private \App\Services\Access\ScopedAccess $access,
     ) {
     }
 
@@ -254,14 +255,33 @@ class ResultService
         return $sheet;
     }
 
+    /**
+     * Whether the sheet is waiting at a step this person signs. "Approve results" may come from an ordinary role (any
+     * course) or from a role held for a department or faculty, such as the one heads get (courses that department or
+     * faculty owns). When the step names a role, the person must hold it outright or for the course's department or faculty.
+     */
     public function canApprove(User $user, ResultSheet $sheet): bool
     {
         if ($sheet->status !== 'submitted' || ! $sheet->stage) {
             return false;
         }
+        if ($user->can('Approve results for any stage')) {
+            return true;
+        }
+        $sheet->loadMissing('course.department');
+        $departmentId = $sheet->course?->department_id;
+        if (! $this->access->scope($user, 'Approve results')->coversDepartment($departmentId)) {
+            return false;
+        }
+        $role = $sheet->stage->office_role;
+        if (! $role || $user->hasRole($role)) {
+            return true;
+        }
 
-        return $user->can('Approve results for any stage')
-            || ($user->can('Approve results') && (! $sheet->stage->office_role || $user->hasRole($sheet->stage->office_role)));
+        return \App\Models\ScopedRole::where('user_id', $user->id)->whereHas('role', fn ($q) => $q->where('name', $role))
+            ->where(fn ($q) => $q->where(fn ($w) => $w->where('scope_type', 'department')->where('scope_id', $departmentId))
+                ->orWhere(fn ($w) => $w->where('scope_type', 'faculty')->where('scope_id', $sheet->course?->department?->faculty_id)))
+            ->exists();
     }
 
     public function approve(ResultSheet $sheet, User $user, ?string $note = null): ResultSheet
@@ -378,31 +398,6 @@ class ResultService
     }
 
     /**
-     * A programme's results for one level, session and semester: one row per student with each course's score and grade,
-     * semester GPA and CGPA (published results only).
-     *
-     * @return array{courses: Collection, rows: Collection}
-     */
-    public function broadsheet(int $programmeId, int $level, int $sessionId, int $semesterTypeId): array
-    {
-        $students = Student::where('programme_id', $programmeId)
-            ->whereHas('registrationForms', fn ($q) => $q->where('level', $level)->where('academic_session_id', $sessionId)->where('semester_type_id', $semesterTypeId)->where('status', 'approved'))
-            ->orderBy('last_name')->orderBy('first_name')->get();
-
-        $term = CourseResult::with('course')->whereIn('student_id', $students->pluck('id'))->where('status', 'published')
-            ->where('academic_session_id', $sessionId)->where('semester_type_id', $semesterTypeId)->get()->groupBy('student_id');
-        $courses = $term->flatten()->pluck('course')->unique('id')->sortBy('code')->values();
-
-        $rows = $students->map(function (Student $s) use ($term) {
-            $mine = $term->get($s->id, collect());
-
-            return ['student' => $s, 'results' => $mine->keyBy('course_id'), 'units' => (int) $mine->sum('credit_units'), 'gpa' => GradeScale::gpa($mine)] + (fn ($t) => ['cgpa' => $t->cgpa, 'standing' => $t->standing])($this->transcript($s));
-        });
-
-        return ['courses' => $courses, 'rows' => $rows];
-    }
-
-    /**
      * A department's end-of-semester summary: each student registered that semester sorted into
      * pending (no published result yet), withdraw, probation, carry-over (outstanding failed courses) or passed.
      *
@@ -420,14 +415,17 @@ class ResultService
                 ->where('academic_session_id', $sessionId)->where('semester_type_id', $semesterTypeId)->get();
             $t = $this->transcript($s);
             $passed = CourseResult::where('student_id', $s->id)->where('status', 'published')->where('is_pass', true)->pluck('course_id')->flip();
-            $outstanding = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')->where('is_pass', false)->get()
-                ->reject(fn ($r) => $passed->has($r->course_id))->pluck('course.code')->unique()->sort()->values();
+            $waived = \App\Models\CarryoverWaiver::active()->with('course')->where('student_id', $s->id)->get()->keyBy('course_id');
+            $failed = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')->where('is_pass', false)->get()
+                ->reject(fn ($r) => $passed->has($r->course_id))->unique('course_id')->sortBy('course.code');
+            $outstanding = $failed->reject(fn ($r) => $waived->has($r->course_id))->pluck('course.code')->values();
+            $outstandingCourses = $failed->reject(fn ($r) => $waived->has($r->course_id))->pluck('course')->values();
             $bucket = $term->isEmpty() ? 'pending' : match ($t->standing) {
                 'Advised to withdraw' => 'withdraw', 'On probation' => 'probation', default => $outstanding->isNotEmpty() ? 'carryover' : 'pass',
             };
 
             return ['student' => $s, 'level' => (int) $f->level, 'gpa' => GradeScale::gpa($term), 'cgpa' => $t->cgpa, 'standing' => $t->standing,
-                'outstanding' => $outstanding, 'bucket' => $bucket, 'pending' => $f->courses()->count() - $term->count()];
+                'outstanding' => $outstanding, 'outstanding_courses' => $outstandingCourses, 'waived' => $waived->values(), 'bucket' => $bucket, 'pending' => $f->courses()->count() - $term->count()];
         })->sortBy(fn ($r) => $r['student']->matric_number)
             ->groupBy(fn ($r) => $r['student']->programme_id . '-' . $r['level'])
             ->map(fn ($rows) => ['programme' => $rows->first()['student']->programme, 'level' => $rows->first()['level'], 'rows' => $rows->values()])
@@ -444,8 +442,20 @@ class ResultService
      */
     public function transcript(Student $student): Transcript
     {
-        $all = CourseResult::with('course', 'session', 'semesterType', 'assessmentScores.item')->where('student_id', $student->id)->where('status', 'published')
-            ->get()->sortBy(fn ($r) => [$r->session->name, $r->semesterType->sort_order, $r->id])->values();   // session names sort chronologically (2025/2026 < 2026/2027)
+        $all = CourseResult::with('course', 'session', 'semesterType', 'assessmentScores.item')->where('student_id', $student->id)->where('status', 'published')->get();
+
+        return $this->transcriptFrom($student, $all);
+    }
+
+    /**
+     * The same totals worked out from a given set of the student's results, for example including results still going
+     * through approval (the master sheet Senate considers) or only those up to a given semester.
+     *
+     * @param  Collection<int, CourseResult>  $results  with session and semesterType loaded
+     */
+    public function transcriptFrom(Student $student, Collection $results): Transcript
+    {
+        $all = $results->sortBy(fn ($r) => [$r->session->name, $r->semesterType->sort_order, $r->id])->values();   // session names sort chronologically (2025/2026 < 2026/2027)
 
         $terms = $all->groupBy(fn ($r) => $r->academic_session_id . '-' . $r->semester_type_id)->map(fn ($rows) => new TranscriptTerm(
             $rows->first()->session, $rows->first()->semesterType, $rows->sortBy('course.code')->values(), (int) $rows->sum('credit_units'), (float) GradeScale::gpa($rows),

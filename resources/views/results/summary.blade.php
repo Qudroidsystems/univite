@@ -16,6 +16,7 @@
                 <div><label class="form-label mb-1">Semester</label><select name="semester_type_id" data-lookup="semester-types" class="form-select">@foreach ($types as $id => $n)<option value="{{ $id }}" @selected($f['type'] === $id)>{{ $n }}</option>@endforeach</select></div>
                 <button class="btn btn-primary" type="submit">Show</button>
                 @if ($groups)<button type="button" class="btn btn-light" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button>@endif
+                <a href="{{ route('results.waivers.index') }}" class="btn btn-light ms-auto"><i class="ri-file-shield-2-line me-1"></i>Carry-over waivers</a>
             </div></form>
 
             @if ($groups !== null)
@@ -35,7 +36,33 @@
                             @foreach ($rows->values() as $i => $r)
                                 <tr><td>{{ $i + 1 }}</td><td>{{ $r['student']->matric_label }}</td><td>{{ $r['student']->full_name }}</td>
                                     <td class="text-end">{{ $k === 'pending' ? '—' : number_format($r['gpa'], 2) }}</td><td class="text-end">{{ number_format($r['cgpa'], 2) }}</td>
-                                    <td class="fs-13">{{ $k === 'pending' ? $r['pending'] : ($r['outstanding']->implode(', ') ?: '—') }}
+                                    <td class="fs-13">
+                                        @if ($k === 'pending'){{ $r['pending'] }}
+                                        @else
+                                            @php $mayWaive = $canWaive($r['student']); @endphp
+                                            @forelse ($r['outstanding_courses'] as $course)
+                                                @if ($mayWaive)
+                                                    <details class="d-inline-block me-1 align-top"><summary class="badge bg-warning-subtle text-warning" style="cursor:pointer" title="Waive this carry-over">{{ $course->code }}</summary>
+                                                        <form method="POST" action="{{ route('results.waivers.store') }}" class="d-flex gap-1 mt-1 d-print-none" style="min-width:320px">@csrf
+                                                            <input type="hidden" name="student_id" value="{{ $r['student']->id }}"><input type="hidden" name="course_id" value="{{ $course->id }}">
+                                                            <input name="reason" class="form-control form-control-sm" placeholder="Reason, e.g. course no longer offered" required minlength="5">
+                                                            <button class="btn btn-sm btn-soft-warning text-nowrap" type="submit" data-confirm="Waive {{ $course->code }} for {{ $r['student']->full_name }}? It stays on the transcript but no longer has to be passed.">Waive</button></form>
+                                                    </details>
+                                                @else<span class="me-1">{{ $course->code }}</span>@endif
+                                            @empty
+                                                @if ($r['waived']->isEmpty())—@endif
+                                            @endforelse
+                                            @foreach ($r['waived'] as $w)
+                                                <details class="d-inline-block me-1 align-top"><summary class="badge bg-light text-muted text-decoration-line-through" style="cursor:pointer" title="Waived: {{ $w->reason }}">{{ $w->course->code }} waived</summary>
+                                                    <div class="fs-12 text-muted mt-1">{{ $w->reason }}</div>
+                                                    @if ($mayWaive)
+                                                        <form method="POST" action="{{ route('results.waivers.withdraw', $w->id) }}" class="d-flex gap-1 mt-1 d-print-none" style="min-width:320px">@csrf
+                                                            <input name="reason" class="form-control form-control-sm" placeholder="Why withdraw the waiver?" required>
+                                                            <button class="btn btn-sm btn-soft-danger text-nowrap" type="submit">Withdraw</button></form>
+                                                    @endif
+                                                </details>
+                                            @endforeach
+                                        @endif
                                         @if ($k === 'withdraw' && $current)
                                             @if ($waivers->has($r['student']->id))
                                                 <div class="text-success fs-12 d-print-none">Allowed to register in {{ $current->name }}</div>

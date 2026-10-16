@@ -173,8 +173,9 @@ class Menu
                     ['Matric Number Format', 'students.settings', 'View matric number format', 'students.settings*'],
                 ]],
                 ['sidebarResults', 'Results', 'ph-chart-bar', [
-                    ['Score Sheets', 'results.sheets.index', 'View result sheets', 'results.sheets.*', 'results.open'],
-                    ['Broadsheet', 'results.broadsheet', 'View student results', 'results.broadsheet'],
+                    ['Score Sheets', 'results.sheets.index', ['View result sheets', 'Approve results', 'Approve results for any stage'], 'results.sheets.*', 'results.open'],
+                    ['Master Sheet', 'results.broadsheet', ['View student results', 'Approve results', 'Approve results for any stage', 'Publish results'], 'results.broadsheet*'],
+                    ['Carry-over Waivers', 'results.waivers.index', 'Waive carryover courses', 'results.waivers.*'],
                     ['Result Summary', 'results.summary', ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],
                     ['Result Queries', 'results.complaints', 'View result complaints', 'results.complaints*'],
                     ['Legacy Results', 'legacy.index', 'Import legacy results', 'legacy.*'],

@@ -9,6 +9,7 @@ use App\Models\RegistrationForm;
 use App\Models\ResultSheet;
 use App\Models\SemesterType;
 use App\Models\Student;
+use App\Services\ResultService;
 use App\Support\GradeScale;
 use Database\Seeders\Demo\DemoPeople;
 use Illuminate\Database\Seeder;
@@ -33,6 +34,9 @@ class DemoAcademicRecordSeeder extends Seeder
         $lecturers = CourseAssignment::pluck('user_id', 'course_id');
         $sheets = [];
         GradeScale::flush();
+        // Scores follow the result settings (CA and exam maximums), so they match what lecturers can enter.
+        $caMax = (int) ResultService::caMax();
+        $examMax = (int) ResultService::examMax();
 
         foreach (Student::where('needs_onboarding', false)->orderBy('id')->get() as $student) {
             $ability = $people->int(42, 80);
@@ -84,8 +88,8 @@ class DemoAcademicRecordSeeder extends Seeder
                             'submitted_by' => $lecturers[$pc->course_id] ?? null, 'submitted_at' => $published->copy()->subWeeks(4), 'published_at' => $published,
                         ])->id;
                         $total = max(12, min(96, $ability + $people->int(-16, 14)));
-                        $ca = min(40, max(5, (int) round($total * 0.4) + $people->int(-4, 4)));
-                        $exam = max(0, min(60, $total - $ca));
+                        $ca = min($caMax, max(5, (int) round($total * $caMax / 100) + $people->int(-4, 4)));
+                        $exam = max(0, min($examMax, $total - $ca));
                         $total = $ca + $exam;
                         $g = GradeScale::grade($total);
                         $rows[] = [

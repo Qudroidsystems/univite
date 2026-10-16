@@ -140,13 +140,13 @@ class RegistrationService
         return CourseResult::where('student_id', $student->id)->where('is_pass', true)->whereIn('status', ['approved', 'published'])->pluck('course_id')->unique()->values();
     }
 
-    /** Course ids the student failed and has not passed since. @return Collection<int, int> */
+    /** Course ids the student failed and has not passed since, leaving out carry-overs the department waived. @return Collection<int, int> */
     public function failed(Student $student): Collection
     {
         $passed = $this->passed($student);
 
         return CourseResult::where('student_id', $student->id)->where('is_pass', false)->whereIn('status', ['approved', 'published'])
-            ->pluck('course_id')->unique()->diff($passed)->values();
+            ->pluck('course_id')->unique()->diff($passed)->diff(\App\Models\CarryoverWaiver::courseIdsFor($student->id))->values();
     }
 
     /**

@@ -2,8 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\CourseAssignment;
 use App\Models\Department;
 use App\Models\Faculty;
+use App\Models\Semester;
+use App\Models\SemesterType;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +25,7 @@ class DemoDataSeeder extends Seeder
         DemoStudentSeeder::class,
         DemoAcademicRecordSeeder::class,
         DemoAssessmentSeeder::class,
+        DemoResultApprovalSeeder::class,
         DemoFeesSeeder::class,
         DemoCampusSeeder::class,
     ];
@@ -41,19 +45,29 @@ class DemoDataSeeder extends Seeder
     /** One sample account per role, so whoever ran the seeder can sign in straight away. */
     private function showLogins(): void
     {
+        $heads = Department::whereNotNull('hod_id')->pluck('hod_id')->merge(Faculty::whereNotNull('dean_id')->pluck('dean_id'));
+        $row = fn (string $role, ?User $user, string $note = '') => $user ? [$role, $user->email, $note ?: (string) $user->username] : null;
+
         $rows = [];
-        foreach (['Registrar', 'Bursar', 'Exams Officer', 'HR Officer', 'Librarian', 'Hostel Officer', 'Medical Officer', 'Lecturer', 'Student'] as $role) {
-            $user = User::role($role)->orderBy('id')->first();
-            if ($user) {
-                $rows[] = [$role, $user->email, $user->username ?? ''];
-            }
+        $rows[] = $row('Registrar', User::role('Registrar')->orderBy('id')->first(), 'signs the Senate step; publishes results');
+        foreach (['Bursar', 'Exams Officer', 'HR Officer', 'Librarian', 'Hostel Officer', 'Medical Officer'] as $role) {
+            $rows[] = $row($role, User::role($role)->orderBy('id')->first());
         }
-        foreach (['Dean' => Faculty::whereNotNull('dean_id')->orderBy('id')->value('dean_id'), 'Head of Department' => Department::whereNotNull('hod_id')->orderBy('id')->value('hod_id')] as $role => $id) {
-            if ($user = User::find($id)) {
-                array_splice($rows, count($rows) - 2, 0, [[$role, $user->email, $user->username ?? '']]);
-            }
-        }
-        $this->command?->table(['Role', 'Email', 'Username'], $rows);
+        $rows[] = $row('Dean', User::find(Faculty::whereNotNull('dean_id')->orderBy('id')->value('dean_id')), 'approves results for the faculty');
+        $rows[] = $row('Head of Department', User::find(Department::whereNotNull('hod_id')->orderBy('id')->value('hod_id')), 'approves results for the department');
+
+        // A lecturer who is not a head, teaching the largest class this semester.
+        $semester = Semester::current();
+        $type = $semester ? SemesterType::where('sort_order', $semester->sort_order)->first() : null;
+        $assignment = CourseAssignment::with('course', 'user')
+            ->where('academic_session_id', $semester?->academic_session_id)->where('semester_type_id', $type?->id)
+            ->whereNotIn('user_id', $heads)->get()
+            ->sortByDesc(fn ($a) => DB::table('course_registrations')->where('course_id', $a->course_id)->count())
+            ->first();
+        $rows[] = $row('Lecturer', $assignment?->user, $assignment ? 'teaches ' . $assignment->course->code . ': Results > open the course' : '');
+        $rows[] = $row('Student', User::role('Student')->orderBy('id')->first());
+
+        $this->command?->table(['Role', 'Email', 'Username / note'], array_values(array_filter($rows)));
         $this->command?->line('  Every sample account uses the password "' . DemoStaffSeeder::PASSWORD . '".');
     }
 }

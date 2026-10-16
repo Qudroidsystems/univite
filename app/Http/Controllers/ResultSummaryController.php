@@ -20,7 +20,7 @@ use Illuminate\View\View;
  */
 class ResultSummaryController extends Controller
 {
-    public function __construct(private ResultService $results, private \App\Services\OperationAudit $audit, private \App\Services\RegistrationService $registration)
+    public function __construct(private ResultService $results, private \App\Services\OperationAudit $audit, private \App\Services\RegistrationService $registration, private \App\Services\Results\CarryoverWaivers $waivers, private \App\Services\Access\ScopedAccess $access)
     {
     }
 
@@ -29,7 +29,10 @@ class ResultSummaryController extends Controller
         $user = auth()->user();
         $all = Department::orderBy('name')->get();
 
-        return $user->can('View student results') ? $all : $all->filter(fn ($d) => AcademicRuleController::canEdit($user, 'department', $d->id))->values();
+        $view = $this->access->scope($user, 'View student results');
+        $waive = $this->access->scope($user, 'Waive carryover courses');
+
+        return $all->filter(fn ($d) => $view->coversDepartment($d->id) || $waive->coversDepartment($d->id) || AcademicRuleController::canEdit($user, 'department', $d->id))->values();
     }
 
     public function index(Request $request): View
@@ -48,6 +51,7 @@ class ResultSummaryController extends Controller
             'types' => SemesterType::orderBy('sort_order')->pluck('name', 'id'), 'levels' => \App\Support\Levels::options(),
             'waivers' => StandingWaiver::where('academic_session_id', AcademicSession::current()?->id)->pluck('student_id')->flip(),
             'current' => AcademicSession::current(),
+            'canWaive' => fn ($student) => $this->waivers->canManage(auth()->user(), $student),
         ]);
     }
 

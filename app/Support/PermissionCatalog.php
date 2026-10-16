@@ -259,6 +259,7 @@ class PermissionCatalog
                 'about' => 'Published results, GPA and CGPA for individual students.',
                 'permissions' => [
                     ['View student results', 'View', 'Open any student\'s published results and print their transcript with semester GPA, CGPA and class.'],
+                    ['Waive carryover courses', 'Manage', 'Waive a student\'s carry-over with a reason: the failed course stays on the transcript and in the CGPA, but no longer has to be registered again or stop the student graduating. Heads of department get this for their own department.'],
                 ],
             ],
 

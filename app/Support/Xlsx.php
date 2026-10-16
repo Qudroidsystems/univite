@@ -14,7 +14,7 @@ class Xlsx
 {
     /**
      * @param  array<int, array<int, string|int|float|null>>  $rows  the first row is the header
-     * @param  array{widths?: array<int, int>, limits?: array<int, array{0: float, 1: float}>, notes?: string[], notes_title?: string}  $opts
+     * @param  array{widths?: array<int, int>, limits?: array<int, array{0: float, 1: float}>, notes?: string[], notes_title?: string, notes_sheet?: string}  $opts
      *                                                                 limits: column index => [min, max] (Excel refuses other numbers)
      */
     public static function write(array $rows, string $sheetName = 'Sheet1', array $opts = []): string
@@ -28,7 +28,7 @@ class Xlsx
         }
         $sheets = [$sheetName];
         if ($notes) {
-            $sheets[] = 'How to fill in';
+            $sheets[] = $opts['notes_sheet'] ?? 'How to fill in';
         }
 
         $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

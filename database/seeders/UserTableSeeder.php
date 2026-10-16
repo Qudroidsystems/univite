@@ -52,6 +52,30 @@ class UserTableSeeder extends Seeder
                     ->syncPermissions(array_values(array_intersect($permissions, $allPermissions)));
             }
         }
+        $this->laterGrants($allPermissions);
         $heads->syncAll();
+    }
+
+    /**
+     * Permissions added to the head roles after they were first created. Each set is given once (remembered in
+     * settings), so an administrator who later takes one away does not get it back on the next seed.
+     */
+    private function laterGrants(array $allPermissions): void
+    {
+        $grants = [
+            'heads.grant.result_approval' => [
+                'Head of Department' => ['Approve results', 'Waive carryover courses'],
+                'Dean' => ['Approve results'],
+            ],
+        ];
+        foreach ($grants as $key => $roles) {
+            if (\App\Models\Setting::get($key)) {
+                continue;
+            }
+            foreach ($roles as $name => $permissions) {
+                Role::where('name', $name)->first()?->givePermissionTo(array_values(array_intersect($permissions, $allPermissions)));
+            }
+            \App\Models\Setting::put($key, '1');
+        }
     }
 }

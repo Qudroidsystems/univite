@@ -70,7 +70,9 @@ class GraduationService
         $curriculum = ProgrammeCourse::with('course')->where('programme_id', $programme->id)->get()->keyBy('course_id');
         $electives = $curriculum->where('status', 'elective')->keys()->flip();
 
-        $failed = $latest->filter(fn ($r) => ! $r->is_pass && ($rules['retake_failed_electives'] || ! $electives->has($r->course_id)));
+        // A carry-over the department has waived no longer blocks graduation (its units still do not count as earned).
+        $waived = \App\Models\CarryoverWaiver::courseIdsFor($student->id)->flip();
+        $failed = $latest->filter(fn ($r) => ! $r->is_pass && ! $waived->has($r->course_id) && ($rules['retake_failed_electives'] || ! $electives->has($r->course_id)));
         if ($failed->isNotEmpty()) {
             $problems[] = 'Failed and not yet passed: ' . $failed->map(fn ($r) => $r->course->code)->sort()->implode(', ') . '.';
         }

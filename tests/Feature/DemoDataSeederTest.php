@@ -39,10 +39,12 @@ it('seeds a whole sample university that hangs together', function () {
     $finalist = Student::where('current_level', 400)->whereNotNull('matric_number')->first();
     expect($finalist->matric_number)->toStartWith('2023/');
 
-    // Finished semesters have results; the running one has registrations but no results.
+    // Finished semesters have results; in the running one only final-year sheets have scores, still going through approval.
     expect(CourseResult::count())->toBeGreaterThan(1000)
         ->and(RegistrationForm::where('academic_session_id', $current->id)->count())->toBeGreaterThan(0)
-        ->and(CourseResult::whereHas('sheet', fn ($q) => $q->where('academic_session_id', $current->id))->count())->toBe(0);
+        ->and(CourseResult::where('academic_session_id', $current->id)->where('status', 'published')->count())->toBe(0)
+        ->and(\App\Models\ResultSheet::where('academic_session_id', $current->id)->whereHas('stage', fn ($q) => $q->where('name', 'Senate'))->exists())->toBeTrue()
+        ->and(\App\Models\CarryoverWaiver::active()->count())->toBeGreaterThan(0);
 
     // Fees: past sessions paid off, this session a mix; invoice totals match their payments.
     expect(Invoice::where('academic_session_id', '!=', $current->id)->where('status', '!=', 'paid')->count())->toBe(0)
@@ -52,6 +54,21 @@ it('seeds a whole sample university that hangs together', function () {
 
     expect(BedAllocation::count())->toBeGreaterThan(0)
         ->and(LibraryLoan::whereNull('returned_at')->count())->toBeGreaterThan(0);
+
+    // Past scores respect the CA and exam maximums (this session's sheets follow their assessment scheme instead).
+    $past = fn () => CourseResult::where('academic_session_id', '!=', $current->id);
+    expect($past()->where('ca', '>', \App\Services\ResultService::caMax())->count())->toBe(0)
+        ->and($past()->where('exam', '>', \App\Services\ResultService::examMax())->count())->toBe(0);
+
+    // A lecturer can open the score sheet of a course they teach this semester and enter scores.
+    $assignment = \App\Models\CourseAssignment::where('academic_session_id', $current->id)->where('semester_type_id', \App\Models\SemesterType::where('sort_order', 1)->value('id'))
+        ->whereHas('course', fn ($q) => $q->where('code', 'EDU 101'))->firstOrFail();
+    $this->actingAs($assignment->user)->get(route('results.open', $assignment->course_id))->assertRedirect();
+    $sheet = \App\Models\ResultSheet::where('course_id', $assignment->course_id)->where('academic_session_id', $current->id)->firstOrFail();
+    expect($sheet->results()->count())->toBeGreaterThan(10);
+    $scores = $sheet->results()->pluck('student_id')->mapWithKeys(fn ($id) => [$id => ['ca' => 20, 'exam' => 50]])->all();
+    $this->actingAs($assignment->user)->post(route('results.sheets.save', $sheet), ['scores' => $scores])->assertSessionHasNoErrors();
+    expect($sheet->results()->where('total', 70)->count())->toBe(count($scores));
 
     // Every sample account signs in with the documented password.
     $bursar = User::role('Bursar')->first();

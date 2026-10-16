@@ -144,16 +144,17 @@ class TeachingController extends ApiController
         return $this->ok($this->sheetData($request, $sheet->fresh()), ['saved' => count($scores) - count($problems), 'problems' => $problems]);
     }
 
-    /** GET /api/v1/teaching/sheets/{sheet}/file?format=xlsx|csv: the sheet to fill in offline (Excel by default). */
+    /** GET /api/v1/teaching/sheets/{sheet}/file?format=xlsx|csv&type=detailed|total: the sheet to fill in offline (detailed Excel by default). */
     public function download(Request $request, ResultSheet $sheet, \App\Services\ScoreSheetFile $file)
     {
         $this->staff($request);
         abort_unless($this->mayView($request, $sheet), 404);
         $csv = $request->query('format') === 'csv';
+        $type = $request->query('type') === 'total' ? 'total' : 'detailed';
 
-        return response($csv ? $file->csv($sheet) : $file->xlsx($sheet), 200, [
+        return response($csv ? $file->csv($sheet, $type) : $file->xlsx($sheet, $type), 200, [
             'Content-Type' => $csv ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $file->filename($sheet, $csv ? 'csv' : 'xlsx') . '"',
+            'Content-Disposition' => 'attachment; filename="' . $file->filename($sheet, $csv ? 'csv' : 'xlsx', $type) . '"',
         ]);
     }
 

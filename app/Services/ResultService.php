@@ -103,14 +103,15 @@ class ResultService
 
     /**
      * Set one student's scores. Blank clears. Throws RuntimeException with a readable message when a score is out of range.
-     * On a sheet with an assessment scheme the marks go on its items ($items when given, otherwise the CA and exam are
-     * spread over the items) and the CA and exam become what the items add up to.
+     * On a sheet with an assessment scheme the marks go on its items and the CA and exam become what the items add up
+     * to. When $items is given (typed or uploaded), a part whose assessments are all blank may take its CA or exam total
+     * directly (see AssessmentService::applyMixed); when $items is null the CA and exam are spread over the items.
      */
     private function apply(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null): void
     {
         if ($scheme) {
             [$ca, $exam] = $items !== null
-                ? $this->assessments->applyItems($row, $scheme, $items, $user)
+                ? $this->assessments->applyMixed($row, $scheme, $items, $ca, $exam, $user)
                 : $this->assessments->distribute($row, $scheme, $ca, $exam, $user);
         } else {
             $ca = ($ca === null || $ca === '') ? null : $ca;
@@ -169,7 +170,8 @@ class ResultService
 
     /**
      * Read a CSV or Excel upload and save the scores. The first row is the header: Matric Number, then CA and Exam, or
-     * on a sheet with an assessment scheme one column per assessment (its code or name). Columns left out keep their marks.
+     * on a sheet with an assessment scheme one column per assessment (its code or name) and/or CA total and Exam total.
+     * Columns left out keep their marks; Total and Grade columns are ignored (they are worked out).
      */
     public function import(ResultSheet $sheet, UploadedFile $file, ?User $user = null): ScoreImport
     {
@@ -177,8 +179,8 @@ class ResultService
         $head = array_map(fn ($h) => self::headKey($h), array_shift($table) ?? []);
         $col = fn (array $names) => collect($names)->map(fn ($n) => array_search($n, $head, true))->first(fn ($i) => $i !== false);
         $m = $col(['matricnumber', 'matricno', 'matric', 'regno', 'regnumber']);
-        $ca = $col(['ca', 'continuousassessment', 'testscore', 'catest']);
-        $ex = $col(['exam', 'examscore', 'examination']);
+        $ca = $col(['ca', 'catotal', 'continuousassessment', 'testscore', 'catest']);
+        $ex = $col(['exam', 'examtotal', 'examscore', 'examination']);
 
         $itemCols = [];
         if ($scheme = $sheet->scheme?->loadMissing('items')) {
@@ -188,9 +190,6 @@ class ResultService
                     $itemCols[$item->id] = $i;
                 }
             }
-        }
-        if ($itemCols) {
-            $ca = $ex = null;   // per-item columns win over CA / Exam totals
         }
         if ($m === null || (! $itemCols && $ca === null && $ex === null)) {
             throw new RuntimeException($scheme
@@ -211,8 +210,10 @@ class ResultService
                 $problems[] = 'Row ' . ($n + 2) . ": {$matric} is not registered for this course.";
                 continue;
             }
-            $scores[$row->student_id] = $itemCols
-                ? new Score(items: array_map(fn ($i) => $line[$i] ?? null, $itemCols))
+            // On a scheme sheet a part's assessments win; a part with only its total filled in takes the total as it
+            // is (a "totals only" download comes back this way). Without a scheme the CA and Exam columns are the marks.
+            $scores[$row->student_id] = $scheme
+                ? new Score($ca !== null ? ($line[$ca] ?? null) : null, $ex !== null ? ($line[$ex] ?? null) : null, array_map(fn ($i) => $line[$i] ?? null, $itemCols))
                 : new Score(
                     $ca !== null ? ($line[$ca] ?? null) : $row->ca,
                     $ex !== null ? ($line[$ex] ?? null) : $row->exam,

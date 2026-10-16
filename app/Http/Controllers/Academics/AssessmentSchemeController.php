@@ -58,12 +58,14 @@ class AssessmentSchemeController extends Controller
 
     public function create(): View
     {
-        $scheme = new AssessmentScheme(['is_active' => true]);
+        $scheme = new AssessmentScheme(['is_active' => true, 'ca_total' => 40, 'exam_total' => 60]);
         $scheme->setRelation('items', collect([
-            new \App\Models\AssessmentItem(['name' => 'Test 1', 'code' => 'T1', 'component' => 'ca', 'max_score' => 10]),
-            new \App\Models\AssessmentItem(['name' => 'Test 2', 'code' => 'T2', 'component' => 'ca', 'max_score' => 10]),
-            new \App\Models\AssessmentItem(['name' => 'Assignment', 'code' => 'ASG', 'component' => 'ca', 'max_score' => 10]),
-            new \App\Models\AssessmentItem(['name' => 'Examination', 'code' => 'EXAM', 'component' => 'exam', 'max_score' => 70]),
+            new \App\Models\AssessmentItem(['name' => 'CA 1', 'code' => 'CA1', 'component' => 'ca', 'max_score' => 10]),
+            new \App\Models\AssessmentItem(['name' => 'CA 2', 'code' => 'CA2', 'component' => 'ca', 'max_score' => 15]),
+            new \App\Models\AssessmentItem(['name' => 'CA 3', 'code' => 'CA3', 'component' => 'ca', 'max_score' => 15]),
+            new \App\Models\AssessmentItem(['name' => 'Exam question 1', 'code' => 'Q1', 'component' => 'exam', 'max_score' => 20]),
+            new \App\Models\AssessmentItem(['name' => 'Exam question 2', 'code' => 'Q2', 'component' => 'exam', 'max_score' => 20]),
+            new \App\Models\AssessmentItem(['name' => 'Exam question 3', 'code' => 'Q3', 'component' => 'exam', 'max_score' => 20]),
         ]));
 
         return view('academics.assessments.form', ['pagetitle' => 'New assessment scheme', 'scheme' => $scheme, 'locked' => false]);
@@ -80,6 +82,8 @@ class AssessmentSchemeController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],
             'is_active' => ['nullable', 'boolean'],
+            'ca_total' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'exam_total' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items' => ['required', 'array', 'max:30'],
             'items.*.name' => ['nullable', 'string', 'max:80'],
             'items.*.code' => ['nullable', 'string', 'max:20'],

@@ -23,13 +23,16 @@
                 <div class="card"><div class="card-body row g-3">
                     <div class="col-md-6"><label class="form-label">Name</label><input name="name" class="form-control" required maxlength="120" value="{{ old('name', $scheme->name) }}" placeholder="Science courses (with practicals)"></div>
                     <div class="col-md-6"><label class="form-label">Description</label><input name="description" class="form-control" maxlength="500" value="{{ old('description', $scheme->description) }}" placeholder="Optional"></div>
+                    <div class="col-md-3"><label class="form-label">CA total</label><input name="ca_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('ca_total', $scheme->ca_total !== null ? rtrim(rtrim(number_format($scheme->ca_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 40" data-target="ca" @readonly($locked)></div>
+                    <div class="col-md-3"><label class="form-label">Exam total</label><input name="exam_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('exam_total', $scheme->exam_total !== null ? rtrim(rtrim(number_format($scheme->exam_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 60" data-target="exam" @readonly($locked)></div>
+                    <div class="col-md-6 d-flex align-items-end"><p class="text-muted fs-13 mb-2">The CA total and exam total add up to 100. The CA assessments (CA1, CA2, …) must add up to the CA total and the exam questions (Q1, Q2, …) to the exam total. Leave both blank to take them from the assessments.</p></div>
                     <div class="col-12"><div class="form-check form-switch"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $scheme->is_active))><label class="form-check-label" for="is_active">On (can be assigned and given to new score sheets)</label></div></div>
                 </div></div>
 
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="card-title mb-0">Assessments</h6>
-                        <span class="fs-13">CA <strong data-sum="ca">0</strong> + Exam <strong data-sum="exam">0</strong> = <strong data-sum="all">0</strong> <span data-sum-note class="ms-1"></span></span>
+                        <span class="fs-13">CA <strong data-sum="ca">0</strong><span data-want="ca" class="text-muted"></span> + Exam <strong data-sum="exam">0</strong><span data-want="exam" class="text-muted"></span> = <strong data-sum="all">0</strong> <span data-sum-note class="ms-1"></span></span>
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
@@ -94,10 +97,34 @@
         document.querySelector('[data-sum=ca]').textContent = Math.round(t.ca * 100) / 100;
         document.querySelector('[data-sum=exam]').textContent = Math.round(t.exam * 100) / 100;
         document.querySelector('[data-sum=all]').textContent = all;
-        var note = document.querySelector('[data-sum-note]');
-        note.className = 'ms-1 badge ' + (all === 100 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger');
-        note.textContent = all === 100 ? 'Adds up to 100' : 'Must add up to 100';
+        var note = document.querySelector('[data-sum-note]'), ok = all === 100, msg = 'Adds up to 100';
+        var want = {};
+        ['ca', 'exam'].forEach(function (c) {
+            var v = document.querySelector('[data-target=' + c + ']').value;
+            want[c] = v === '' ? null : parseFloat(v);
+        });
+        if (want.ca !== null || want.exam !== null) {
+            if (want.ca === null) { want.ca = 100 - want.exam; }
+            if (want.exam === null) { want.exam = 100 - want.ca; }
+        }
+        ['ca', 'exam'].forEach(function (c) {
+            var el = document.querySelector('[data-want=' + c + ']'), have = Math.round(t[c] * 100) / 100;
+            el.textContent = want[c] === null ? '' : ' of ' + want[c];
+            el.className = want[c] === null ? 'text-muted' : (have === want[c] ? 'text-success' : 'text-danger');
+            if (want[c] !== null && have !== want[c]) { ok = false; msg = (c === 'ca' ? 'CA' : 'Exam') + ' assessments must add up to ' + want[c]; }
+        });
+        if (all !== 100) { ok = false; if (msg === 'Adds up to 100') { msg = 'Must add up to 100'; } }
+        note.className = 'ms-1 badge ' + (ok ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger');
+        note.textContent = msg;
     }
+    document.querySelectorAll('[data-target]').forEach(function (el) {
+        el.addEventListener('input', function () {
+            var other = document.querySelector('[data-target=' + (el.getAttribute('data-target') === 'ca' ? 'exam' : 'ca') + ']');
+            var v = parseFloat(el.value);
+            if (!isNaN(v) && v >= 0 && v <= 100) { other.value = Math.round((100 - v) * 100) / 100; }
+            sum();
+        });
+    });
     body.addEventListener('input', sum);
     body.addEventListener('change', sum);
     body.addEventListener('click', function (e) {

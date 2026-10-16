@@ -100,7 +100,8 @@ class Menu
         $add((bool) $student?->needs_onboarding, 'Getting Started', 'my.onboarding', 'ph-flag', ['my.onboarding*'], ['admission', 'clearance', 'acceptance']);
         $add($settled, 'Course Registration', 'my.registration', 'ph-note-pencil', ['my.registration*'], ['courses', 'register']);
         $add($this->scoped->scope($u, 'View course registrations')->isEmpty() && CourseAdviser::where('user_id', $u->id)->exists(), 'My Advisees', 'registrations.index', 'ph-users-three', ['registrations.*'], ['course adviser']);
-        $add($u->courseAssignments()->exists() && ! $u->can('View result sheets'), 'My Courses & Scores', 'results.sheets.index', 'ph-list-checks', ['results.*'], ['score sheet', 'results']);
+        $add($u->courseAssignments()->exists() && ! $u->can('View result sheets'), 'My Courses & Scores', 'results.sheets.index', 'ph-list-checks', ['results.sheets.*', 'results.open'], ['score sheet', 'results']);
+        $add($u->courseAssignments()->exists() && ! $u->can('Enter results for any course'), 'Enter Scores', 'results.entry', 'ph-pencil-simple-line', ['results.entry'], ['post scores', 'by student', 'by subject', 'ca', 'exam']);
         $add($settled, 'My Results', 'my.results', 'ph-medal', ['my.results*'], ['grades', 'gpa', 'cgpa', 'transcript']);
         $add($settled && $this->mobile->feature('gpa_planner'), 'GPA Planner', 'my.gpa-planner', 'ph-target', ['my.gpa-planner'], ['target', 'gpa', 'cgpa', 'grades needed']);
         $add((bool) $student, 'My Fees', 'my.fees', 'ph-wallet', ['my.fees*', 'my.receipt'], ['pay', 'invoice', 'receipt', 'school fees']);
@@ -174,6 +175,7 @@ class Menu
                 ]],
                 ['sidebarResults', 'Results', 'ph-chart-bar', [
                     ['Score Sheets', 'results.sheets.index', ['View result sheets', 'Approve results', 'Approve results for any stage'], 'results.sheets.*', 'results.open'],
+                    ['Enter Scores', 'results.entry', 'Enter results for any course', 'results.entry'],
                     ['Master Sheet', 'results.broadsheet', ['View student results', 'Approve results', 'Approve results for any stage', 'Publish results'], 'results.broadsheet*'],
                     ['Carry-over Waivers', 'results.waivers.index', 'Waive carryover courses', 'results.waivers.*'],
                     ['Result Summary', 'results.summary', ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],

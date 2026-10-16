@@ -136,15 +136,16 @@ class ResultSheetController extends Controller
             : back()->with('success', $msg . ' Scores saved.');
     }
 
-    /** The sheet as an Excel file (or ?format=csv) the lecturer can fill in and upload again. */
+    /** The sheet as an Excel file (or ?format=csv), detailed or ?type=total, that the lecturer can fill in and upload again. */
     public function template(Request $request, ResultSheet $sheet, \App\Services\ScoreSheetFile $file): Response
     {
         abort_unless($this->mayView($sheet), 403);
         $csv = $request->query('format') === 'csv';
+        $type = $request->query('type') === 'total' ? 'total' : 'detailed';
 
-        return response($csv ? $file->csv($sheet) : $file->xlsx($sheet), 200, [
+        return response($csv ? $file->csv($sheet, $type) : $file->xlsx($sheet, $type), 200, [
             'Content-Type' => $csv ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $file->filename($sheet, $csv ? 'csv' : 'xlsx') . '"',
+            'Content-Disposition' => 'attachment; filename="' . $file->filename($sheet, $csv ? 'csv' : 'xlsx', $type) . '"',
         ]);
     }
 

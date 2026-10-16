@@ -266,6 +266,7 @@ Route::middleware('auth')->group(function () {
     $rs = \App\Http\Controllers\ResultSheetController::class;
     Route::get('results', [$rs, 'index'])->name('results.sheets.index');
     Route::get('results/open/{course}', [$rs, 'open'])->name('results.open');
+    Route::get('results/enter', [\App\Http\Controllers\ScoreEntryController::class, 'index'])->name('results.entry');
     Route::get('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'index'])->name('results.settings');
     Route::put('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'update'])->name('results.settings.update');
     Route::get('results/summary', [\App\Http\Controllers\ResultSummaryController::class, 'index'])->name('results.summary');

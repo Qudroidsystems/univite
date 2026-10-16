@@ -33,12 +33,14 @@ class AssessmentService
     // ---- Building schemes ------------------------------------------------------------------------------
 
     /**
-     * Check a list of items before saving: names, unique codes, marks above 0, and a total of exactly 100.
+     * Check a list of items before saving: names, unique codes, marks above 0, and a total of exactly 100. When the
+     * admin set a CA total and an exam total (for example 40 and 60), they must add up to 100 and each part's
+     * assessments must add up to its total.
      *
      * @param  array<int, array{name?: mixed, code?: mixed, component?: mixed, max_score?: mixed}>  $items
      * @return array<int, array{name: string, code: string, component: string, max_score: float}>
      */
-    public function cleanItems(array $items): array
+    public function cleanItems(array $items, mixed $caTotal = null, mixed $examTotal = null): array
     {
         $out = [];
         $codes = [];
@@ -70,12 +72,54 @@ class AssessmentService
         if (! $out) {
             throw new RuntimeException('Add at least one assessment.');
         }
+        [$caTotal, $examTotal] = $this->totals($caTotal, $examTotal);
+        if ($caTotal !== null) {
+            foreach (['ca' => [$caTotal, 'CA'], 'exam' => [$examTotal, 'exam']] as $component => [$want, $label]) {
+                $have = round(array_sum(array_column(array_filter($out, fn ($i) => $i['component'] === $component), 'max_score')), 2);
+                if (abs($have - $want) > 0.001) {
+                    throw new RuntimeException("The {$label} assessments must add up to the {$label} total of " . self::num($want) . '. They add up to ' . self::num($have) . ' now.');
+                }
+            }
+        }
         $total = round(array_sum(array_column($out, 'max_score')), 2);
         if (abs($total - 100) > 0.001) {
             throw new RuntimeException("The assessments must add up to 100. They add up to {$total} now.");
         }
 
         return $out;
+    }
+
+    /**
+     * The CA and exam totals the admin typed: both blank (worked out from the assessments) or both set and adding up
+     * to 100.
+     *
+     * @return array{0: ?float, 1: ?float}
+     */
+    public function totals(mixed $caTotal, mixed $examTotal): array
+    {
+        $caTotal = blank($caTotal) ? null : $caTotal;
+        $examTotal = blank($examTotal) ? null : $examTotal;
+        if ($caTotal === null && $examTotal === null) {
+            return [null, null];
+        }
+        if ($caTotal === null || $examTotal === null) {
+            [$caTotal, $examTotal] = $caTotal === null ? [100 - (float) $examTotal, $examTotal] : [$caTotal, 100 - (float) $caTotal];
+        }
+        foreach ([[$caTotal, 'CA'], [$examTotal, 'Exam']] as [$v, $label]) {
+            if (! is_numeric($v) || $v < 0 || $v > 100) {
+                throw new RuntimeException("The {$label} total must be a number from 0 to 100.");
+            }
+        }
+        if (abs((float) $caTotal + (float) $examTotal - 100) > 0.001) {
+            throw new RuntimeException('The CA total and the exam total must add up to 100 (for example 40 and 60).');
+        }
+
+        return [round((float) $caTotal, 2), round((float) $examTotal, 2)];
+    }
+
+    private static function num(float $n): string
+    {
+        return rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
     }
 
     /** "Test 1" => T1, "Mid-semester exam" => MSE; numbered when taken. */
@@ -94,10 +138,12 @@ class AssessmentService
     /** Create a scheme, or update one. Items cannot change once marks have been entered against them. */
     public function save(?AssessmentScheme $scheme, array $data, array $items, User $user): AssessmentScheme
     {
-        $clean = $this->cleanItems($items);
+        $clean = $this->cleanItems($items, $data['ca_total'] ?? null, $data['exam_total'] ?? null);
+        [$caTotal, $examTotal] = $this->totals($data['ca_total'] ?? null, $data['exam_total'] ?? null);
 
-        return DB::transaction(function () use ($scheme, $data, $clean, $user) {
-            $fields = ['name' => $data['name'], 'description' => $data['description'] ?? null, 'is_active' => (bool) ($data['is_active'] ?? true)];
+        return DB::transaction(function () use ($scheme, $data, $clean, $user, $caTotal, $examTotal) {
+            $fields = ['name' => $data['name'], 'description' => $data['description'] ?? null, 'is_active' => (bool) ($data['is_active'] ?? true),
+                'ca_total' => $caTotal, 'exam_total' => $examTotal];
             if ($scheme && $scheme->isLocked()) {
                 $scheme->load('items');
                 $now = $scheme->items->map(fn ($i) => [$i->name, $i->code, $i->component, (float) $i->max_score])->all();
@@ -125,7 +171,8 @@ class AssessmentService
     public function duplicate(AssessmentScheme $scheme, User $user): AssessmentScheme
     {
         return DB::transaction(function () use ($scheme, $user) {
-            $copy = AssessmentScheme::create(['name' => mb_substr($scheme->name . ' (copy)', 0, 120), 'description' => $scheme->description, 'is_active' => true, 'created_by' => $user->id]);
+            $copy = AssessmentScheme::create(['name' => mb_substr($scheme->name . ' (copy)', 0, 120), 'description' => $scheme->description,
+                'ca_total' => $scheme->ca_total, 'exam_total' => $scheme->exam_total, 'is_active' => true, 'created_by' => $user->id]);
             foreach ($scheme->items as $i) {
                 $copy->items()->create($i->only(['name', 'code', 'component', 'max_score', 'sort_order']));
             }
@@ -327,6 +374,82 @@ class AssessmentService
         $row->unsetRelation('assessmentScores');
 
         return $this->components($row, $scheme);
+    }
+
+    /**
+     * Save what a lecturer typed in one row, part by part (CA, then exam). A part whose assessments have any mark is
+     * worked out from them, as before. A part whose assessments are all blank but whose total was typed takes that total
+     * directly, and its assessment marks are cleared: lecturers may give a CA or exam total without the breakdown. A part
+     * with neither its assessments nor its total in $items / the totals is left as it is. A total typed next to marked
+     * assessments is ignored (a downloaded sheet still shows the old total after an assessment is changed).
+     *
+     * @param  array<int|string, mixed>  $items  item id or code => mark
+     * @return array{0: ?float, 1: ?float}
+     */
+    public function applyMixed(CourseResult $row, AssessmentScheme $scheme, array $items, mixed $ca, mixed $exam, ?User $user = null): array
+    {
+        $scheme->loadMissing('items');
+        $byId = $scheme->items->keyBy('id');
+        $byCode = $scheme->items->keyBy(fn ($i) => strtoupper($i->code));
+        $given = [];
+        foreach ($items as $key => $v) {
+            $item = $byId->get(is_numeric($key) ? (int) $key : -1) ?? $byCode->get(strtoupper((string) $key));
+            if (! $item) {
+                throw new RuntimeException("{$key} is not an assessment on this sheet.");
+            }
+            $given[$item->id] = $v;
+        }
+
+        $plan = [];
+        foreach (['ca' => [$ca, 'CA', $row->ca], 'exam' => [$exam, 'Exam', $row->exam]] as $component => [$total, $label, $now]) {
+            $part = $scheme->items->where('component', $component);
+            if ($part->isEmpty()) {
+                $plan[$component] = ['fixed', 0.0];
+                continue;
+            }
+            $mine = array_intersect_key($given, $part->keyBy('id')->all());
+            $filled = array_filter($mine, fn ($v) => ! blank($v));
+            $total = blank($total) ? null : $total;
+            $max = round((float) $part->sum('max_score'), 2);
+            if ($filled) {
+                $plan[$component] = ['items', $mine];
+            } elseif ($total !== null) {
+                if (! is_numeric($total) || $total < 0 || $total > $max) {
+                    throw new RuntimeException("{$label} total must be a number from 0 to " . self::num($max) . '.');
+                }
+                $plan[$component] = ['total', round((float) $total, 2), $part->pluck('id')->all()];
+            } elseif ($mine) {
+                $plan[$component] = ['items', $mine];
+            } else {
+                $plan[$component] = ['fixed', $now === null ? null : (float) $now];
+            }
+        }
+
+        $marks = [];
+        foreach ($plan as $p) {
+            if ($p[0] === 'items') {
+                $marks += $p[1];
+            }
+        }
+        if ($marks) {
+            $this->applyItems($row, $scheme, $marks, $user);
+        }
+        [$fromCa, $fromExam] = $this->components($row, $scheme);
+        $out = [];
+        foreach (['ca' => $fromCa, 'exam' => $fromExam] as $component => $fromItems) {
+            $p = $plan[$component];
+            if ($p[0] === 'total') {
+                AssessmentScore::where('course_result_id', $row->id)->whereIn('assessment_item_id', $p[2])->delete();
+                $out[] = $p[1];
+            } elseif ($p[0] === 'fixed') {
+                $out[] = $p[1];
+            } else {
+                $out[] = $fromItems;
+            }
+        }
+        $row->unsetRelation('assessmentScores');
+
+        return $out;
     }
 
     /**

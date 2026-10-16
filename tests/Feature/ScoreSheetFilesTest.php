@@ -53,7 +53,7 @@ it('lets a lecturer download the sheet as Excel, fill it in and upload it from t
     $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
     file_put_contents($path, $res->getContent());
     $rows = Xlsx::read($path);
-    expect($rows[0])->toBe(['Matric Number', 'Name', 'T1 (20)', 'ASG (10)', 'EXAM (70)'])->and(count($rows))->toBe(3);
+    expect($rows[0])->toBe(['Matric Number', 'Name', 'T1 (20)', 'ASG (10)', 'EXAM (70)', 'CA total (30)', 'Exam total (70)', 'Total (100)', 'Grade'])->and(count($rows))->toBe(3);
 
     // fill in: one good row, one mark out of range
     $filled = [$rows[0], [$rows[1][0], $rows[1][1], 15, 8, 50], [$rows[2][0], $rows[2][1], 25, 5, 40]];
@@ -66,7 +66,7 @@ it('lets a lecturer download the sheet as Excel, fill it in and upload it from t
 
     // CSV works too, and other files are refused
     $csv = $this->withToken($this->token)->get("/api/v1/teaching/sheets/{$this->sheet['id']}/file?format=csv")->assertOk()->getContent();
-    expect($csv)->toContain('"Matric Number","Name","T1 (20)","ASG (10)","EXAM (70)"')->toContain(',15,8,50');
+    expect($csv)->toContain('"Matric Number","Name","T1 (20)","ASG (10)","EXAM (70)","CA total (30)","Exam total (70)","Total (100)","Grade"')->toContain(',15,8,50,23,50,73,');
     $this->withToken($this->token)->post("/api/v1/teaching/sheets/{$this->sheet['id']}/upload", ['file' => UploadedFile::fake()->create('scores.pdf', 10)], ['Accept' => 'application/json'])->assertUnprocessable();
 
     // another lecturer cannot download or upload
@@ -89,5 +89,5 @@ it('gives the same Excel file on the portal and reads it back on upload', functi
     $this->actingAs($this->lecturer)->post(route('results.sheets.upload', $this->sheet['id']), ['file' => new UploadedFile($path, 'scores.xlsx', null, null, true)])
         ->assertSessionHas('success');
     expect(ResultSheet::find($this->sheet['id'])->results()->whereNotNull('total')->count())->toBe(1);
-    $this->actingAs($this->lecturer)->get(route('results.sheets.show', $this->sheet['id']))->assertOk()->assertSee('Download Excel to fill in');
+    $this->actingAs($this->lecturer)->get(route('results.sheets.show', $this->sheet['id']))->assertOk()->assertSee('Download score sheet')->assertSee('Totals only');
 });

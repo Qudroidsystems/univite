@@ -9,6 +9,7 @@ use App\Models\Faculty;
 use App\Models\Programme;
 use App\Models\ProgrammeCourse;
 use App\Models\Semester;
+use App\Models\SemesterType;
 use App\Models\StudyCategory;
 use Illuminate\Database\Seeder;
 
@@ -117,6 +118,13 @@ class DemoAcademicSeeder extends Seeder
                     ProgrammeCourse::updateOrCreate(['programme_id' => $programme->id, 'course_id' => $course->id], ['level' => 100, 'semester_order' => $sem, 'status' => 'required']);
                 }
             }
+        }
+
+        // Each course's own semester, category and the session it was introduced (the curriculum places it per programme).
+        $types = SemesterType::pluck('id', 'sort_order');
+        $first = AcademicSession::orderBy('name')->value('id');
+        foreach (ProgrammeCourse::with('course')->orderBy('id')->get()->unique('course_id') as $pc) {
+            $pc->course->update(['semester_type_id' => $types[$pc->semester_order] ?? null, 'study_category_id' => $category->id, 'academic_session_id' => $first]);
         }
     }
 }

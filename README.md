@@ -353,6 +353,21 @@ Things that used to open the website now happen in the app: course registration,
 
 **Master sheet.** Results → Master Sheet shows a programme and level for a semester: every course (score and grade), TCR, TCE, TGP and GPA for the semester, the cumulative totals before and after, CGPA and the remark (pass, carry-over list, probation, withdrawal, incomplete). It includes results still going through approval (marked provisional; tick "Published results only" to leave them out), so heads, deans and Senate consider the whole level before anything is published. It downloads as Excel and has a print layout (landscape, with signature lines) to print or save as PDF. "Approve all" approves every sheet on it waiting at your step; "Publish all" publishes the approved ones. Courses shared with other programmes (general studies) are approved or published for everyone on them, and the page says so.
 
+## Courses, assessments and entering scores
+
+**Courses.** Academic Setup → Courses asks for the faculty (school), then one of its departments, the student category (Degree, NCE, ... or every category), level, the session the course was introduced, its semester, the course code, title and units. The curriculum still decides which programmes take a course at which level and semester.
+
+**Assessments.** Academic Setup → Assessment Schemes sets the CA total and exam total (for example 40 and 60, adding up to 100) and the assessments that make them up: CA 1, CA 2, CA 3 ... for the CA and Question 1, Question 2 ... (or one Examination) for the exam. Each part's assessments must add up to its total.
+
+**Entering scores.** On a score sheet, and on Results → Enter Scores, each mark adds up as it is typed: a part's assessments fill its CA or exam total, and the total and grade (from Grade Bands) follow, with a progress bar and pass/fail counts. A lecturer may instead type a CA or exam total directly; that part's assessment marks are then cleared and the total is kept as typed. Enter moves down a column, like a spreadsheet. Enter Scores has two ways in:
+
+- *Post by student*: choose the department, student category and level (the class), the session and semester, and one of the class's courses; the table lists that class's students on the course.
+- *Post by subject*: choose the course (department, category and level only shorten the list); the table lists everyone taking it, with their programme and level.
+
+Either way only the rows shown are saved; submitting sends the whole course's sheet for approval. Lecturers see only the courses assigned to them; *Enter results for any course* sees every course.
+
+**Downloads.** A score sheet downloads (Excel or CSV) as *Detailed* (a column per assessment, then the CA and exam totals, total and grade) or *Totals only* (CA total, exam total, total and grade). Either can be filled in offline and uploaded: a part with assessment marks is added up from them, a part with only its total filled in takes the total, and empty cells keep what is on the portal. Total and Grade in the file are ignored on upload. The app's download takes `type=total` too.
+
 ## Sample data for development
 
 On a development machine (`APP_ENV=local` or `development`), `php artisan db:seed` also runs `DemoDataSeeder`, which builds a whole sample university: 4 faculties, 11 departments and programmes with courses for 100 to 400 level, four sessions (2023/2024 to 2026/2027, the last one current), staff with HODs, deans, unit heads and officers (registrar, bursar, exams, HR, library, hostel, clinic) and their roles, about 260 students at every level with matric numbers, applicants waiting for a decision, course registrations and published results for every finished semester, this semester's final-year results part-way through the HOD → Dean → Senate chain, a few waived carry-overs, school bills, invoices and payments (past sessions paid, this one a mix of paid, part-paid and unpaid), venues, hostels with bed allocations, a library with loans, and teaching-practice schools. It never runs on a live server.

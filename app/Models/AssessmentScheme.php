@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** A named set of assessment items (tests, assignments, practicals, exam ...) that adds up to 100. */
 class AssessmentScheme extends Model
 {
-    protected $fillable = ['name', 'description', 'is_active', 'created_by'];
+    protected $fillable = ['name', 'description', 'ca_total', 'exam_total', 'is_active', 'created_by'];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = ['is_active' => 'boolean', 'ca_total' => 'float', 'exam_total' => 'float'];
 
     public function items(): HasMany
     {

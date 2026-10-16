@@ -18,7 +18,7 @@
             @include('academics.partials.alerts')
             <p class="text-muted">{{ $sheet->session->name }} · {{ $sheet->semesterType->name }} · {{ $sheet->course->credit_units }} units · CA out of {{ $fmt($caMax) }}, exam out of {{ $fmt($examMax) }}</p>
             @if ($scheme)
-                <p class="text-muted fs-13 mt-n2"><i class="ri-survey-line me-1"></i>Assessment scheme <strong>{{ $scheme->name }}</strong>: {{ $scheme->summary() }}. Enter each mark; CA and exam are added up for you. Save as often as you like; every mark is needed before you submit.</p>
+                <p class="text-muted fs-13 mt-n2"><i class="ri-survey-line me-1"></i>Assessment scheme <strong>{{ $scheme->name }}</strong>: {{ $scheme->summary() }}. Enter each mark and the CA, exam, total and grade add up as you type, or type a CA or exam total directly. Save as often as you like; every student needs a total before you submit.</p>
             @endif
 
             @if ($schemes->isNotEmpty())
@@ -46,62 +46,20 @@
                             <div><label class="form-label mb-1">Upload scores (CSV or Excel)</label><input type="file" name="file" class="form-control" accept=".csv,.txt,.xlsx,.xls" required></div>
                             <button class="btn btn-soft-primary" type="submit"><i class="ri-upload-2-line me-1"></i>Upload</button>
                         </form>
-                        <div class="btn-group">
-                            <a href="{{ route('results.sheets.template', $sheet->id) }}" class="btn btn-light"><i class="ri-file-excel-2-line me-1 text-success"></i>Download Excel to fill in</a>
-                            <a href="{{ route('results.sheets.template', [$sheet->id, 'format' => 'csv']) }}" class="btn btn-light">CSV</a>
-                        </div>
-                        <div class="text-muted fs-12 w-100">The Excel file has a column per assessment with its maximum, the marks already entered, and refuses marks out of range. Fill it in offline and upload it here or from the UniVite app.</div>
+                        @include('results.partials.download-menu', ['sheet' => $sheet, 'label' => 'Download score sheet'])
+                        <div class="text-muted fs-12 w-100">Detailed has a column per assessment; totals only has the CA and exam totals. Both carry the marks already entered and refuse marks out of range. Fill either in offline and upload it here or from the UniVite app.</div>
                     </div>
                 </div>
             @else
-                <div class="d-flex justify-content-end mb-2"><a href="{{ route('results.sheets.template', $sheet->id) }}" class="btn btn-sm btn-light"><i class="ri-file-excel-2-line me-1 text-success"></i>Download as Excel</a></div>
+                <div class="d-flex justify-content-end mb-2">@include('results.partials.download-menu', ['sheet' => $sheet, 'label' => 'Download', 'small' => true])</div>
             @endif
 
             <form method="POST" action="{{ route('results.sheets.save', $sheet->id) }}">
                 @csrf
-                <div class="card">
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead class="table-light"><tr><th>#</th><th>Matric number</th><th>Name</th>
-                                @if ($scheme)
-                                    @foreach ($items as $it)<th style="width:96px" class="text-nowrap" title="{{ $it->name }} · {{ \App\Models\AssessmentItem::COMPONENTS[$it->component] }}">{{ $it->code }} <span class="text-muted fw-normal">/{{ $it->maxLabel() }}</span></th>@endforeach
-                                    <th>CA</th><th>Exam</th>
-                                @else
-                                    <th style="width:110px">CA</th><th style="width:110px">Exam</th>
-                                @endif
-                                <th>Total</th><th>Grade</th></tr></thead>
-                            <tbody>
-                            @forelse ($rows as $i => $r)
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $r->student->matric_label }}</td>
-                                    <td>{{ $r->student->full_name }}</td>
-                                    @if ($scheme)
-                                        @php $m = $marksOf($r); @endphp
-                                        @foreach ($items as $it)
-                                            <td>@if ($edit)<input type="number" step="0.01" min="0" max="{{ $it->max_score }}" name="scores[{{ $r->student_id }}][items][{{ $it->id }}]" value="{{ $m[$it->id] ?? '' }}" class="form-control form-control-sm" aria-label="{{ $it->name }}">@else{{ $m[$it->id] ?? '' }}@endif</td>
-                                        @endforeach
-                                        <td>{{ $r->ca }}</td><td>{{ $r->exam }}</td>
-                                    @else
-                                    <td>@if ($edit)<input type="number" step="0.01" min="0" max="{{ $caMax }}" name="scores[{{ $r->student_id }}][ca]" value="{{ $r->ca }}" class="form-control form-control-sm">@else{{ $r->ca }}@endif</td>
-                                    <td>@if ($edit)<input type="number" step="0.01" min="0" max="{{ $examMax }}" name="scores[{{ $r->student_id }}][exam]" value="{{ $r->exam }}" class="form-control form-control-sm">@else{{ $r->exam }}@endif</td>
-                                    @endif
-                                    <td>{{ $r->total }}</td>
-                                    <td>@if ($r->grade)<span class="badge {{ $r->is_pass ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }}">{{ $r->grade }}</span>@endif</td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="{{ 7 + ($scheme ? $items->count() : 0) }}" class="text-center text-muted py-4">No student has an approved registration for this course yet.</td></tr>
-                            @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    @if ($edit && $rows->isNotEmpty())
-                        <div class="card-footer d-flex justify-content-between align-items-center">
-                            <span class="text-muted">{{ $missing ? $missing . ' student(s) still need scores.' : 'All scores are in.' }}</span>
-                            <button class="btn btn-light" type="submit"><i class="ri-save-line me-1"></i>Save scores</button>
-                        </div>
-                    @endif
-                </div>
+                @include('results.partials.score-table', ['rows' => $rows, 'scheme' => $scheme, 'edit' => $edit, 'caMax' => $caMax, 'examMax' => $examMax])
+                @if ($edit && $rows->isNotEmpty() && $missing)
+                    <p class="text-muted fs-13 mt-n2">{{ $missing }} student(s) still need scores.</p>
+                @endif
             </form>
 
             @if ($edit && $rows->isNotEmpty())

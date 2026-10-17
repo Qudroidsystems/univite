@@ -10,7 +10,8 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
-            <div class="page-title-box"><h4 class="mb-0">Academic rules</h4></div>
+            <div class="page-title-box d-flex flex-wrap gap-2 align-items-center justify-content-between"><h4 class="mb-0">Academic rules</h4>
+                @include('setup.partials.links', ['sections' => ['rules', 'grading'], 'copy' => [], 'session' => null])</div>
             @include('academics.partials.alerts')
             <p class="text-muted">The university sets the defaults. A faculty, department or programme can override any rule, and the credit load can also be set for one level or semester. The most specific setting wins.</p>
 

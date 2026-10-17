@@ -22,6 +22,7 @@ class ResultKeyController extends CrudController
     protected string $icon = 'ri-key-2-line';
     protected string $routeBase = 'academics.result-keys';
     protected string $intro = 'What a student\'s cumulative GPA means after the Head of Department computes results: the remark printed on the master sheet, the rank (standing), the action that follows and what the student should do. Leave school, department and category blank for the whole university; the most specific key that matches the student\'s department and category is used. Ranges in one key must not overlap.';
+    protected array $snapshotSections = ['grading'];
 
     protected function model(): string
     {

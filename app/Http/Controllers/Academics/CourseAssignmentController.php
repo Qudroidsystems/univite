@@ -31,6 +31,8 @@ class CourseAssignmentController extends CrudController
     protected string $icon = 'ri-user-voice-line';
     protected string $routeBase = 'academics.course-assignments';
     protected string $intro = 'Define which lecturer teaches which course in a session and semester. A lecturer can enter and upload scores only for the courses defined for them, unless they hold the permission to enter results for any course. Heads of Department define their own department\'s courses for their own staff.';
+    protected array $snapshotSections = ['assignments'];
+    protected array $copyCategories = ['assignments'];
     protected array $searchable = [];
 
     public function __construct(private ScopedAccess $access, private Guard $auth)

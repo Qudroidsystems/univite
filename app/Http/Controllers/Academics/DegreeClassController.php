@@ -15,6 +15,7 @@ class DegreeClassController extends CrudController
     protected string $icon = 'ri-medal-line';
     protected string $routeBase = 'academics.degree-classes';
     protected string $intro = 'The class a graduating student earns from their CGPA: the highest class whose minimum CGPA the student reaches. Name them as your university does (First Class, Distinction, Merit ...).';
+    protected array $snapshotSections = ['grading'];
 
     protected function model(): string
     {

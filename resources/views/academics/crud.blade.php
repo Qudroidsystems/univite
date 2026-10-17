@@ -30,8 +30,11 @@
 
             @include('academics.partials.alerts')
 
-            @if ($intro)
-                <p class="text-muted mb-3">{{ $intro }}</p>
+            @if ($intro || $snapshotSections || $copyCategories)
+                <div class="d-flex flex-wrap gap-2 align-items-start justify-content-between mb-3">
+                    <p class="text-muted mb-0 flex-grow-1" style="max-width: 900px">{{ $intro }}</p>
+                    @include('setup.partials.links', ['sections' => $snapshotSections, 'copy' => $copyCategories, 'session' => request('session') ?: request('academic_session_id')])
+                </div>
             @endif
 
             @includeWhen($extraView, $extraView ?? 'academics.partials.alerts')

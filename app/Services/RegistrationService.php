@@ -54,10 +54,10 @@ class RegistrationService
         if (! $ctx) {
             return ['No semester is running right now.'];
         }
-        if (! RegistrationSettings::on('open')) {
+        if (! RegistrationSettings::on('open', $ctx)) {
             $why[] = 'Course registration is closed.';
         }
-        if ($windowReason = $this->windowBlocker($ctx->semester)) {
+        if ($windowReason = $this->windowBlocker($ctx)) {
             $why[] = $windowReason;
         }
         if (! $ctx->type->is_teaching) {
@@ -69,7 +69,7 @@ class RegistrationService
         if ($reason = $this->standingBlocker($student, $ctx)) {
             $why[] = $reason;
         }
-        if (RegistrationSettings::on('require_clearance') && $student->needs_onboarding && ! $student->cleared_at) {
+        if (RegistrationSettings::on('require_clearance', $ctx) && $student->needs_onboarding && ! $student->cleared_at) {
             $why[] = 'Finish your clearance first.';
         }
         if ($reason = $this->feeBlocker($student, $ctx)) {
@@ -99,14 +99,15 @@ class RegistrationService
     }
 
     /** Registration opens and closes on dates set per semester; a late period can follow if the university allows it. */
-    private function windowBlocker(Semester $semester): ?string
+    private function windowBlocker(RegistrationContext $ctx): ?string
     {
+        $semester = $ctx->semester;
         $now = now();
         if ($semester->registration_opens_at && $now->lt($semester->registration_opens_at)) {
             return 'Registration opens on ' . $semester->registration_opens_at->format('d M Y, g:i A') . '.';
         }
         if ($semester->registration_closes_at && $now->gt($semester->registration_closes_at)) {
-            $lateUntil = SessionSettings::on('late_registration') ? $semester->registration_closes_at->copy()->addDays(SessionSettings::int('late_registration_days')) : null;
+            $lateUntil = RegistrationSettings::on('late_registration', $ctx) ? $semester->registration_closes_at->copy()->addDays(RegistrationSettings::int('late_registration_days', $ctx)) : null;
             if (! $lateUntil || $now->gt($lateUntil)) {
                 return 'Registration closed on ' . $semester->registration_closes_at->format('d M Y, g:i A') . '.';
             }
@@ -117,7 +118,7 @@ class RegistrationService
 
     private function feeBlocker(Student $student, RegistrationContext $ctx): ?string
     {
-        $rule = RegistrationSettings::get('fee_rule');
+        $rule = RegistrationSettings::get('fee_rule', $ctx);
         if ($rule === 'none') {
             return null;
         }
@@ -327,7 +328,7 @@ class RegistrationService
             throw new RuntimeException(implode(' ', $problems));
         }
 
-        $approved = ! RegistrationSettings::on('require_approval');
+        $approved = ! RegistrationSettings::on('require_approval', $ctx);
         $form->update([
             'status' => $approved ? 'approved' : 'submitted', 'submitted_at' => now(), 'note' => null,
             'decided_by' => null, 'decided_at' => $approved ? now() : null,

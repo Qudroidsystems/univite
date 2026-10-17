@@ -22,6 +22,8 @@ class SessionController extends CrudController
     protected string $routeBase = 'academics.sessions';
     protected string $intro = 'An academic session is one school year, e.g. 2025/2026. Only one session is current at a time.';
     protected array $searchable = ['name'];
+    protected array $copyCategories = ['registration', 'windows', 'bills', 'assignments', 'assessments'];
+    protected array $snapshotSections = ['registration', 'windows', 'bills', 'assignments', 'assessments'];
 
     public function __construct(private SessionLifecycle $lifecycle)
     {

@@ -27,6 +27,10 @@ abstract class CrudController extends Controller
     protected string $icon = 'ri-settings-3-line';
     protected string $routeBase;    // "academics.sessions"
     protected string $intro = '';
+    /** Parts of the setup (SetupSnapshots section keys) this page edits: the page links to saving or restoring them. */
+    protected array $snapshotSections = [];
+    /** What of this page can be copied to another session (SessionCloneService categories). */
+    protected array $copyCategories = [];
     protected array $searchable = [];
     /** Which of create / edit / delete this page offers (each also needs its permission). */
     protected array $actions = ['create', 'edit', 'delete'];
@@ -185,6 +189,8 @@ abstract class CrudController extends Controller
             'rows'       => $this->query($request)->paginate($this->perPage)->withQueryString(),
             'canSearch'  => ! empty($this->searchable),
             'extraView'  => $this->extraView,
+            'snapshotSections' => $this->snapshotSections,
+            'copyCategories' => $this->copyCategories,
             'recordData' => fn (Model $row) => $this->recordData($row, $fields),
         ], $this->viewData($request)));
     }

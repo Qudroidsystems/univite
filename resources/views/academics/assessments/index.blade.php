@@ -10,9 +10,12 @@
         <div class="container-fluid">
             <div class="page-title-box d-sm-flex align-items-center justify-content-between">
                 <h4 class="mb-sm-0"><i class="ri-survey-line me-1 align-middle"></i>Assessment Schemes</h4>
-                @can('Create assessment schemes')
-                    <a href="{{ route('academics.assessments.create') }}" class="btn btn-primary"><i class="ri-add-line me-1"></i>New scheme</a>
-                @endcan
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    @include('setup.partials.links', ['sections' => ['assessments'], 'copy' => ['assessments'], 'session' => null])
+                    @can('Create assessment schemes')
+                        <a href="{{ route('academics.assessments.create') }}" class="btn btn-primary"><i class="ri-add-line me-1"></i>New scheme</a>
+                    @endcan
+                </div>
             </div>
             @include('academics.partials.alerts')
             <p class="text-muted">A scheme lists the assessments a course is marked on (for example Test 1, Assignment, Practical and the exam), each out of a set mark and counting towards CA or exam, adding up to 100.

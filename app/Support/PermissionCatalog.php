@@ -84,8 +84,9 @@ class PermissionCatalog
                 'about' => 'Sessions move through Draft, Setup, Active, Closing, Closed and Archived. Every change is checked first and recorded with a reason.',
                 'permissions' => [
                     ['Change session status', 'Manage', 'Move a session to the next stage (activate, start closing, close, reopen or archive it). A session is checked before it goes live and a reason is recorded.'],
-                    ['Copy session setup', 'Manage', 'Copy a session\'s setup (registration windows, school bills, course lecturers) into another session after a preview. No student data, scores or payments are ever copied.'],
+                    ['Copy session setup', 'Manage', 'Copy a session\'s setup (registration settings and windows, school bills, course lecturers, assessment schemes) into another session, a new session made from it, or from one semester to another, after a preview. No student data, scores or payments are ever copied.'],
                     ['Undo session copies', 'Manage', 'Undo a session copy. Only what nothing has used since is removed; anything already in use is kept and reported.'],
+                    ['Manage setup snapshots', 'Manage', 'Save a snapshot of the setup (registration settings, windows, bills, course lecturers, assessment schemes, academic rules, grading, result approval steps), see what restoring it would change, and restore it. A snapshot of what is there is always saved first. Student data, scores and payments are never in a snapshot.'],
                     ['View session rules', 'View', 'See the rules a university can choose for sessions, such as late registration and whether several sessions can be active together.'],
                     ['Edit session rules', 'Edit', 'Change the session rules, such as late registration days and whether closed sessions can be reopened.'],
                 ],

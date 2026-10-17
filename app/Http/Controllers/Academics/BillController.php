@@ -27,6 +27,8 @@ class BillController extends CrudController
     protected string $icon = 'ri-bill-line';
     protected string $routeBase = 'bills.structure';
     protected string $intro = 'Set what each bill item costs for a programme and level in a session. A charge can apply to all students, or only fresh or returning ones. Use "Copy bills" to roll a session forward.';
+    protected array $snapshotSections = ['bills'];
+    protected array $copyCategories = ['bills'];
     protected int $perPage = 30;
     protected ?string $extraView = 'academics.partials.bill-extra';
 

@@ -24,7 +24,7 @@
 
     function eligible(el) {
         return el instanceof HTMLSelectElement && !boxes.has(el) && !el.hasAttribute('data-no-search')
-            && !el.closest('[data-no-search]') && !el.closest('.uv-ss-panel');
+            && !el.closest('[data-no-search]') && !el.closest('.uv-ss-panel') && !el.closest('.swal2-container') && !el.classList.contains('swal2-select');
     }
 
     function placeholderOf(el) {

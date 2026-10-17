@@ -21,6 +21,7 @@ class GradeBandController extends CrudController
     protected string $routeBase = 'academics.grade-bands';
     protected ?string $extraView = 'academics.partials.grade-gaps';
     protected string $intro = 'Score ranges for each grade: the letter, grade points, rank (Distinction, Credit, Merit, Pass, Fail) and whether it is a pass. Leave school, department and category blank for the whole university. A school, department or student category can have its own key: when results are computed, the most specific key that matches the course\'s department and the student\'s category is used, never a mix. Ranges in one key must not overlap and should cover 0 to 100. Changing a key does not regrade results that are already approved.';
+    protected array $snapshotSections = ['grading'];
 
     protected function model(): string
     {

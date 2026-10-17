@@ -159,6 +159,7 @@ class Menu
                     ['Result Approval Steps', 'academics.result-stages.index', 'View result stages', 'academics.result-stages.*'],
                     ['Reference Lists', 'academics.lists.index', 'View reference lists', 'academics.lists.*'],
                     ['Copy Session Setup', 'sessions.clone', 'Copy session setup', 'sessions.clone*'],
+                    ['Setup Snapshots', 'setup.snapshots.index', 'Manage setup snapshots', 'setup.snapshots.*'],
                     ['Session Rules', 'sessions.rules', 'View session rules', 'sessions.rules*'],
                 ]],
                 ['sidebarStudents', 'Admissions & Students', 'ph-student', [

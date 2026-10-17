@@ -22,6 +22,7 @@ class Reversals
         'matric_correct'        => ['Matric numbers corrected', null],
         'session_clone'         => ['Session setup copied', R\SessionCloneReversal::class],
         'session_clone_undo'    => ['Session copy undone', null],
+        'snapshot_restore'      => ['Setup snapshot restored', null],
         'session_status'        => ['Session status changed', null],
         'payment_record'        => ['Payment recorded', R\PaymentReversal::class],
         'payment_reverse'       => ['Payment reversed', null],

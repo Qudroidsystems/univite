@@ -230,6 +230,12 @@ Route::middleware('auth')->group(function () {
     Route::get('sessions/copy', [\App\Http\Controllers\SessionCloneController::class, 'index'])->name('sessions.clone');
     Route::post('sessions/copy', [\App\Http\Controllers\SessionCloneController::class, 'run'])->name('sessions.clone.run');
     Route::post('sessions/copy/{batch}/undo', [\App\Http\Controllers\SessionCloneController::class, 'undo'])->name('sessions.clone.undo');
+    Route::get('setup/snapshots', [\App\Http\Controllers\SetupSnapshotController::class, 'index'])->name('setup.snapshots.index');
+    Route::post('setup/snapshots', [\App\Http\Controllers\SetupSnapshotController::class, 'store'])->name('setup.snapshots.store');
+    Route::get('setup/snapshots/{snapshot}', [\App\Http\Controllers\SetupSnapshotController::class, 'show'])->name('setup.snapshots.show');
+    Route::post('setup/snapshots/{snapshot}/restore', [\App\Http\Controllers\SetupSnapshotController::class, 'restore'])->name('setup.snapshots.restore');
+    Route::get('setup/snapshots/{snapshot}/download', [\App\Http\Controllers\SetupSnapshotController::class, 'download'])->name('setup.snapshots.download');
+    Route::delete('setup/snapshots/{snapshot}', [\App\Http\Controllers\SetupSnapshotController::class, 'destroy'])->name('setup.snapshots.destroy');
     Route::get('sessions/{session}/status', [\App\Http\Controllers\SessionLifecycleController::class, 'show'])->name('sessions.lifecycle');
     Route::post('sessions/{session}/status', [\App\Http\Controllers\SessionLifecycleController::class, 'change'])->name('sessions.lifecycle.change');
     Route::get('operations', [\App\Http\Controllers\OperationHistoryController::class, 'index'])->name('operations.index');

@@ -187,7 +187,7 @@ it('copies and undoes lecturer assignments, keeping those with a score sheet', f
 });
 
 it('never copies registrations, results or payments', function () {
-    expect(array_keys(SessionCloneService::CATEGORIES))->toBe(['windows', 'bills', 'assignments']);
+    expect(array_keys(SessionCloneService::CATEGORIES))->toBe(['registration', 'windows', 'bills', 'assignments', 'assessments']);
     expect(CloneItem::count())->toBe(0);
 });
 

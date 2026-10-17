@@ -19,6 +19,7 @@ class ResultStageController extends CrudController
     protected string $icon = 'ri-git-merge-line';
     protected string $routeBase = 'academics.result-stages';
     protected string $intro = 'After a lecturer submits a score sheet it goes through these steps in order, for example Head of Department then Dean, then Senate. Choose the role that signs off each step, or leave the role blank to let anyone allowed to approve results sign it. The last step is followed by publishing, which makes results visible to students. Remove all steps to publish straight after submission.';
+    protected array $snapshotSections = ['approval'];
 
     protected function model(): string
     {

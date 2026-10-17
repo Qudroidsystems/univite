@@ -12,6 +12,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A MySQL run that stopped part-way (index names over 64 characters) left the table behind without recording
+        // the migration, so start clean.
+        Schema::dropIfExists('computed_results');
+
         Schema::create('computed_results', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained()->cascadeOnDelete();
@@ -45,8 +49,8 @@ return new class extends Migration
             $table->foreignId('computed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('computed_at')->nullable();
             $table->timestamps();
-            $table->unique(['student_id', 'academic_session_id', 'semester_type_id']);
-            $table->index(['department_id', 'academic_session_id', 'semester_type_id', 'level']);
+            $table->unique(['student_id', 'academic_session_id', 'semester_type_id'], 'computed_results_student_term_unique');
+            $table->index(['department_id', 'academic_session_id', 'semester_type_id', 'level'], 'computed_results_department_term_index');
         });
     }
 

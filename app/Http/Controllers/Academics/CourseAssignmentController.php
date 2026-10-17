@@ -159,7 +159,7 @@ class CourseAssignmentController extends CrudController
     {
         return [
             ['Lecturer', fn ($r) => new \Illuminate\Support\HtmlString(e($r->user->name) . '<div class="text-muted fs-12">' . e($r->user->staffProfile?->staff_number ?? '') . '</div>')],
-            ['Course', fn ($r) => $r->course->code . ' - ' . $r->course->title],
+            ['Course', fn ($r) => new \Illuminate\Support\HtmlString(e($r->course->code . ' - ' . $r->course->title) . '<div class="mt-1">' . \Illuminate\Support\Facades\Blade::renderComponent(new \App\View\Components\CourseTag($r->course)) . '</div>')],
             ['Department', fn ($r) => $r->course->department?->name],
             ['Session', fn ($r) => $r->session->name],
             ['Semester', fn ($r) => $r->semesterType->name],

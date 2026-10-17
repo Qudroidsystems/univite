@@ -87,7 +87,7 @@
                                 <tbody>
                                     @forelse ($overview->courses as $c)
                                         <tr @class(['table-warning' => ! $c->ready()])>
-                                            <td><span class="fw-semibold">{{ $c->course->code }}</span><div class="fs-12 text-muted">{{ $c->course->title }} · {{ $c->course->credit_units }} units</div></td>
+                                            <td><span class="fw-semibold">{{ $c->course->code }}</span><div class="fs-12 text-muted">{{ $c->course->title }} · {{ $c->course->credit_units }} units</div><x-course-tag :course="$c->course" /></td>
                                             <td>{!! $c->lecturers->isEmpty() ? '<span class="text-muted">Not defined</span>' : $c->lecturers->map($person)->implode('') !!}</td>
                                             <td>@if ($c->sheet)<span class="badge {{ \App\Models\ResultSheet::BADGES[$c->sheet->status] ?? 'bg-light text-body' }}">{{ $c->statusLabel() }}</span>@else<span class="text-muted">{{ $c->statusLabel() }}</span>@endif</td>
                                             <td>{!! $person($c->submittedBy) !!}</td>

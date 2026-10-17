@@ -9,6 +9,8 @@ class ProgrammeCourse extends Model
 {
     protected $fillable = ['programme_id', 'course_id', 'level', 'semester_order', 'status'];
 
+    protected $attributes = ['status' => \App\Support\CourseType::COMPULSORY];
+
     public function programme(): BelongsTo
     {
         return $this->belongsTo(Programme::class);

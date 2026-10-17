@@ -86,7 +86,7 @@ class TimetableService
 
         $enrolled = StudentStatus::codesWhere('is_enrolled') ?: ['active'];
         $order = (int) ($t->semesterType?->sort_order ?? 1);
-        foreach (ProgrammeCourse::whereIn('course_id', array_diff($courseIds, array_keys($sizes)))->where('semester_order', $order)->whereIn('status', ['core', 'required'])->get() as $pc) {
+        foreach (ProgrammeCourse::whereIn('course_id', array_diff($courseIds, array_keys($sizes)))->where('semester_order', $order)->where('status', \App\Support\CourseType::COMPULSORY)->get() as $pc) {
             $sizes[$pc->course_id] = ($sizes[$pc->course_id] ?? 0) + Student::where('programme_id', $pc->programme_id)->where('current_level', $pc->level)->whereIn('status', $enrolled)->count();
         }
 

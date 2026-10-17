@@ -59,3 +59,9 @@ select.uv-lookup-loading {
 @keyframes uvBump { 40% { transform: scale(1.3); } }
 .uv-search-empty:not(.d-none) { animation: uvSearchIn .35s ease both; }
 @media (prefers-reduced-motion: reduce) { .uv-leader-in, .uv-search-item, .uv-search-item.uv-show, .uv-search-card mark, .uv-search-count.uv-bump { animation: none; transition: none; } }
+
+/* Course type (C / CE / E) and owning department beside a course. */
+.uv-ctag { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; margin-left: 4px; font-weight: 400; }
+.uv-ctag .badge { font-size: 10px; letter-spacing: .3px; }
+.uv-ctag-dept { display: inline-flex; align-items: center; gap: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vz-secondary-color, #878a99); }
+@media print { .uv-ctag .badge { border: 1px solid #999; color: #000 !important; background: none !important; } }

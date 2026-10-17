@@ -157,16 +157,16 @@ it('builds a curriculum and totals credit units', function () {
     $c2 = Course::create(['department_id' => $dept->id, 'code' => 'CSC 102', 'title' => 'Programming', 'credit_units' => 4]);
 
     $this->actingAs($this->admin)->post(route('academics.curriculum.store'), [
-        'programme_id' => $prog->id, 'course_ids' => [$c1->id, $c2->id], 'level' => 100, 'semester_order' => 1, 'status' => 'core',
+        'programme_id' => $prog->id, 'course_ids' => [$c1->id, $c2->id], 'level' => 100, 'semester_order' => 1, 'status' => 'compulsory',
     ])->assertSessionHasNoErrors();
     expect(ProgrammeCourse::count())->toBe(2);
 
     $this->get(route('academics.curriculum.index', ['programme' => $prog->id]))->assertOk()->assertSee('7 units');
 
     // The same course cannot be added twice, and a level the programme does not run is refused
-    $this->post(route('academics.curriculum.store'), ['programme_id' => $prog->id, 'course_ids' => [$c1->id], 'level' => 100, 'semester_order' => 2, 'status' => 'core']);
+    $this->post(route('academics.curriculum.store'), ['programme_id' => $prog->id, 'course_ids' => [$c1->id], 'level' => 100, 'semester_order' => 2, 'status' => 'compulsory']);
     expect(ProgrammeCourse::count())->toBe(2);
-    $this->post(route('academics.curriculum.store'), ['programme_id' => $prog->id, 'course_ids' => [$c1->id], 'level' => 500, 'semester_order' => 1, 'status' => 'core'])
+    $this->post(route('academics.curriculum.store'), ['programme_id' => $prog->id, 'course_ids' => [$c1->id], 'level' => 500, 'semester_order' => 1, 'status' => 'compulsory'])
         ->assertSessionHas('error');
 
     $entry = ProgrammeCourse::first();
@@ -254,4 +254,20 @@ it('resets a password and disables or enables an account', function () {
     $this->post(route('users.toggle-status', $user));
     expect($user->fresh()->is_disabled)->toBeTrue();
     $this->post(route('users.toggle-status', $this->admin))->assertSessionHas('error');
+});
+
+it('gives a course a type, which the curriculum uses unless it sets its own, and shows it with the owning department', function () {
+    [, $dept, $prog] = makeStructure();
+    $this->actingAs($this->admin)->post(route('academics.courses.store'), ['department_id' => $dept->id, 'code' => 'CSC 105', 'title' => 'Ethics', 'credit_units' => 2, 'course_type' => 'elective'])->assertSessionHasNoErrors();
+    $this->post(route('academics.courses.store'), ['department_id' => $dept->id, 'code' => 'CSC 106', 'title' => 'Logic', 'credit_units' => 2])->assertSessionHasNoErrors();
+    $this->post(route('academics.courses.store'), ['department_id' => $dept->id, 'code' => 'CSC 107', 'title' => 'Odd', 'credit_units' => 2, 'course_type' => 'core'])->assertSessionHasErrors('course_type');
+    [$ethics, $logic] = [Course::where('code', 'CSC 105')->first(), Course::where('code', 'CSC 106')->first()];
+    expect($ethics->course_type)->toBe('elective')->and($logic->course_type)->toBe('compulsory');
+
+    $this->get(route('academics.courses.index'))->assertOk()->assertSee('Elective');
+
+    $this->post(route('academics.curriculum.store'), ['programme_id' => $prog->id, 'course_ids' => [$ethics->id, $logic->id], 'level' => 100, 'semester_order' => 1])->assertSessionHasNoErrors();
+    expect(ProgrammeCourse::where('course_id', $ethics->id)->value('status'))->toBe('elective')
+        ->and(ProgrammeCourse::where('course_id', $logic->id)->value('status'))->toBe('compulsory');
+    $this->get(route('academics.curriculum.index', ['programme' => $prog->id]))->assertOk()->assertSee('Owned by ' . $dept->name)->assertSee("Each course's own type", false);
 });

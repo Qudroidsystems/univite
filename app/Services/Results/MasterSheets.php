@@ -16,6 +16,8 @@ use App\Models\Student;
 use App\Models\User;
 use App\Services\Access\ScopedAccess;
 use App\Services\ResultService;
+use App\Support\AcademicRules;
+use App\Support\CourseType;
 use App\Support\GradeScale;
 use App\Support\Institution;
 use App\Support\Xlsx;
@@ -34,7 +36,7 @@ class MasterSheets
     /** Result statuses the provisional sheet counts (drafts are still the lecturer's). */
     private const PROVISIONAL = ['submitted', 'approved', 'published'];
 
-    public function __construct(private ResultService $results, private ScopedAccess $access)
+    public function __construct(private ResultService $results, private ScopedAccess $access, private AcademicRules $rules)
     {
     }
 
@@ -63,7 +65,7 @@ class MasterSheets
             ->get()->sortBy(fn ($s) => [$s->matric_number ?? 'zzz', $s->last_name, $s->first_name])->values();
         $ids = $students->pluck('id');
 
-        $registered = CourseRegistration::with('course')->whereIn('student_id', $ids)
+        $registered = CourseRegistration::with('course.department')->whereIn('student_id', $ids)
             ->whereHas('form', fn ($q) => $q->where('academic_session_id', $session->id)->where('semester_type_id', $type->id)->where('status', 'approved'))
             ->get();
         $courses = $registered->pluck('course')->unique('id')->sortBy('code')->values();
@@ -75,8 +77,9 @@ class MasterSheets
         $history = CourseResult::with('course', 'session', 'semesterType')->whereIn('student_id', $ids)->whereIn('status', $statuses)->get()
             ->filter(fn ($r) => $order($r) <= $here)->groupBy('student_id');
         $waivers = CarryoverWaiver::active()->with('course')->whereIn('student_id', $ids)->get()->groupBy('student_id');
+        $types = \App\Models\ProgrammeCourse::where('programme_id', $programme->id)->pluck('status', 'course_id');
 
-        $rows = $students->map(function (Student $s) use ($history, $session, $type, $byStudent, $waivers, $order, $here) {
+        $rows = $students->map(function (Student $s) use ($history, $session, $type, $byStudent, $waivers, $order, $here, $types) {
             $mine = $history->get($s->id, collect());
             $term = $mine->filter(fn ($r) => $r->academic_session_id === $session->id && $r->semester_type_id === $type->id)->keyBy('course_id');
             $before = $mine->filter(fn ($r) => $order($r) < $here)->values();
@@ -87,7 +90,9 @@ class MasterSheets
             $waived = $waivers->get($s->id, collect())->keyBy('course_id');
             $latest = $mine->sortBy(fn ($r) => [...$order($r), $r->id])->groupBy('course_id')->map->last();
             $passedEver = $mine->where('is_pass', true)->pluck('course_id')->flip();
-            $failed = $latest->filter(fn ($r) => ! $r->is_pass && $r->grade !== null && ! $passedEver->has($r->course_id));
+            $rules = $this->rules->forStudent($s);
+            $failed = $latest->filter(fn ($r) => ! $r->is_pass && $r->grade !== null && ! $passedEver->has($r->course_id)
+                && CourseType::mustRetake($types->get($r->course_id), $rules));
             $carryovers = $failed->reject(fn ($r) => $waived->has($r->course_id))->map(fn ($r) => $r->course->code)->sort()->values();
             $outstanding = $byStudent->get($s->id, collect())->reject(fn ($c) => $term->has($c->course_id))->map(fn ($c) => $c->course->code)->sort()->values();
             $missing = $outstanding->count();
@@ -132,7 +137,7 @@ class MasterSheets
         $sheets = ResultSheet::with('stage')->whereIn('course_id', $courses->pluck('id'))
             ->where('academic_session_id', $session->id)->where('semester_type_id', $type->id)->get()->keyBy('course_id');
         $takers = $registered->groupBy('course_id')->map->count();
-        $columns = $courses->map(function ($course) use ($rows, $sheets, $takers) {
+        $columns = $courses->map(function ($course) use ($rows, $sheets, $takers, $types) {
             $marks = $rows->map(fn (MasterSheetRow $r) => $r->results->get($course->id))->filter();
 
             return new MasterSheetCourse(
@@ -142,6 +147,7 @@ class MasterSheets
                 passed: $marks->where('is_pass', true)->count(),
                 failed: $marks->where('is_pass', false)->count(),
                 average: $marks->isEmpty() ? null : round((float) $marks->avg('total'), 1),
+                type: $types->get($course->id) ?? $course->course_type,
             );
         });
 
@@ -217,7 +223,7 @@ class MasterSheets
     {
         $head = ['S/N', 'Matric number', 'Name'];
         foreach ($sheet->courses as $c) {
-            $head[] = "{$c->course->code} ({$c->course->credit_units})";
+            $head[] = "{$c->course->code} ({$c->course->credit_units}) " . CourseType::short($c->type);
         }
         array_push($head, 'Present TCP', 'Present TNU', 'GPA', 'Previous TCP', 'Previous TNU', 'Previous CGPA', 'Cumulative TCP', 'Cumulative TNU', 'CGPA', 'Outstanding results', 'Remark');
 
@@ -236,12 +242,13 @@ class MasterSheets
         $notes = [
             $sheet->title(),
             $sheet->provisional ? 'Includes results still going through approval; students only see published results.' : 'Published results only.',
+            'C: compulsory, CE: compulsory elective, E: elective.',
             'TCP: total credit points (grade point x units). TNU: total number of units. GPA = TCP / TNU. Previous: before this semester; cumulative: including it.',
             '',
             'Where each course is:',
         ];
         foreach ($sheet->courses as $c) {
-            $notes[] = "{$c->course->code} {$c->course->title}: {$c->statusLabel()}. {$c->passed} passed, {$c->failed} failed" . ($c->average !== null ? ", average {$c->average}" : '') . '.';
+            $notes[] = "{$c->course->code} {$c->course->title} (" . CourseType::label($c->type) . ', ' . ($c->course->department?->name ?? 'no department') . "): {$c->statusLabel()}. {$c->passed} passed, {$c->failed} failed" . ($c->average !== null ? ", average {$c->average}" : '') . '.';
         }
         $notes[] = '';
         foreach (MasterSheet::BUCKETS as $k => $label) {

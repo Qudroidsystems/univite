@@ -64,11 +64,11 @@
                     @endif
 
                     <div class="table-responsive mb-3"><table class="table table-sm table-bordered align-middle mb-0 fs-12">
-                        <thead class="table-light"><tr><th>Course</th><th>Title</th><th class="text-center">Units</th><th>Where it is</th><th class="text-end">Registered</th><th class="text-end">Passed</th><th class="text-end">Failed</th><th class="text-end">Average</th></tr></thead>
+                        <thead class="table-light"><tr><th>Course</th><th>Title</th><th>Type and department</th><th class="text-center">Units</th><th>Where it is</th><th class="text-end">Registered</th><th class="text-end">Passed</th><th class="text-end">Failed</th><th class="text-end">Average</th></tr></thead>
                         <tbody>
                         @foreach ($sheet->courses as $c)
                             <tr><td class="fw-semibold">@if ($c->sheet && ! $print)<a href="{{ route('results.sheets.show', $c->sheet->id) }}">{{ $c->course->code }}</a>@else{{ $c->course->code }}@endif</td>
-                                <td>{{ $c->course->title }}</td><td class="text-center">{{ $c->course->credit_units }}</td>
+                                <td>{{ $c->course->title }}</td><td><x-course-tag :course="$c->course" :type="$c->type" full /></td><td class="text-center">{{ $c->course->credit_units }}</td>
                                 <td><span class="badge {{ $badges[$c->sheet?->status] ?? 'bg-light text-body' }}">{{ $c->statusLabel() }}</span></td>
                                 <td class="text-end">{{ $c->registered }}</td><td class="text-end">{{ $c->passed }}</td><td class="text-end">{{ $c->failed }}</td><td class="text-end">{{ $c->average ?? '—' }}</td></tr>
                         @endforeach
@@ -81,7 +81,7 @@
                                 @if ($sheet->courses->isNotEmpty())<th colspan="{{ $sheet->courses->count() }}" class="uv-group">Courses (score and grade)</th>@endif
                                 <th colspan="3" class="uv-group">Present</th><th colspan="3" class="uv-group">Previous</th><th colspan="3" class="uv-group">Cumulative</th><th rowspan="2" class="uv-group text-start">Outstanding results</th><th rowspan="2" class="uv-group text-start">Remark</th></tr>
                             <tr>
-                                @foreach ($sheet->courses as $i => $c)<th class="{{ $i === 0 ? 'uv-group' : '' }}" title="{{ $c->course->title }}">{{ $c->course->code }}<div class="fw-normal">{{ $c->course->credit_units }}u</div></th>@endforeach
+                                @foreach ($sheet->courses as $i => $c)<th class="{{ $i === 0 ? 'uv-group' : '' }}" title="{{ $c->course->title }}">{{ $c->course->code }}<div class="fw-normal">{{ $c->course->credit_units }}u · <span title="{{ \App\Support\CourseType::label($c->type) }}">{{ \App\Support\CourseType::short($c->type) }}</span></div></th>@endforeach
                                 <th class="uv-group">TCP</th><th>TNU</th><th>GPA</th>
                                 <th class="uv-group">TCP</th><th>TNU</th><th>CGPA</th>
                                 <th class="uv-group">TCP</th><th>TNU</th><th>CGPA</th>

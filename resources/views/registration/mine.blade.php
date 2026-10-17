@@ -3,7 +3,9 @@
 @section('content')
 @php
     $editable = $form && $form->isEditable() && ! $blockers;
-    $chosen = old('courses', $form ? $form->courses->pluck('course_id')->all() : []);
+    // a fresh form starts with the compulsory courses and carry-overs ticked
+    $fresh = ! $form || ($form->courses->isEmpty() && $form->status === 'draft');
+    $chosen = old('courses', $fresh ? collect($offered)->filter(fn ($o) => ! $o['blocked'] && ($o['carryover'] || $o['status'] === \App\Support\CourseType::COMPULSORY))->map(fn ($o) => $o['course']->id)->values()->all() : $form->courses->pluck('course_id')->all());
 @endphp
 <div class="main-content">
     <div class="page-content">
@@ -45,7 +47,7 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
-                            <thead class="table-light"><tr><th style="width:1%"></th><th>Course</th><th>Status</th><th class="text-end">Units</th></tr></thead>
+                            <thead class="table-light"><tr><th style="width:1%"></th><th>Course</th><th>Type and department</th><th class="text-end">Units</th></tr></thead>
                             <tbody>
                             @forelse ($offered as $o)
                                 @php $c = $o['course']; $on = in_array($c->id, $chosen); @endphp
@@ -54,7 +56,7 @@
                                     <td><span class="fw-semibold">{{ $c->code }}</span> {{ $c->title }}
                                         @if ($o['carryover'])<span class="badge bg-danger-subtle text-danger ms-1">Carry-over</span>@endif
                                         @if ($o['blocked'])<div class="fs-12 text-danger">{{ $o['blocked'] }}</div>@endif</td>
-                                    <td>{{ \App\Support\Lookups::label('course_status', $o['status']) }}</td>
+                                    <td><x-course-tag :course="$c" :type="$o['status']" full /></td>
                                     <td class="text-end">{{ $c->credit_units }}</td>
                                 </tr>
                             @empty
@@ -63,6 +65,9 @@
                             </tbody>
                         </table>
                     </div>
+                    @if ($editable && collect($offered)->isNotEmpty())
+                        <div class="px-3 pt-2 text-muted fs-12">Compulsory courses must be taken and passed.@if (collect($offered)->contains('status', \App\Support\CourseType::COMPULSORY_ELECTIVE)) From the compulsory electives, choose {{ $ceRule }}.@endif Electives are optional.</div>
+                    @endif
                     @if ($editable)
                         @foreach ($problems as $p)<div class="px-3 pt-2 text-danger fs-13">{{ $p }}</div>@endforeach
                         <div class="card-footer d-flex gap-2 justify-content-end">

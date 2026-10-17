@@ -20,7 +20,7 @@
                 @forelse ($waivers as $w)
                     <tr><td>{{ $w->student->full_name }}<div class="text-muted fs-12">{{ $w->student->matric_label }}</div></td>
                         <td>{{ $w->student->programme?->name }}</td>
-                        <td>{{ $w->course->code }}<div class="text-muted fs-12">{{ $w->course->title }}</div></td>
+                        <td>{{ $w->course->code }}<div class="text-muted fs-12">{{ $w->course->title }}</div><x-course-tag :course="$w->course" /></td>
                         <td class="fs-13">{{ $w->reason }}</td>
                         <td class="fs-13">{{ $w->created_at->format('j M Y') }}<div class="text-muted fs-12">{{ $w->granter?->name }}</div></td>
                         <td>@if ($w->isActive())<span class="badge bg-success-subtle text-success">In force</span>@else<span class="badge bg-secondary-subtle text-secondary">Withdrawn {{ $w->revoked_at->format('j M Y') }}</span><div class="text-muted fs-12">{{ $w->revoke_reason }}</div>@endif</td>

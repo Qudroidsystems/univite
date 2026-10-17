@@ -437,12 +437,12 @@ class ResultService
 
         return $forms->map(function (RegistrationForm $f) use ($sessionId, $semesterTypeId) {
             $s = $f->student;
-            $term = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')
+            $term = CourseResult::with('course.department')->where('student_id', $s->id)->where('status', 'published')
                 ->where('academic_session_id', $sessionId)->where('semester_type_id', $semesterTypeId)->get();
             $t = $this->transcript($s);
             $passed = CourseResult::where('student_id', $s->id)->where('status', 'published')->where('is_pass', true)->pluck('course_id')->flip();
             $waived = \App\Models\CarryoverWaiver::active()->with('course')->where('student_id', $s->id)->get()->keyBy('course_id');
-            $failed = CourseResult::with('course')->where('student_id', $s->id)->where('status', 'published')->where('is_pass', false)->get()
+            $failed = CourseResult::with('course.department')->where('student_id', $s->id)->where('status', 'published')->where('is_pass', false)->get()
                 ->reject(fn ($r) => $passed->has($r->course_id))->unique('course_id')->sortBy('course.code');
             $outstanding = $failed->reject(fn ($r) => $waived->has($r->course_id))->pluck('course.code')->values();
             $outstandingCourses = $failed->reject(fn ($r) => $waived->has($r->course_id))->pluck('course')->values();

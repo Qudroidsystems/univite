@@ -1,0 +1,1 @@
+<span class="uv-ctag"><span class="badge {{ $badge }}" title="{{ $label }}">{{ $full ? $label : $short }}</span>@if ($dept)<span class="uv-ctag-dept" title="Owned by {{ $dept->name }}"><i class="ri-building-line"></i>{{ $dept->name }}</span>@endif</span>

@@ -23,7 +23,7 @@
                             <div class="d-flex flex-wrap justify-content-between gap-2">
                                 <div>
                                     <span class="fw-semibold">{{ $c->student->full_name }}</span> <span class="text-muted">{{ $c->student->matric_label }}</span>
-                                    <div class="fs-13">{{ $r->course->code }} {{ $r->course->title }} · {{ $r->session->name }} {{ $r->semesterType->name }} · CA {{ $r->ca }} + Exam {{ $r->exam }} = <strong>{{ $r->total }} ({{ $r->grade }})</strong>
+                                    <div class="fs-13">{{ $r->course->code }} {{ $r->course->title }} <x-course-tag :course="$r->course" /> · {{ $r->session->name }} {{ $r->semesterType->name }} · CA {{ $r->ca }} + Exam {{ $r->exam }} = <strong>{{ $r->total }} ({{ $r->grade }})</strong>
                                         @if ($r->sheet)<a href="{{ route('results.sheets.show', $r->result_sheet_id) }}" class="ms-1">Score sheet</a>@endif</div>
                                 </div>
                                 <div class="text-end"><span class="badge {{ \App\Models\ResultComplaint::BADGES[$c->status] }}">{{ \App\Models\ResultComplaint::STATUSES[$c->status] }}</span><div class="text-muted fs-12">{{ $c->created_at->format('j M Y') }}</div></div>

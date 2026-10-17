@@ -41,7 +41,7 @@ beforeEach(function () {
     Semester::create(['academic_session_id' => $this->session->id, 'name' => 'First Semester', 'sort_order' => 1, 'is_current' => true]);
     $this->type = SemesterType::where('sort_order', 1)->first();
     $this->course = Course::create(['department_id' => $dept->id, 'code' => 'BIO 101', 'title' => 'Intro Biology', 'credit_units' => 3, 'level' => 100]);
-    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course->id, 'level' => 100, 'semester_order' => 1, 'status' => 'core']);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course->id, 'level' => 100, 'semester_order' => 1, 'status' => 'compulsory']);
     $this->course2 = Course::create(['department_id' => $dept->id, 'code' => 'BIO 102', 'title' => 'Cell Biology', 'credit_units' => 2, 'level' => 100]);
 
     $this->students = collect([['Tola', 'Adeyemi', 'a@example.com', '11111111AA', '2026/0001'], ['Bisi', 'Okon', 'b@example.com', '22222222BB', '2026/0002']])->map(function ($d, $i) {
@@ -143,7 +143,7 @@ it('downloads the master sheet as Excel and opens a print layout', function () {
     $tmp = tempnam(sys_get_temp_dir(), 'ms') . '.xlsx';
     file_put_contents($tmp, $res->getContent());
     $rows = \App\Support\Xlsx::read($tmp);
-    expect($rows[0])->toContain('BIO 101 (3)')->toContain('CGPA')->toContain('Remark')
+    expect($rows[0])->toContain('BIO 101 (3) C')->toContain('CGPA')->toContain('Remark')
         ->and(collect($rows)->flatten()->implode('|'))->toContain('2026/0002')->toContain('Carry over BIO 101');
 
     $this->get(route('results.broadsheet.print', masterQuery()))->assertOk()->assertSee('window.print()', false)->assertSee('Chairman, Senate');

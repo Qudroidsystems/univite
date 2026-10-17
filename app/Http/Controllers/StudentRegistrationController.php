@@ -27,7 +27,7 @@ class StudentRegistrationController extends Controller
         $student = $this->student()->load('programme');
         $ctx = $this->registration->context();
         $blockers = $this->registration->blockers($student, $ctx);
-        $form = $ctx ? $this->registration->form($student, $ctx)->load('courses.course') : null;
+        $form = $ctx ? $this->registration->form($student, $ctx)->load('courses.course.department') : null;
 
         return view('registration.mine', [
             'pagetitle' => 'Course registration',
@@ -37,6 +37,7 @@ class StudentRegistrationController extends Controller
             'form'      => $form,
             'offered'   => ($ctx && ! $blockers) || ($form && ! $form->isEditable()) ? $this->registration->offered($student, $ctx) : collect(),
             'limits'    => $this->registration->limits($student, $ctx),
+            'ceRule'    => $this->registration->compulsoryElectiveRule($student, $ctx, $form?->level),
             'problems'  => $form && $form->isEditable() && $form->courses->isNotEmpty() ? $this->registration->problems($form, $ctx) : [],
             'history'   => $student->registrationForms()->with('session', 'semesterType')->latest('id')->get(),
         ]);
@@ -66,6 +67,6 @@ class StudentRegistrationController extends Controller
     {
         abort_unless($form->student_id === $this->student()->id && $form->status === 'approved', 404);
 
-        return view('registration.slip', ['form' => $form->load('student.programme.department.faculty', 'session', 'semesterType', 'courses.course', 'decider')]);
+        return view('registration.slip', ['form' => $form->load('student.programme.department.faculty', 'session', 'semesterType', 'courses.course.department', 'decider')]);
     }
 }

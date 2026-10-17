@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\CourseType;
 use App\Models\AcademicSession;
 use App\Models\Course;
 use App\Models\Department;
@@ -100,9 +101,11 @@ class DemoAcademicSeeder extends Seeder
                             $number = $level + ($sem === 1 ? 1 : 2) + $k * 2;   // 101, 103 ... first semester; 102, 104 ... second
                             $course = Course::updateOrCreate(['code' => "{$dcode} {$number}"], [
                                 'department_id' => $dept->id, 'title' => sprintf($titles[($sem - 1) * 6 + $k], $subject),
-                                'credit_units' => $k % 2 === 0 ? 3 : 2, 'level' => $level, 'is_active' => true,
+                                'credit_units' => $k % 2 === 0 ? 3 : 2, 'level' => $level, 'is_active' => true, 'course_type' => $type = match (true) {
+                                    $k < 3 => CourseType::COMPULSORY, $k < 5 => CourseType::COMPULSORY_ELECTIVE, default => CourseType::ELECTIVE,
+                                },
                             ]);
-                            ProgrammeCourse::updateOrCreate(['programme_id' => $programme->id, 'course_id' => $course->id], ['level' => $level, 'semester_order' => $sem, 'status' => $k < 4 ? 'core' : 'elective']);
+                            ProgrammeCourse::updateOrCreate(['programme_id' => $programme->id, 'course_id' => $course->id], ['level' => $level, 'semester_order' => $sem, 'status' => $type]);
                         }
                     }
                 }
@@ -115,7 +118,7 @@ class DemoAcademicSeeder extends Seeder
         foreach (Programme::all() as $programme) {
             foreach ($shared as $sem => $courses) {
                 foreach ($courses as $course) {
-                    ProgrammeCourse::updateOrCreate(['programme_id' => $programme->id, 'course_id' => $course->id], ['level' => 100, 'semester_order' => $sem, 'status' => 'required']);
+                    ProgrammeCourse::updateOrCreate(['programme_id' => $programme->id, 'course_id' => $course->id], ['level' => 100, 'semester_order' => $sem, 'status' => CourseType::COMPULSORY]);
                 }
             }
         }

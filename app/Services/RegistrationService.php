@@ -15,6 +15,7 @@ use App\Models\SemesterType;
 use App\Models\Student;
 use App\Models\StudentStatus;
 use App\Support\AcademicRules;
+use App\Support\CourseType;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -151,7 +152,7 @@ class RegistrationService
 
     /**
      * Courses open to this student this semester: the curriculum for their level and semester, plus carry-overs.
-     * Each row: course, status (core|required|elective), carryover, blocked (prerequisite reason or null).
+     * Each row: course, status (compulsory|compulsory_elective|elective, as the curriculum gives it), carryover, blocked (prerequisite reason or null).
      *
      * @return Collection<int, array{course: Course, status: string, carryover: bool, blocked: ?string}>
      */
@@ -161,9 +162,9 @@ class RegistrationService
         $passed = $this->passed($student);
         $failed = $this->failed($student);
 
-        $current = ProgrammeCourse::with('course.prerequisites')->where('programme_id', $student->programme_id)
+        $current = ProgrammeCourse::with('course.prerequisites', 'course.department')->where('programme_id', $student->programme_id)
             ->where('level', $student->current_level)->where('semester_order', $order)->get();
-        $carry = ProgrammeCourse::with('course.prerequisites')->where('programme_id', $student->programme_id)
+        $carry = ProgrammeCourse::with('course.prerequisites', 'course.department')->where('programme_id', $student->programme_id)
             ->where('semester_order', $order)->whereIn('course_id', $failed)->get();
 
         $checkPrereqs = (bool) $this->rules($student, $ctx)['check_prerequisites'];
@@ -190,6 +191,18 @@ class RegistrationService
     public function rules(Student $student, ?RegistrationContext $ctx, ?int $level = null): array
     {
         return $this->rules->forStudent($student, $level ?? $student->current_level, $ctx?->type->id);
+    }
+
+    /** How many compulsory electives a student must pick, in words: "at least one" or "at least 4 units". */
+    public function compulsoryElectiveRule(Student $student, ?RegistrationContext $ctx, ?int $level = null): string
+    {
+        $need = $this->rules($student, $ctx, $level)['min_compulsory_elective_units'];
+
+        return match (true) {
+            $need === null => 'at least one',
+            (int) $need === 0 => 'as many as you like',
+            default => "at least {$need} units",
+        };
     }
 
     public function limits(Student $student, ?RegistrationContext $ctx, ?int $level = null): CreditLimits
@@ -275,14 +288,28 @@ class RegistrationService
         $chosenIds = $form->courses->pluck('course_id');
         if ($rules['force_carryovers']) {
             $missing = $offered->where('carryover', true)->filter(fn ($r) => ! $chosenIds->contains($r['course']->id) && ! $r['blocked']
-                && ($rules['retake_failed_electives'] || $r['status'] !== 'elective'));
+                && CourseType::mustRetake($r['status'], $rules));
             if ($missing->isNotEmpty()) {
                 $problems[] = 'Carry-over courses must be registered: ' . $missing->map(fn ($r) => $r['course']->code)->implode(', ') . '.';
             }
         }
-        $core = $offered->where('status', 'required')->filter(fn ($r) => ! $chosenIds->contains($r['course']->id) && ! $r['blocked']);
-        if ($core->isNotEmpty()) {
-            $problems[] = 'Compulsory courses missing: ' . $core->map(fn ($r) => $r['course']->code)->implode(', ') . '.';
+        if ($rules['force_compulsory']) {
+            $compulsory = $offered->where('status', CourseType::COMPULSORY)->filter(fn ($r) => ! $chosenIds->contains($r['course']->id) && ! $r['blocked']);
+            if ($compulsory->isNotEmpty()) {
+                $problems[] = 'Compulsory courses missing: ' . $compulsory->map(fn ($r) => $r['course']->code)->implode(', ') . '.';
+            }
+        }
+
+        // Compulsory electives: a set number of units from those on offer (carry-overs count toward it).
+        $ce = $offered->where('status', CourseType::COMPULSORY_ELECTIVE)->reject(fn ($r) => $r['blocked']);
+        if ($ce->isNotEmpty()) {
+            $chosenCe = (int) $form->courses->whereIn('course_id', $ce->map(fn ($r) => $r['course']->id))->sum('credit_units');
+            $need = $rules['min_compulsory_elective_units'];
+            $need = $need === null ? (int) $ce->min(fn ($r) => $r['course']->credit_units) : min((int) $need, (int) $ce->sum(fn ($r) => $r['course']->credit_units));
+            if ($chosenCe < $need) {
+                $problems[] = ($rules['min_compulsory_elective_units'] === null ? 'Choose at least one compulsory elective' : "Choose at least {$need} units of compulsory electives (you have {$chosenCe})")
+                    . ' from: ' . $ce->map(fn ($r) => $r['course']->code)->implode(', ') . '.';
+            }
         }
 
         return $problems;

@@ -107,7 +107,7 @@ class DocumentMailer
 
     public function courseForm(RegistrationForm $form, ?User $by = null): int
     {
-        $form->loadMissing('student.user', 'student.programme', 'session', 'semesterType', 'courses.course', 'decider');
+        $form->loadMissing('student.user', 'student.programme', 'session', 'semesterType', 'courses.course.department', 'decider');
         $student = $form->student;
         $approved = $form->status === 'approved';
 
@@ -118,9 +118,9 @@ class DocumentMailer
             'intro'    => [$approved ? 'Your course registration is complete. Your approved course form is below and attached.' : 'We have received your course registration. A copy is below; you will get the approved form by email once it is approved.'],
             'details'  => ['Name' => $student->full_name, 'Matric number' => $student->matric_label, 'Programme' => $student->programme?->name, 'Level' => (string) $form->level],
             'table'    => [
-                'head'  => ['Code', 'Title', 'Status', 'Units'], 'right' => [3],
-                'rows'  => $form->courses->sortBy('course.code')->map(fn ($r) => [$r->course->code, $r->course->title . ($r->is_carryover ? ' (carry-over)' : ''), \App\Support\Lookups::label('course_status', $r->course_status), (string) $r->credit_units])->values()->all(),
-                'foot'  => [['', '', 'Total units', (string) $form->total_units]],
+                'head'  => ['Code', 'Title', 'Type', 'Department', 'Units'], 'right' => [4],
+                'rows'  => $form->courses->sortBy('course.code')->map(fn ($r) => [$r->course->code, $r->course->title . ($r->is_carryover ? ' (carry-over)' : ''), \App\Support\CourseType::label($r->course_status), (string) $r->course->department?->name, (string) $r->credit_units])->values()->all(),
+                'foot'  => [['', '', '', 'Total units', (string) $form->total_units]],
             ],
             'signatory' => $approved ? 'registrar' : null,
             'link'      => [route('my.registration'), 'Open my registration'],

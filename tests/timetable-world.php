@@ -38,7 +38,7 @@ function timetableWorld($test): void
             foreach (range(1, 4) as $i) {
                 $code = ($pi ? 'MTH ' : 'CSC ') . ($level + $i);
                 $c = Course::create(['department_id' => $test->dept->id, 'code' => $code, 'title' => "Course {$code}", 'credit_units' => 2, 'level' => $level]);
-                ProgrammeCourse::create(['programme_id' => $prog->id, 'course_id' => $c->id, 'level' => $level, 'semester_order' => 1, 'status' => 'core']);
+                ProgrammeCourse::create(['programme_id' => $prog->id, 'course_id' => $c->id, 'level' => $level, 'semester_order' => 1, 'status' => 'compulsory']);
                 $test->courses[$code] = $c;
             }
             // 30 students per programme-level, registered for its four courses

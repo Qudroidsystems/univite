@@ -23,7 +23,7 @@
 
             @include('academics.partials.alerts')
 
-            <p class="text-muted mb-3">Choose a programme, then place courses into each level and semester. Credit units are totalled per semester and checked against the programme's credit-load limits (electives are not counted towards the minimum).</p>
+            <p class="text-muted mb-3">Choose a programme, then place courses into each level and semester. Credit units are totalled per semester and checked against the programme's credit-load limits (electives are not counted towards the minimum). C: compulsory, CE: compulsory elective, E: elective.</p>
 
             <div class="card">
                 <div class="card-body">
@@ -85,13 +85,12 @@
                                                 @forelse ($sem['entries'] as $e)
                                                     <tr>
                                                         <td style="width:90px"><span class="badge bg-primary-subtle text-primary">{{ $e->course->code }}</span></td>
-                                                        <td>{{ $e->course->title }}</td>
-                                                        <td class="text-nowrap"><span class="badge bg-light text-body border">{{ $statuses[$e->status] }}</span></td>
+                                                        <td>{{ $e->course->title }}<div class="mt-1"><x-course-tag :course="$e->course" :type="$e->status" full /></div></td>
                                                         <td class="text-end text-nowrap">{{ $e->course->credit_units }} u</td>
                                                         <td><x-last-change :record="$e" :among="$sem['entries']" /></td>
                                                         @if ($canEdit)
                                                             <td class="text-end text-nowrap">
-                                                                <button type="button" class="btn btn-sm btn-soft-primary btn-move" title="Move / change status"
+                                                                <button type="button" class="btn btn-sm btn-soft-primary btn-move" title="Move or change type"
                                                                         data-url="{{ route('academics.curriculum.update', $e->id) }}"
                                                                         data-title="{{ $e->course->code }} — {{ $e->course->title }}"
                                                                         data-level="{{ $e->level }}" data-semester="{{ $e->semester_order }}" data-status="{{ $e->status }}"><i class="ri-pencil-line"></i></button>
@@ -144,8 +143,9 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Status <span class="text-danger">*</span></label>
-                            <select name="status" class="form-select" required>
+                            <label class="form-label">Course type</label>
+                            <select name="status" class="form-select">
+                                <option value="">Each course's own type</option>
                                 @foreach ($statuses as $v => $l) <option value="{{ $v }}">{{ $l }}</option> @endforeach
                             </select>
                         </div>
@@ -156,7 +156,7 @@
                                 @foreach ($courseOptions->groupBy(fn ($c) => $c->department->name) as $dept => $courses)
                                     <optgroup label="{{ $dept }}">
                                         @foreach ($courses as $c)
-                                            <option value="{{ $c->id }}">{{ $c->code }} — {{ $c->title }} ({{ $c->credit_units }}u)</option>
+                                            <option value="{{ $c->id }}">{{ $c->code }} — {{ $c->title }} ({{ $c->credit_units }}u, {{ \App\Support\CourseType::short($c->course_type) }})</option>
                                         @endforeach
                                     </optgroup>
                                 @endforeach
@@ -196,7 +196,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="form-label">Status</label>
+                        <label class="form-label">Course type</label>
                         <select name="status" id="move-status" class="form-select">
                             @foreach ($statuses as $v => $l) <option value="{{ $v }}">{{ $l }}</option> @endforeach
                         </select>

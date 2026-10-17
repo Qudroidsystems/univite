@@ -11,7 +11,7 @@
     <div class="page-content">
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">{{ $sheet->course->code }} · {{ $sheet->course->title }}
+                <h4 class="mb-0">{{ $sheet->course->code }} · {{ $sheet->course->title }} <span class="fs-13 fw-normal"><x-course-tag :course="$sheet->course" full /></span>
                     <span class="badge {{ \App\Models\ResultSheet::BADGES[$sheet->status] }} fs-12 align-middle">{{ \App\Models\ResultSheet::STATUSES[$sheet->status] }}{{ $sheet->stage ? ' · ' . $sheet->stage->name : '' }}</span></h4>
                 <a href="{{ route('results.sheets.index') }}" class="btn btn-light">Back</a>
             </div>

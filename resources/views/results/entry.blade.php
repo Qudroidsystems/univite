@@ -57,7 +57,7 @@
             @if ($sheet)
                 <div class="card uv-entry-hero border-0 bg-primary-subtle"><div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
                     <div>
-                        <h5 class="mb-1">{{ $sheet->course->code }} · {{ $sheet->course->title }}
+                        <h5 class="mb-1">{{ $sheet->course->code }} · {{ $sheet->course->title }} <span class="fs-12 fw-normal"><x-course-tag :course="$sheet->course" full /></span>
                             <span class="badge {{ $badge }} fs-11 align-middle">{{ \App\Models\ResultSheet::STATUSES[$sheet->status] }}{{ $sheet->stage ? ' · ' . $sheet->stage->name : '' }}</span></h5>
                         <div class="fs-13 text-muted">{{ $q->session->name }} · {{ $q->semesterType->name }}
                             · {{ $rows->count() }} {{ Str::plural('student', $rows->count()) }}{{ $q->byStudent() ? ' in ' . $q->department->name . ', ' . $q->category->name . ', ' . $q->level . 'L' : ' on the course' }}

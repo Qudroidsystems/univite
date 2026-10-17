@@ -208,7 +208,7 @@ it('sends the app its settings in ping, and lets an admin change them on the web
 });
 
 it('lets students register courses, query results, vote and change their password in the app', function () {
-    \App\Models\ProgrammeCourse::create(['programme_id' => $this->prog->id, 'course_id' => $this->course->id, 'level' => 100, 'semester_order' => 1, 'status' => 'core']);
+    \App\Models\ProgrammeCourse::create(['programme_id' => $this->prog->id, 'course_id' => $this->course->id, 'level' => 100, 'semester_order' => 1, 'status' => 'compulsory']);
     $new = makeStudent($this, 'Dayo');
     $new->update(['needs_onboarding' => false]);
     $reg = as_($new->user)->getJson('/api/v1/registration')->assertOk()->json('data');

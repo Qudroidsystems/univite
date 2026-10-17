@@ -29,7 +29,10 @@ class AcademicRules
         'carryover_exempt' => ['Credit load', 'Carry-overs do not count against the maximum', 'bool', 'Students may go above the maximum by the units of their carry-over courses.', 'registration.carryover_exempt', '1'],
         'force_carryovers' => ['Credit load', 'Failed courses must be registered again', 'bool', 'The form cannot be submitted without the carry-over courses.', 'registration.force_carryovers', '1'],
         'check_prerequisites' => ['Credit load', 'Check prerequisites', 'bool', 'A course stays locked until its prerequisites are passed.', 'registration.check_prerequisites', '1'],
+        'force_compulsory' => ['Credit load', 'Compulsory courses must be registered', 'bool', 'The form cannot be submitted without every compulsory course offered that semester.', 'registration.force_compulsory', '1'],
+        'min_compulsory_elective_units' => ['Credit load', 'Compulsory elective units per semester', 'int', 'Units the student must choose from the compulsory electives offered. Blank = at least one compulsory elective when any is offered; 0 = no minimum.', 'registration.min_compulsory_elective_units', ''],
 
+        'retake_failed_compulsory_electives' => ['Results', 'A failed compulsory elective must be retaken', 'bool', 'On: a failed compulsory elective is a carry-over and blocks graduation until passed. Off: the student may pass another compulsory elective instead.', 'rules.retake_failed_compulsory_electives', '1'],
         'retake_failed_electives' => ['Results', 'A failed elective must be passed', 'bool', 'On: a failed elective is a carry-over and blocks graduation until passed. Off: the student may drop it and take another elective.', 'rules.retake_failed_electives', '1'],
         'cgpa_method' => ['Results', 'How CGPA counts repeated courses', 'choice', 'Every attempt is the usual TCP ÷ TNU method: a failed attempt stays in the CGPA after the re-sit is passed.', 'rules.cgpa_method', 'latest', ['latest' => 'Latest attempt only (a passed re-sit replaces the fail)', 'all' => 'Every attempt (TCP ÷ TNU)']],
 
@@ -39,9 +42,10 @@ class AcademicRules
         'withdrawal_blocks_registration' => ['Academic standing', 'Students advised to withdraw cannot register', 'bool', 'They need the department to allow them for the session first.', 'rules.withdrawal_blocks_registration', '1'],
 
         'graduation_units' => ['Graduation', 'Units needed to graduate', 'int', 'Total credit units a student must pass. Blank = not checked.', 'rules.graduation_units', ''],
+        'min_compulsory_elective_units_total' => ['Graduation', 'Compulsory elective units needed to graduate', 'int', 'Units of compulsory electives a student must pass. Blank = not checked.', 'rules.min_compulsory_elective_units_total', ''],
         'min_elective_units' => ['Graduation', 'Elective units needed to graduate', 'int', 'Units of elective courses a student must pass. Blank = not checked.', 'rules.min_elective_units', ''],
         'min_graduation_cgpa' => ['Graduation', 'Minimum CGPA to graduate', 'decimal', 'Blank = any CGPA that earns a class of degree.', 'rules.min_graduation_cgpa', ''],
-        'require_core' => ['Graduation', 'Every core and required course must be taken', 'bool', 'Counted from the student\'s entry level, so direct-entry students are not asked for lower-level courses.', 'graduation.require_core', '1'],
+        'require_core' => ['Graduation', 'Every compulsory course must be taken', 'bool', 'Counted from the student\'s entry level, so direct-entry students are not asked for lower-level courses.', 'graduation.require_core', '1'],
         'max_years' => ['Graduation', 'Maximum years of study', 'int', 'Sessions a student may spend on the programme, including spill-over years. Students past it cannot graduate and are flagged. Blank = no limit.', 'rules.max_years', ''],
     ];
 

@@ -17,10 +17,10 @@
                     <tr><th>Level</th><td>{{ $form->level }}</td></tr>
                 </table>
                 <table class="table table-sm">
-                    <thead class="table-light"><tr><th>Code</th><th>Title</th><th>Status</th><th class="text-end">Units</th></tr></thead>
+                    <thead class="table-light"><tr><th>Code</th><th>Title</th><th>Type and department</th><th class="text-end">Units</th></tr></thead>
                     <tbody>
                         @foreach ($form->courses->sortBy('course.code') as $r)
-                            <tr><td>{{ $r->course->code }}</td><td>{{ $r->course->title }}@if ($r->is_carryover) (carry-over)@endif</td><td>{{ \App\Support\Lookups::label('course_status', $r->course_status) }}</td><td class="text-end">{{ $r->credit_units }}</td></tr>
+                            <tr><td>{{ $r->course->code }}</td><td>{{ $r->course->title }}@if ($r->is_carryover) (carry-over)@endif</td><td><x-course-tag :course="$r->course" :type="$r->course_status" full /></td><td class="text-end">{{ $r->credit_units }}</td></tr>
                         @endforeach
                     </tbody>
                     <tfoot><tr><th colspan="3" class="text-end">Total units</th><th class="text-end">{{ $form->total_units }}</th></tr></tfoot>

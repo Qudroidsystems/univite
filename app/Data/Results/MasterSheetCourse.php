@@ -15,6 +15,7 @@ final readonly class MasterSheetCourse
         public int $passed,
         public int $failed,
         public ?float $average,
+        public ?string $type = null,
     ) {
     }
 

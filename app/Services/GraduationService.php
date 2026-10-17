@@ -14,6 +14,7 @@ use App\Models\Student;
 use App\Models\StudentStatus;
 use App\Models\User;
 use App\Support\AcademicRules;
+use App\Support\CourseType;
 use App\Support\Levels;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -68,11 +69,14 @@ class GraduationService
         }
 
         $curriculum = ProgrammeCourse::with('course')->where('programme_id', $programme->id)->get()->keyBy('course_id');
-        $electives = $curriculum->where('status', 'elective')->keys()->flip();
+        $electives = $curriculum->where('status', CourseType::ELECTIVE)->keys()->flip();
+        $compulsoryElectives = $curriculum->where('status', CourseType::COMPULSORY_ELECTIVE)->keys()->flip();
+        $typeOf = fn ($courseId) => $curriculum->get($courseId)?->status ?? CourseType::COMPULSORY;
+        $mustRetake = fn ($courseId) => CourseType::mustRetake($typeOf($courseId), $rules);
 
         // A carry-over the department has waived no longer blocks graduation (its units still do not count as earned).
         $waived = \App\Models\CarryoverWaiver::courseIdsFor($student->id)->flip();
-        $failed = $latest->filter(fn ($r) => ! $r->is_pass && ! $waived->has($r->course_id) && ($rules['retake_failed_electives'] || ! $electives->has($r->course_id)));
+        $failed = $latest->filter(fn ($r) => ! $r->is_pass && ! $waived->has($r->course_id) && $mustRetake($r->course_id));
         if ($failed->isNotEmpty()) {
             $problems[] = 'Failed and not yet passed: ' . $failed->map(fn ($r) => $r->course->code)->sort()->implode(', ') . '.';
         }
@@ -80,7 +84,7 @@ class GraduationService
         if ($rules['require_core']) {
             $passed = $latest->where('is_pass', true)->keys()->flip();
             $attempted = $latest->keys()->flip();
-            $missing = $curriculum->filter(fn ($pc) => in_array($pc->status, ['core', 'required'], true) && $pc->level >= (int) ($student->entry_level ?: 100)
+            $missing = $curriculum->filter(fn ($pc) => $pc->status === CourseType::COMPULSORY && $pc->level >= (int) ($student->entry_level ?: 100)
                 && ! $passed->has($pc->course_id) && ! $attempted->has($pc->course_id) && ! $pending->contains('course_id', $pc->course_id));
             if ($missing->isNotEmpty()) {
                 $problems[] = 'Compulsory courses never taken: ' . $missing->map(fn ($pc) => $pc->course->code)->sort()->implode(', ') . '.';
@@ -89,6 +93,12 @@ class GraduationService
 
         if ($rules['graduation_units'] && $t->earned < $rules['graduation_units']) {
             $problems[] = "Passed {$t->earned} of the {$rules['graduation_units']} units needed.";
+        }
+        if ($rules['min_compulsory_elective_units_total']) {
+            $ceUnits = (int) $latest->filter(fn ($r) => $r->is_pass && $compulsoryElectives->has($r->course_id))->sum('credit_units');
+            if ($ceUnits < $rules['min_compulsory_elective_units_total']) {
+                $problems[] = "Passed {$ceUnits} of the {$rules['min_compulsory_elective_units_total']} compulsory elective units needed.";
+            }
         }
         if ($rules['min_elective_units']) {
             $electiveUnits = (int) $latest->filter(fn ($r) => $r->is_pass && $electives->has($r->course_id))->sum('credit_units');

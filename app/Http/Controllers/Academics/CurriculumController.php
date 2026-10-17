@@ -32,7 +32,7 @@ class CurriculumController extends Controller
         $courseOptions = [];
 
         if ($programme) {
-            $entries = ProgrammeCourse::with('course')
+            $entries = ProgrammeCourse::with('course.department')
                 ->where('programme_id', $programme->id)
                 ->get()
                 ->sortBy(fn ($e) => $e->course->code);
@@ -48,7 +48,7 @@ class CurriculumController extends Controller
                         'max'     => (int) $r['max_units'],
                         'label'   => $label,
                         'entries' => $rows,
-                        'units'   => $rows->where('status', '!=', 'elective')->sum(fn ($e) => $e->course->credit_units),
+                        'units'   => $rows->where('status', '!=', \App\Support\CourseType::ELECTIVE)->sum(fn ($e) => $e->course->credit_units),
                         'all'     => $rows->sum(fn ($e) => $e->course->credit_units),
                     ];
                 }
@@ -68,7 +68,7 @@ class CurriculumController extends Controller
             'programme'     => $programme,
             'grid'          => $grid,
             'courseOptions' => $courseOptions,
-            'statuses'      => \App\Support\Lookups::options('course_status'),
+            'statuses'      => \App\Support\CourseType::options(),
         ]);
     }
 
@@ -80,7 +80,7 @@ class CurriculumController extends Controller
             'course_ids.*'   => ['exists:courses,id'],
             'level'          => ['required', 'integer'],
             'semester_order' => ['required', Rule::in(array_keys(\App\Models\SemesterType::options()))],
-            'status'         => ['required', Rule::in(array_keys(\App\Support\Lookups::options('course_status')))],
+            'status'         => ['nullable', Rule::in(array_keys(\App\Support\CourseType::options()))],
         ]);
 
         $programme = Programme::findOrFail($data['programme_id']);
@@ -89,10 +89,12 @@ class CurriculumController extends Controller
         }
 
         $added = 0;
+        $ownTypes = Course::whereIn('id', $data['course_ids'])->pluck('course_type', 'id');
         foreach ($data['course_ids'] as $courseId) {
+            // no type chosen: each course keeps the type set on the course itself
             $entry = ProgrammeCourse::firstOrCreate(
                 ['programme_id' => $programme->id, 'course_id' => $courseId],
-                ['level' => $data['level'], 'semester_order' => $data['semester_order'], 'status' => $data['status']]
+                ['level' => $data['level'], 'semester_order' => $data['semester_order'], 'status' => ($data['status'] ?? null) ?: ($ownTypes[$courseId] ?? \App\Support\CourseType::COMPULSORY)]
             );
             $added += $entry->wasRecentlyCreated ? 1 : 0;
         }
@@ -108,7 +110,7 @@ class CurriculumController extends Controller
         $data = $request->validate([
             'level'          => ['required', Rule::in($entry->programme->levels())],
             'semester_order' => ['required', Rule::in(array_keys(\App\Models\SemesterType::options()))],
-            'status'         => ['required', Rule::in(array_keys(\App\Support\Lookups::options('course_status')))],
+            'status'         => ['required', Rule::in(array_keys(\App\Support\CourseType::options()))],
         ]);
 
         $entry->update($data);

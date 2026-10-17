@@ -391,6 +391,16 @@ Courses not yet submitted do not stop Compute; their students show INC until it 
 
 **Master marks sheet** (buttons on Compute Results once computed): Excel, PDF and a print page in the school's layout: one section per programme ("Programme - 400 Level (Graduating / Non-Graduating)"); per student REG NO, CURRENT SEMESTER (subject, number, units in brackets, score + grade, 8 courses a line), SEM RMK, OUTSTANDING COURSES (R. = repeat), PRESENT / PREVIOUS / CUMULATIVE TCP TNU GPA, CUM RMK and REG NO again, with a line under each student (used semester ratio, units outstanding, rank and activity). It ends with the key to grade, key to result, a summary and signature lines. The PDF uses `dompdf/dompdf` (run `composer install` after pulling).
 
+## Course types: compulsory, compulsory elective, elective
+
+Every course has a usual type (Academic Setup → Courses → Course type, default Compulsory); a programme's curriculum can give it a different type for that programme ("Each course's own type" keeps the course's). Lists, forms, score sheets, master sheets and transcripts show the type (C / CE / E, or in full) with the department that owns the course (`<x-course-tag>`). The names are the "Course types" lookup and can be renamed; the three kinds are fixed. Old `core` and `required` entries became Compulsory (migration `2026_11_01_100004`, run `php artisan migrate`).
+
+- **Compulsory**: must be registered (rule "Compulsory courses must be registered") and passed; a failed one is always a carry-over.
+- **Compulsory elective**: the student picks from those offered: at least one by default, or the number of units set in "Compulsory elective units per semester" (0 = no minimum). A failed one is retaken unless "Retake failed compulsory electives" is off. Graduation can ask for a total number of CE units.
+- **Elective**: optional; a failed one is retaken only if "Retake failed electives" is on.
+
+A fresh registration form starts with the compulsory courses and carry-overs ticked. Timetable clash checks cover compulsory courses.
+
 ## Last changed by
 
 Every model created, changed or deleted by a signed-in person is logged in `record_activities` (App\Listeners\RecordModelActivity; chat, polls' votes, device tokens and the logs themselves are skipped). List tables show a "Last changed by" column (`<x-last-change :record="$row" :among="$rows" />`): photo, staff number and an ⓘ that opens the person's details and the record's history (`GET activity/{Model}/{id}`, staff only). Records not touched since this was added show "—". Rows of every table under `.page-content` slide in (public/js/univite-app.js `animateTables`); add class `uv-no-anim` to a table to keep it still.

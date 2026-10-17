@@ -36,7 +36,7 @@ beforeEach(function () {
     Semester::create(['academic_session_id' => $this->session->id, 'name' => 'First Semester', 'sort_order' => 1, 'is_current' => true]);
     $this->type = SemesterType::where('sort_order', 1)->first();
     $this->course = Course::create(['department_id' => $dept->id, 'code' => 'BIO 101', 'title' => 'Intro Biology', 'credit_units' => 3, 'level' => 100]);
-    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course->id, 'level' => 100, 'semester_order' => 1, 'status' => 'core']);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course->id, 'level' => 100, 'semester_order' => 1, 'status' => 'compulsory']);
     $this->course2 = Course::create(['department_id' => $dept->id, 'code' => 'BIO 102', 'title' => 'Cell Biology', 'credit_units' => 2, 'level' => 100]);
 
     $this->students = collect([['Tola', 'Adeyemi', 'a@example.com', '11111111AA', '2026/0001'], ['Bisi', 'Okon', 'b@example.com', '22222222BB', '2026/0002']])->map(function ($d, $i) {
@@ -334,7 +334,7 @@ it('checks final-year students for graduation, holds back on request and graduat
 
 it('stops graduation while registered results are unpublished or compulsory courses were never taken', function () {
     $this->programme->update(['duration_years' => 1]);
-    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course2->id, 'level' => 100, 'semester_order' => 2, 'status' => 'required']);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $this->course2->id, 'level' => 100, 'semester_order' => 2, 'status' => 'compulsory']);
     $this->students->each->update(['current_level' => 100, 'status' => 'active']);
 
     $c = app(\App\Services\GraduationService::class)->check($this->students[0]->fresh());

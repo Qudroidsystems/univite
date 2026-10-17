@@ -144,7 +144,7 @@ class ProblemBuilder
         // Compulsory courses of the same programme and level always clash, even before anyone has registered.
         $order = (int) ($t->semesterType?->sort_order ?? 1);
         $cohorts = ProgrammeCourse::with('programme')->whereIn('course_id', $courseIds)->where('semester_order', $order)
-            ->whereIn('status', ['core', 'required'])->get();
+            ->where('status', \App\Support\CourseType::COMPULSORY)->get();
         $cohortOf = [];
         $enrolled = StudentStatus::codesWhere('is_enrolled');
         $sizes = [];

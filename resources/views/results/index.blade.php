@@ -44,6 +44,7 @@
                                     <option value="category">Category</option>
                                     <option value="level">Level</option>
                                     <option value="units">Units</option>
+                                    <option value="type">Course type</option>
                                     <option value="status">Sheet status</option>
                                     <option value="scheme">Assessment</option>
                                 </select>
@@ -63,9 +64,10 @@
                             @endphp
                             <li class="list-group-item d-flex justify-content-between align-items-center gap-2 uv-search-item" style="--uv-i:{{ $loop->index }}" data-uv-item
                                 data-code="{{ $co->code }}" data-title="{{ $co->title }}" data-dept="{{ $co->department?->name }}" data-category="{{ $co->studyCategory?->name }}" data-hod="{{ $lead?->hod?->name }}" data-dean="{{ $lead?->dean?->name }}"
-                                data-level="{{ $co->level }}" data-units="{{ $co->credit_units }}" data-status="{{ $statusLabel }}" data-scheme="{{ $sc?->name ?? 'CA and exam' }}">
+                                data-level="{{ $co->level }}" data-units="{{ $co->credit_units }}" data-type="{{ \App\Support\CourseType::label($co->course_type) }}" data-status="{{ $statusLabel }}" data-scheme="{{ $sc?->name ?? 'CA and exam' }}">
                                 <span>
                                     <span class="fw-semibold" data-uv-mark="code">{{ $co->code }}</span> <span data-uv-mark="title">{{ $co->title }}</span>
+                                    <span class="badge {{ \App\Support\CourseType::BADGES[$co->course_type] ?? 'bg-light text-body' }} ms-1" data-uv-mark="type" title="Course type">{{ \App\Support\CourseType::label($co->course_type) }}</span>
                                     @if ($sh)<span class="badge {{ \App\Models\ResultSheet::BADGES[$sh->status] }} ms-1">{{ $statusLabel }}</span>@endif
                                     <span class="d-block text-muted fs-12 mt-1">
                                         <span data-uv-mark="level">{{ $co->level ? $co->level . ' level' : '' }}</span>{{ $co->level ? ' · ' : '' }}<span data-uv-mark="units">{{ $co->credit_units }}</span> units
@@ -123,7 +125,7 @@
                             <tbody>
                             @forelse ($all as $s)
                                 <tr>
-                                    <td><span class="fw-semibold">{{ $s->course->code }}</span> {{ $s->course->title }}</td>
+                                    <td><span class="fw-semibold">{{ $s->course->code }}</span> {{ $s->course->title }}<div class="mt-1"><x-course-tag :course="$s->course" /></div></td>
                                     <td>{{ $s->session->name }} · {{ $s->semesterType->name }}</td>
                                     <td>{{ $s->results_count }}</td>
                                     <td><span class="badge {{ \App\Models\ResultSheet::BADGES[$s->status] }}">{{ \App\Models\ResultSheet::STATUSES[$s->status] }}</span>@if ($s->stage)<div class="text-muted fs-12">At: {{ $s->stage->name }}</div>@endif</td>

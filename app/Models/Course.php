@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Course extends Model
 {
-    protected $fillable = ['department_id', 'study_category_id', 'code', 'title', 'credit_units', 'level', 'semester_type_id', 'academic_session_id', 'description', 'is_active'];
+    protected $fillable = ['department_id', 'study_category_id', 'code', 'title', 'credit_units', 'course_type', 'level', 'semester_type_id', 'academic_session_id', 'description', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
+
+    protected $attributes = ['course_type' => \App\Support\CourseType::COMPULSORY];
 
     public function department(): BelongsTo
     {

@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Services\Access\ScopedAccess;
 use App\Services\ResultService;
 use App\Support\AcademicRules;
+use App\Support\CourseType;
 use App\Support\GradeScale;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +165,8 @@ class ResultComputation
             ->where('semester_type_id', $q->semesterType->id)->where('status', 'approved')->get()->keyBy('student_id');
         $waivers = CarryoverWaiver::active()->whereIn('student_id', $ids)->get()->groupBy('student_id');
         $keys = ResultKey::all();
+        $types = \App\Models\ProgrammeCourse::whereIn('programme_id', $students->pluck('programme_id')->unique())->get()
+            ->groupBy('programme_id')->map(fn ($g) => $g->pluck('status', 'course_id'));
         $perSession = max(1, SemesterType::count());
         $out = [];
 
@@ -175,11 +178,15 @@ class ResultComputation
             $cumulative = $this->results->transcriptFrom($s, $mine->values());
             $form = $forms->get($s->id);
 
-            // Outstanding: failed at their latest attempt, never passed, not waived.
+            // Outstanding: failed at their latest attempt, never passed, not waived, and of a type that must be passed
+            // (a failed elective, or compulsory elective, need not be when the rules say so).
+            $rules = $this->rules->forStudent($s);
+            $typeOf = $types->get($s->programme_id, collect());
             $waived = $waivers->get($s->id, collect())->pluck('course_id')->flip();
             $passedEver = $mine->where('is_pass', true)->pluck('course_id')->flip();
             $latest = $mine->sortBy(fn ($r) => [...$order($r), $r->id])->groupBy('course_id')->map->last();
-            $outstanding = $latest->filter(fn ($r) => $r->grade !== null && ! $r->is_pass && ! $passedEver->has($r->course_id) && ! $waived->has($r->course_id))
+            $outstanding = $latest->filter(fn ($r) => $r->grade !== null && ! $r->is_pass && ! $passedEver->has($r->course_id) && ! $waived->has($r->course_id)
+                    && CourseType::mustRetake($typeOf->get($r->course_id), $rules))
                 ->sortBy(fn ($r) => $r->course->code)
                 ->map(fn ($r) => ['code' => $r->course->code, 'units' => (int) $r->credit_units, 'reason' => 'R'])->values();
             $missing = $form ? $form->courses->reject(fn ($c) => $term->contains('course_id', $c->course_id))->count() : 0;
@@ -193,7 +200,7 @@ class ResultComputation
             $hasResults = $mine->isNotEmpty() || $s->legacyBalance;
             $key = $hasResults ? ResultKey::pick($keys, KeyContext::forStudent($s))
                 ->first(fn ($k) => $cumulative->cgpa + 0.00001 >= $k->min_gpa && $cumulative->cgpa <= $k->max_gpa + 0.00001) : null;
-            $maxYears = $this->rules->forStudent($s)['max_years'] ?? null;
+            $maxYears = $rules['max_years'] ?? null;
             $used = $mine->map(fn ($r) => $r->academic_session_id . '-' . $r->semester_type_id)->unique()->count() + ($form && $term->isEmpty() ? 1 : 0);
 
             $out[$s->id] = [

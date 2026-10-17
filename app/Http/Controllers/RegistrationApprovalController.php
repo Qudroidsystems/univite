@@ -93,7 +93,7 @@ class RegistrationApprovalController extends Controller
 
         return view('registration.show', [
             'pagetitle' => 'Registration form',
-            'form'      => $form->load('student.programme', 'session', 'semesterType', 'courses.course', 'decider'),
+            'form'      => $form->load('student.programme', 'session', 'semesterType', 'courses.course.department', 'decider'),
             'canDecide' => $this->mayDecide($form),
             'standing'  => $this->registration->standing($form->student),
         ]);

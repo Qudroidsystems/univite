@@ -14,7 +14,7 @@
             @forelse ($papers as $rows)
                 @php $e = $rows->first(); $seat = $seats[$e->course_id . '|' . $e->slots[0]] ?? null; @endphp
                 <tr><td><strong>{{ $e->date?->format('D j M Y') }}</strong><div class="text-muted">{{ substr($e->starts_at, 0, 5) }}–{{ substr($e->ends_at, 0, 5) }}</div></td>
-                    <td><strong>{{ $e->course?->code }}</strong><div class="fs-13">{{ $e->course?->title }}</div></td>
+                    <td><strong>{{ $e->course?->code }}</strong><div class="fs-13">{{ $e->course?->title }}</div>@if ($e->course)<x-course-tag :course="$e->course" />@endif</td>
                     <td>@if ($seat){{ $seat->venue?->name }}@if ($seat->venue?->entry_info)<div class="text-muted fs-12">Entry: {{ $seat->venue->entry_info }}</div>@endif @else{{ $rows->map(fn ($r) => $r->venue?->name)->filter()->implode(' or ') }}@endif</td>
                     <td>@if ($seat)<span class="badge bg-success fs-13">{{ $seat->seat_number }}</span><div class="text-muted fs-12">seat {{ $seat->seat_no }}</div>@else<span class="text-muted fs-13">Shown when the seating plan is published</span>@endif</td></tr>
             @empty

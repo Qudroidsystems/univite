@@ -65,7 +65,8 @@ class ActionsController extends ApiController
             'limits' => ['min' => $limits->min, 'max' => $limits->max, 'carryovers_exempt' => $limits->carryoversExempt, 'probation' => $limits->probation],
             'offered' => $offered->map(fn ($r) => [
                 'id' => $r['course']->id, 'code' => $r['course']->code, 'title' => $r['course']->title, 'units' => (int) $r['course']->credit_units,
-                'status' => $r['status'], 'carryover' => $r['carryover'], 'blocked' => $r['blocked'], 'selected' => in_array($r['course']->id, $selected, true),
+                'status' => $r['status'], 'type' => \App\Support\CourseType::short($r['status']), 'type_label' => \App\Support\CourseType::label($r['status']),
+                'department' => $r['course']->department?->name, 'carryover' => $r['carryover'], 'blocked' => $r['blocked'], 'selected' => in_array($r['course']->id, $selected, true),
             ])->values()->all(),
             'problems' => $form && $form->isEditable() && $form->courses->isNotEmpty() ? $registration->problems($form, $ctx) : [],
         ]);

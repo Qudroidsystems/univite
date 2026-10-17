@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Faculty;
 use App\Models\SemesterType;
 use App\Models\StudyCategory;
+use App\Support\CourseType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -50,6 +51,7 @@ class CourseController extends CrudController
             ['study_category_id', 'Study category', StudyCategory::orderBy('name')->pluck('name', 'id')->all()],
             ['level', 'Level', \App\Support\Levels::options()],
             ['semester_type_id', 'Semester', SemesterType::orderBy('sort_order')->pluck('name', 'id')->all()],
+            ['course_type', 'Type', CourseType::options()],
         ];
     }
 
@@ -66,6 +68,7 @@ class CourseController extends CrudController
             'code'          => ['required', 'string', 'max:20', Rule::unique('courses', 'code')->ignore($record?->id)],
             'title'         => ['required', 'string', 'max:255'],
             'credit_units'  => ['required', 'integer', 'min:0', 'max:12'],
+            'course_type'   => ['nullable', Rule::in(array_keys(CourseType::options()))],
             'level'         => ['nullable', Rule::in(array_keys(\App\Support\Levels::options()))],
             'description'   => ['nullable', 'string', 'max:2000'],
             'is_active'     => ['nullable', 'boolean'],
@@ -106,6 +109,9 @@ class CourseController extends CrudController
         // "csc  101" -> "CSC 101"
         $data['code'] = strtoupper(preg_replace('/\s+/', ' ', trim($data['code'])));
         unset($data['prerequisites'], $data['faculty_id']);
+        if (empty($data['course_type'])) {
+            $data['course_type'] = $record?->course_type ?: CourseType::COMPULSORY;
+        }
 
         return $data;
     }
@@ -122,6 +128,7 @@ class CourseController extends CrudController
             ['name' => 'code', 'label' => 'Course code', 'type' => 'text', 'required' => true, 'col' => 4, 'placeholder' => 'CSC 101'],
             ['name' => 'title', 'label' => 'Course title', 'type' => 'text', 'required' => true, 'col' => 8, 'placeholder' => 'Introduction to Computer Science'],
             ['name' => 'credit_units', 'label' => 'Course units', 'type' => 'number', 'required' => true, 'col' => 6, 'default' => 2],
+            ['name' => 'course_type', 'label' => 'Course type', 'type' => 'select', 'options' => CourseType::options(), 'required' => true, 'col' => 6, 'default' => CourseType::COMPULSORY, 'help' => 'The usual type. Each programme\'s curriculum can set its own.'],
             ['name' => 'prerequisites', 'label' => 'Prerequisites (course codes, comma separated)', 'type' => 'text', 'col' => 12, 'placeholder' => 'CSC 101, MTH 101', 'help' => 'A student must have passed these before registering for this course.'],
             ['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'col' => 12],
             ['name' => 'is_active', 'label' => 'Active', 'type' => 'switch', 'col' => 12, 'default' => true],
@@ -139,6 +146,7 @@ class CourseController extends CrudController
             ['Level', fn ($r) => $r->level ? $r->level . 'L' : '—'],
             ['Semester', fn ($r) => trim(($r->semesterType?->name ?? '—') . ($r->session ? ' · from ' . $r->session->name : ''))],
             ['Units', fn ($r) => $r->credit_units],
+            ['Type', fn ($r) => new HtmlString(\Illuminate\Support\Facades\Blade::renderComponent(new \App\View\Components\CourseTag($r, department: false, full: true)))],
             ['Status', fn ($r) => new HtmlString($r->is_active ? '<span class="badge bg-success-subtle text-success">Active</span>' : '<span class="badge bg-secondary-subtle text-secondary">Inactive</span>')],
         ];
     }

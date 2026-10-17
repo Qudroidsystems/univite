@@ -17,7 +17,7 @@
         <tbody>
         @foreach ($items as $i)
             <tr class="{{ $i->is_active ? '' : 'opacity-50' }}">
-                <td><strong>{{ $i->label }}</strong><div class="text-muted fs-12">{{ \Illuminate\Support\Str::limit($i->course?->title, 40) }} · {{ $i->course?->level }}L</div>
+                <td><strong>{{ $i->label }}</strong><div class="text-muted fs-12">{{ \Illuminate\Support\Str::limit($i->course?->title, 40) }} · {{ $i->course?->level }}L</div>@if ($i->course)<x-course-tag :course="$i->course" />@endif
                     @if ($editable)<input form="item-{{ $i->id }}" name="group_label" value="{{ $i->group_label }}" class="form-control form-control-sm mt-1" placeholder="Group (optional)" style="max-width:140px">@endif</td>
                 <td><input type="number" form="item-{{ $i->id }}" name="students" min="0" value="{{ $i->students }}" class="form-control form-control-sm" @disabled(! $editable)></td>
                 @unless ($t->isExam())<td><input type="number" form="item-{{ $i->id }}" name="meetings" min="1" max="10" value="{{ $i->meetings }}" class="form-control form-control-sm" @disabled(! $editable)></td>@endunless

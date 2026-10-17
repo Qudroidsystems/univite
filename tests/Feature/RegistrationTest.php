@@ -34,7 +34,7 @@ beforeEach(function () {
     // 8 courses x 3 units on 100 level first semester, one of them compulsory
     $this->courses = collect(range(1, 8))->map(function ($i) {
         $c = Course::create(['department_id' => $this->dept->id, 'code' => "BIO 10$i", 'title' => "Biology $i", 'credit_units' => 3, 'level' => 100]);
-        ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c->id, 'level' => 100, 'semester_order' => 1, 'status' => $i === 1 ? 'required' : 'core']);
+        ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c->id, 'level' => 100, 'semester_order' => 1, 'status' => $i === 1 ? 'compulsory' : 'elective']);
 
         return $c;
     });
@@ -109,10 +109,10 @@ it('rejects a course that is not offered to the student', function () {
 
 it('forces carry-overs of failed courses and locks courses whose prerequisites are not passed', function () {
     $spring = Course::create(['department_id' => $this->dept->id, 'code' => 'BIO 099', 'title' => 'Remedial Biology', 'credit_units' => 3, 'level' => 100]);
-    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $spring->id, 'level' => 200, 'semester_order' => 1, 'status' => 'core']);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $spring->id, 'level' => 200, 'semester_order' => 1, 'status' => 'compulsory']);
     $this->student->update(['current_level' => 200]);
     $c200 = Course::create(['department_id' => $this->dept->id, 'code' => 'BIO 201', 'title' => 'Genetics', 'credit_units' => 15, 'level' => 200]);
-    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c200->id, 'level' => 200, 'semester_order' => 1, 'status' => 'core']);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c200->id, 'level' => 200, 'semester_order' => 1, 'status' => 'compulsory']);
     $c200->prerequisites()->attach($this->courses[1]->id);   // needs BIO 102
 
     // last year: failed BIO 102 (carry-over), passed BIO 101 (never offered again)
@@ -226,7 +226,7 @@ it('only forces a failed elective back when the rules say so', function () {
     CourseResult::create(['student_id' => $this->student->id, 'course_id' => $elective->id, 'academic_session_id' => $prev->id, 'semester_type_id' => $type->id,
         'total' => 20, 'grade' => 'F', 'points' => 0, 'is_pass' => false, 'credit_units' => 2, 'status' => 'published']);
     $c200 = Course::create(['department_id' => $this->dept->id, 'code' => 'BIO 201', 'title' => 'Genetics', 'credit_units' => 3, 'level' => 200]);
-    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c200->id, 'level' => 200, 'semester_order' => 1, 'status' => 'core']);
+    ProgrammeCourse::create(['programme_id' => $this->programme->id, 'course_id' => $c200->id, 'level' => 200, 'semester_order' => 1, 'status' => 'compulsory']);
     Setting::put('registration.min_units', '0');
 
     regAs()->post(route('my.registration.save'), ['courses' => [$c200->id], 'submit' => 1])->assertSessionHas('error', fn ($m) => str_contains($m, 'BIO 150'));
@@ -255,4 +255,29 @@ it('enforces the semester registration window and an optional late period', func
 
     $this->travelTo(\Carbon\Carbon::parse('2026-11-15 09:00'));
     expect($blockers())->toContain('Registration closed on');
+});
+
+it('asks for compulsory electives, shows each course\'s type and department, and ticks compulsory courses on a fresh form', function () {
+    ProgrammeCourse::whereIn('course_id', ids(7, 8))->update(['status' => \App\Support\CourseType::COMPULSORY_ELECTIVE]);
+
+    regAs()->get(route('my.registration'))->assertOk()->assertSee('Compulsory elective')->assertSee('Science Education')
+        ->assertSee('choose at least one')->assertSee('value="' . $this->courses[0]->id . '" data-units="3" data-carry="0" checked', false);
+
+    $this->post(route('my.registration.save'), ['courses' => ids(1, 2, 3, 4, 5), 'submit' => 1])
+        ->assertSessionHas('error', fn ($m) => str_contains($m, 'Choose at least one compulsory elective from: BIO 107, BIO 108'));
+
+    Setting::put('registration.min_compulsory_elective_units', '6');
+    $this->post(route('my.registration.save'), ['courses' => ids(1, 2, 3, 4, 7), 'submit' => 1])
+        ->assertSessionHas('error', fn ($m) => str_contains($m, 'at least 6 units of compulsory electives (you have 3)'));
+    $this->post(route('my.registration.save'), ['courses' => ids(1, 2, 3, 7, 8), 'submit' => 1])->assertSessionHas('success');
+    expect(RegistrationForm::firstOrFail()->courses()->where('course_id', $this->courses[6]->id)->value('course_status'))->toBe('compulsory_elective');
+});
+
+it('decides which failed courses must be retaken from the course type', function () {
+    $rules = ['retake_failed_electives' => false, 'retake_failed_compulsory_electives' => false];
+    expect(\App\Support\CourseType::mustRetake('compulsory', $rules))->toBeTrue()
+        ->and(\App\Support\CourseType::mustRetake('elective', $rules))->toBeFalse()
+        ->and(\App\Support\CourseType::mustRetake('compulsory_elective', $rules))->toBeFalse()
+        ->and(\App\Support\CourseType::mustRetake('compulsory_elective', []))->toBeTrue()
+        ->and(\App\Support\CourseType::short('compulsory_elective'))->toBe('CE');
 });

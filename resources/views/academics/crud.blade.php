@@ -45,14 +45,25 @@
                         @if ($canSearch)
                             <input type="search" name="q" value="{{ request('q') }}" class="form-control" style="width:220px" placeholder="Search…">
                         @endif
-                        @foreach ($filters as [$name, $label, $options])
-                            <select name="{{ $name }}" class="form-select" style="width:auto;max-width:220px" onchange="this.form.submit()">
-                                <option value="">All {{ Str::plural(strtolower($label)) }}</option>
+                        {{-- A filter is [name, label, options, "all" text (optional), more (optional: tucked under "More filters")] --}}
+                        @php
+                            $moreFilters = collect($filters)->filter(fn ($f) => ! empty($f[4]));
+                            $moreOpen = $moreFilters->contains(fn ($f) => request()->filled($f[0]));
+                        @endphp
+                        @foreach ($filters as $flt)
+                            @php [$name, $label, $options] = $flt; $more = ! empty($flt[4]); @endphp
+                            @if ($more)<span class="uv-more-filter" @if (! $moreOpen) style="display:none" @endif>@endif
+                            <select name="{{ $name }}" class="form-select" style="width:auto;max-width:220px" onchange="this.form.submit()" title="{{ $label }}">
+                                <option value="">{{ $flt[3] ?? 'All ' . Str::plural(strtolower($label)) }}</option>
                                 @foreach ($options as $value => $text)
                                     <option value="{{ $value }}" @selected((string) request($name) === (string) $value)>{{ $text }}</option>
                                 @endforeach
                             </select>
+                            @if ($more)</span>@endif
                         @endforeach
+                        @if ($moreFilters->isNotEmpty() && ! $moreOpen)
+                            <button type="button" class="btn btn-light" onclick="document.querySelectorAll('#filter-form .uv-more-filter').forEach(function (el) { el.style.display = ''; }); this.remove();"><i class="ri-filter-3-line me-1"></i>More filters</button>
+                        @endif
                         @if ($canSearch)
                             <button class="btn btn-soft-primary" type="submit"><i class="ri-search-line"></i></button>
                         @endif

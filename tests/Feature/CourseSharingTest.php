@@ -95,3 +95,28 @@ it('picks prerequisites from the list of courses, shows them, and refuses a cour
     $this->put(route('academics.courses.update', $c), $base + ['prerequisites' => []])->assertSessionHasNoErrors();
     expect($c->fresh()->prerequisites)->toHaveCount(0);
 });
+
+it('finds courses by faculty, semester, session, units, sharing, prerequisites, curriculum use and status', function () {
+    $s1 = \App\Models\AcademicSession::create(['name' => '2025/2026']);
+    $s2 = \App\Models\AcademicSession::create(['name' => '2026/2027']);
+    $sem = \App\Models\SemesterType::orderBy('sort_order')->first();
+    $a = Course::create(['department_id' => $this->csc->id, 'code' => 'CSC 101', 'title' => 'Intro', 'credit_units' => 3, 'semester_type_id' => $sem->id, 'academic_session_id' => $s1->id]);
+    $b = Course::create(['department_id' => $this->mth->id, 'code' => 'MTH 101', 'title' => 'Algebra', 'credit_units' => 2, 'academic_session_id' => $s2->id, 'shared_as' => 'elective', 'is_active' => false]);
+    $b->prerequisites()->attach($a->id);
+    ProgrammeCourse::create(['programme_id' => $this->bscCsc->id, 'course_id' => $a->id, 'level' => 100, 'semester_order' => 1]);
+
+    $see = fn (array $q, array $yes, array $no) => tap($this->get(route('academics.courses.index', $q))->assertOk(), function ($r) use ($yes, $no) {
+        foreach ($yes as $t) { $r->assertSee('<span class="fw-semibold">' . $t . '</span>', false); }
+        foreach ($no as $t) { $r->assertDontSee('<span class="fw-semibold">' . $t . '</span>', false); }
+    });
+    $see(['academic_session_id' => $s1->id], ['Intro'], ['Algebra']);
+    $see(['semester_type_id' => $sem->id], ['Intro'], ['Algebra']);
+    $see(['credit_units' => 2], ['Algebra'], ['Intro']);
+    $see(['shared_as' => 'own'], ['Intro'], ['Algebra']);
+    $see(['shared_as' => 'elective'], ['Algebra'], ['Intro']);
+    $see(['prerequisite' => 'with'], ['Algebra'], ['Intro']);
+    $see(['curriculum' => 'off'], ['Algebra'], ['Intro']);
+    $see(['is_active' => '0'], ['Algebra'], ['Intro']);
+    $see(['faculty' => $this->csc->faculty_id, 'q' => 'alg'], ['Algebra'], ['Intro']);
+    $this->get(route('academics.courses.index'))->assertSee('All sessions')->assertSee('More filters');
+});

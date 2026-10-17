@@ -100,12 +100,18 @@ abstract class CrudController extends Controller
         }
 
         foreach ($this->filters() as [$name]) {
-            if ($request->filled($name)) {
+            if ($request->filled($name) && ! $this->applyFilter($query, $name, $request->query($name))) {
                 $query->where($name, $request->query($name));
             }
         }
 
         return $query;
+    }
+
+    /** A filter that is not a plain column match (a related record, yes / no ...): apply it and return true. */
+    protected function applyFilter(Builder $query, string $name, mixed $value): bool
+    {
+        return false;
     }
 
     /** Values merged into the view (e.g. summaries). */

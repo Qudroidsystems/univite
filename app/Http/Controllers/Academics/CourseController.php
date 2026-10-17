@@ -24,7 +24,7 @@ class CourseController extends CrudController
     protected string $icon = 'ri-book-open-line';
     protected string $routeBase = 'academics.courses';
     protected string $intro = 'The course catalogue. Each course belongs to the department that runs it. That department sets its type for its own programmes (compulsory, compulsory elective or elective) and decides whether other departments may take it, and as what. Prerequisites are picked from the list of courses. Use Curriculum to place courses in programmes.';
-    protected array $searchable = ['code', 'title'];
+    protected array $searchable = ['code', 'title', 'description'];
 
     protected function model(): string
     {
@@ -33,15 +33,7 @@ class CourseController extends CrudController
 
     protected function query(Request $request): Builder
     {
-        $q = parent::query($request)->with('department.faculty', 'studyCategory', 'semesterType', 'session', 'prerequisites')->withCount('programmeCourses')->reorder()->orderBy('code');
-        // "Shared with other departments" filter: any sharing at all, or one way of sharing
-        if ($request->query('shared') === 'any') {
-            $q->whereNotNull('shared_as');
-        } elseif ($request->query('shared') === 'none') {
-            $q->whereNull('shared_as');
-        }
-
-        return $q;
+        return parent::query($request)->with('department.faculty', 'studyCategory', 'semesterType', 'session', 'prerequisites')->withCount('programmeCourses')->reorder()->orderBy('code');
     }
 
     protected function departmentOptions(): array
@@ -55,14 +47,36 @@ class CourseController extends CrudController
 
     protected function filters(): array
     {
+        $faculty = request('faculty');
+        $departments = Department::query()->when($faculty, fn ($q) => $q->where('faculty_id', $faculty))->orderBy('name')->pluck('name', 'id')->all();
+
         return [
-            ['department_id', 'Department', Department::orderBy('name')->pluck('name', 'id')->all()],
+            ['faculty', 'Faculty', Faculty::orderBy('name')->pluck('name', 'id')->all()],
+            ['department_id', 'Department', $departments],
             ['study_category_id', 'Study category', StudyCategory::orderBy('name')->pluck('name', 'id')->all()],
             ['level', 'Level', \App\Support\Levels::options()],
             ['semester_type_id', 'Semester', SemesterType::orderBy('sort_order')->pluck('name', 'id')->all()],
-            ['course_type', 'Type', CourseType::options()],
-            ['shared_as', 'Shared as', array_filter(CourseSharing::options(), fn ($k) => $k !== '', ARRAY_FILTER_USE_KEY)],
+            ['academic_session_id', 'Session', AcademicSession::orderByDesc('name')->pluck('name', 'id')->all(), 'All sessions'],
+            ['course_type', 'Type', CourseType::options(), 'All types'],
+            ['credit_units', 'Unit', Course::query()->distinct()->orderBy('credit_units')->pluck('credit_units')->mapWithKeys(fn ($u) => [$u => $u . ' unit' . ($u == 1 ? '' : 's')])->all(), 'Any units', true],
+            ['shared_as', 'Sharing', ['own' => 'Own department only'] + array_filter(CourseSharing::options(), fn ($k) => $k !== '', ARRAY_FILTER_USE_KEY), 'Any sharing', true],
+            ['prerequisite', 'Prerequisite', ['with' => 'Has prerequisites', 'without' => 'No prerequisites'], 'With or without prerequisites', true],
+            ['curriculum', 'Curriculum', ['on' => 'On a curriculum', 'off' => 'On no curriculum'], 'On a curriculum or not', true],
+            ['is_active', 'Status', ['1' => 'Active', '0' => 'Inactive'], 'Active and inactive', true],
         ];
+    }
+
+    protected function applyFilter(Builder $query, string $name, mixed $value): bool
+    {
+        match ($name) {
+            'faculty' => $query->whereHas('department', fn ($d) => $d->where('faculty_id', $value)),
+            'shared_as' => $value === 'own' ? $query->whereNull('shared_as') : $query->where('shared_as', $value),
+            'prerequisite' => $value === 'with' ? $query->has('prerequisites') : $query->doesntHave('prerequisites'),
+            'curriculum' => $value === 'on' ? $query->has('programmeCourses') : $query->doesntHave('programmeCourses'),
+            default => null,
+        };
+
+        return in_array($name, ['faculty', 'shared_as', 'prerequisite', 'curriculum'], true);
     }
 
     /** Every course, grouped by department, for the prerequisite picker: "CSC 101 — Introduction to Computing (3u, 100L)". */

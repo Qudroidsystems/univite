@@ -81,6 +81,21 @@ it('lets the assigned lecturer enter scores, grades them from the scale, and ref
     expect($r->fresh()->ca)->toBe(25.0);   // the bad row was not applied
 });
 
+it('shows each course with its department, head of department and dean, and the sheet with the same', function () {
+    $dept = $this->course->department;
+    $hod = User::factory()->create(['name' => 'Kemi Hodson']);
+    \App\Models\StaffProfile::create(['user_id' => $hod->id, 'department_id' => $dept->id, 'staff_number' => 'SP/0101']);
+    $dean = User::factory()->create(['name' => 'Tunde Deanery']);
+    $dept->update(['hod_id' => $hod->id]);
+    $dept->faculty->update(['dean_id' => $dean->id]);
+
+    $this->actingAs($this->lecturer)->get(route('results.sheets.index'))->assertOk()
+        ->assertSee($dept->name)->assertSee('Kemi Hodson')->assertSee('Tunde Deanery')
+        ->assertSee('data-hod="Kemi Hodson"', false);
+    $this->actingAs($this->lecturer)->get(route('results.sheets.show', $this->sheet->id))->assertOk()
+        ->assertSee('Course department')->assertSee('Kemi Hodson')->assertSee('SP/0101')->assertSee('Tunde Deanery');
+});
+
 it('keeps other lecturers out of the sheet', function () {
     $other = User::factory()->create();
     $this->actingAs($other)->get(route('results.sheets.show', $this->sheet->id))->assertForbidden();

@@ -17,6 +17,7 @@
             </div>
             @include('academics.partials.alerts')
             <p class="text-muted">{{ $sheet->session->name }} · {{ $sheet->semesterType->name }} · {{ $sheet->course->credit_units }} units · CA out of {{ $fmt($caMax) }}, exam out of {{ $fmt($examMax) }}</p>
+            <x-department-leaders :department="$sheet->course->department" label="Course department" />
             @if ($scheme)
                 <p class="text-muted fs-13 mt-n2"><i class="ri-survey-line me-1"></i>Assessment scheme <strong>{{ $scheme->name }}</strong>: {{ $scheme->summary() }}. Enter each mark and the CA, exam, total and grade add up as you type, or type a CA or exam total directly. Save as often as you like; every student needs a total before you submit.</p>
             @endif

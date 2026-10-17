@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Academics\DepartmentLeaders;
 use App\Data\Results\Score;
 use App\Models\Course;
 use App\Models\ResultSheet;
@@ -36,7 +37,7 @@ class ResultSheetController extends Controller
     {
         $user = auth()->user();
         $ctx = $this->registration->context();
-        $mine = $ctx ? $user->courseAssignments()->with('course')
+        $mine = $ctx ? $user->courseAssignments()->with('course.department', 'course.studyCategory')
             ->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
 
         $sheets = ResultSheet::with('course', 'session', 'semesterType', 'stage')->withCount('results');
@@ -61,8 +62,12 @@ class ResultSheetController extends Controller
             return [$a->course_id => ['sheet' => $sheet, 'scheme' => $scheme]];
         });
 
+        // Each course's department with its head of department and dean, shown on the course's row.
+        $leaders = $mine->pluck('course.department')->filter()->unique('id')
+            ->mapWithKeys(fn ($d) => [$d->id => DepartmentLeaders::of($d)]);
+
         return view('results.index', [
-            'pagetitle' => 'Results', 'ctx' => $ctx, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status, 'schemes' => $schemes, 'waiting' => $waiting,
+            'pagetitle' => 'Results', 'ctx' => $ctx, 'leaders' => $leaders, 'mine' => $mine, 'mySheets' => $mySheets, 'all' => $all, 'status' => $status, 'schemes' => $schemes, 'waiting' => $waiting,
             'caMax' => ResultService::caMax(), 'examMax' => ResultService::examMax(),
             'counts' => ResultSheet::selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status'),
         ]);
@@ -84,7 +89,7 @@ class ResultSheetController extends Controller
         if ($sheet->isEditable() && $this->results->canEnter(auth()->user(), $sheet)) {
             $this->results->syncRows($sheet);
         }
-        $sheet->load('course', 'session', 'semesterType', 'stage', 'events.user', 'results.student', 'results.assessmentScores', 'scheme.items');
+        $sheet->load('course.department', 'session', 'semesterType', 'stage', 'events.user', 'results.student', 'results.assessmentScores', 'scheme.items');
         [$caMax, $examMax] = ResultService::limits($sheet);
 
         return view('results.show', [

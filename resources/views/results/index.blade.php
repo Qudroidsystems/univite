@@ -28,15 +28,58 @@
             @endif
 
             @if ($mine->isNotEmpty() || $mySheets->isNotEmpty())
-                <div class="card">
-                    <div class="card-header"><h6 class="card-title mb-0">My courses{{ $ctx ? ' · ' . $ctx->session->name . ' ' . $ctx->type->name : '' }}</h6></div>
+                <div class="card uv-search-card" data-uv-search>
+                    <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                        <h6 class="card-title mb-0 me-auto">My courses{{ $ctx ? ' · ' . $ctx->session->name . ' ' . $ctx->type->name : '' }}
+                            <span class="badge bg-primary-subtle text-primary ms-1 uv-search-count" data-uv-search-count>{{ $mine->count() }}</span></h6>
+                        @if ($mine->count() > 1)
+                            <div class="uv-search-box d-flex flex-wrap gap-2 align-items-center">
+                                <select class="form-select form-select-sm" style="width:auto" data-uv-search-by aria-label="Search by">
+                                    <option value="">Search by: anything</option>
+                                    <option value="code">Course code</option>
+                                    <option value="title">Course title</option>
+                                    <option value="dept">Department</option>
+                                    <option value="hod">Head of Department</option>
+                                    <option value="dean">Dean</option>
+                                    <option value="category">Category</option>
+                                    <option value="level">Level</option>
+                                    <option value="units">Units</option>
+                                    <option value="status">Sheet status</option>
+                                    <option value="scheme">Assessment</option>
+                                </select>
+                                <div class="position-relative uv-search-field">
+                                    <i class="ri-search-line position-absolute top-50 translate-middle-y ms-2 text-muted"></i>
+                                    <input type="search" class="form-control form-control-sm ps-4" placeholder="Search my courses" data-uv-search-input autocomplete="off">
+                                </div>
+                            </div>
+                        @endif
+                    </div>
                     <ul class="list-group list-group-flush">
                         @foreach ($mine as $a)
-                            @php $sc = $schemes[$a->course_id]['scheme'] ?? null; $sh = $schemes[$a->course_id]['sheet'] ?? null; @endphp
-                            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                            @php
+                                $sc = $schemes[$a->course_id]['scheme'] ?? null; $sh = $schemes[$a->course_id]['sheet'] ?? null; $co = $a->course;
+                                $lead = $leaders[$co->department_id] ?? null;
+                                $statusLabel = $sh ? \App\Models\ResultSheet::STATUSES[$sh->status] : 'Not opened';
+                            @endphp
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-2 uv-search-item" style="--uv-i:{{ $loop->index }}" data-uv-item
+                                data-code="{{ $co->code }}" data-title="{{ $co->title }}" data-dept="{{ $co->department?->name }}" data-category="{{ $co->studyCategory?->name }}" data-hod="{{ $lead?->hod?->name }}" data-dean="{{ $lead?->dean?->name }}"
+                                data-level="{{ $co->level }}" data-units="{{ $co->credit_units }}" data-status="{{ $statusLabel }}" data-scheme="{{ $sc?->name ?? 'CA and exam' }}">
                                 <span>
-                                    <span class="fw-semibold">{{ $a->course->code }}</span> {{ $a->course->title }}
-                                    @if ($sh)<span class="badge {{ \App\Models\ResultSheet::BADGES[$sh->status] }} ms-1">{{ \App\Models\ResultSheet::STATUSES[$sh->status] }}</span>@endif
+                                    <span class="fw-semibold" data-uv-mark="code">{{ $co->code }}</span> <span data-uv-mark="title">{{ $co->title }}</span>
+                                    @if ($sh)<span class="badge {{ \App\Models\ResultSheet::BADGES[$sh->status] }} ms-1">{{ $statusLabel }}</span>@endif
+                                    <span class="d-block text-muted fs-12 mt-1">
+                                        <span data-uv-mark="level">{{ $co->level ? $co->level . ' level' : '' }}</span>{{ $co->level ? ' · ' : '' }}<span data-uv-mark="units">{{ $co->credit_units }}</span> units
+                                        @if ($co->studyCategory) · <span data-uv-mark="category">{{ $co->studyCategory->name }}</span>@endif
+                                    </span>
+                                    <span class="d-flex flex-wrap gap-1 mt-2 uv-course-leaders">
+                                        <span class="uv-chip" title="Department{{ $lead?->faculty ? ', ' . $lead->faculty : '' }}"><i class="ri-building-line"></i><span data-uv-mark="dept">{{ $co->department?->name ?? 'No department' }}</span></span>
+                                        @foreach (['hod' => [$lead?->hod, 'HoD', 'ri-user-star-line'], 'dean' => [$lead?->dean, 'Dean', 'ri-government-line']] as $key => [$p, $tag, $icon])
+                                            <span class="uv-chip" title="{{ $p ? collect([$p->role, $p->staffNumber, $p->email])->filter()->implode(' · ') : '' }}">
+                                                @if ($p && $p->photoUrl)<img src="{{ $p->photoUrl }}" alt="">@else<i class="{{ $icon }}"></i>@endif
+                                                <span class="uv-chip-tag">{{ $tag }}</span><span data-uv-mark="{{ $key }}">{{ $p?->name ?? 'Not assigned' }}</span>
+                                            </span>
+                                        @endforeach
+                                    </span>
                                     <span class="d-block mt-1">
                                         @if ($sc)
                                             <span class="text-muted fs-12 me-1"><i class="ri-survey-line"></i> {{ $sc->name }}:</span>
@@ -49,6 +92,10 @@
                                 <a href="{{ route('results.open', $a->course_id) }}" class="btn btn-sm btn-primary text-nowrap">Enter scores</a>
                             </li>
                         @endforeach
+                        <li class="list-group-item text-center text-muted py-4 uv-search-empty d-none" data-uv-search-empty>
+                            <i class="ri-search-eye-line fs-24 d-block mb-1"></i>No course matches “<span data-uv-search-term></span>”.
+                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-uv-search-clear>Clear the search</button>
+                        </li>
                     </ul>
                     @if ($mySheets->isNotEmpty())
                         <div class="card-body border-top pt-2">

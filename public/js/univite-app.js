@@ -605,6 +605,95 @@
     Uv.animateTables = animateTables;
     document.addEventListener('uv:page', function () { animateTables(document); });
 
+    /* ------------------------------------------------------- list search */
+
+    /**
+     * A card marked data-uv-search filters its [data-uv-item] rows as you type: "Search by" picks one data-* field (or
+     * every field), a row shows when one field holds the phrase, matched text inside [data-uv-mark] is highlighted, and rows fold away or slide
+     * back in. Escape clears the box.
+     */
+    function escapeHtml(t) { return t.replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function escapeRe(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    function setupSearch(card) {
+        if (card.dataset.uvSearchReady) { return; }
+        card.dataset.uvSearchReady = '1';
+        var input = card.querySelector('[data-uv-search-input]');
+        var by = card.querySelector('[data-uv-search-by]');
+        var count = card.querySelector('[data-uv-search-count]');
+        var empty = card.querySelector('[data-uv-search-empty]');
+        var term = card.querySelector('[data-uv-search-term]');
+        var items = Array.prototype.slice.call(card.querySelectorAll('[data-uv-item]'));
+        items.forEach(function (el, i) {
+            el.style.setProperty('--uv-n', i);
+            el.classList.add('uv-show');
+            el.querySelectorAll('[data-uv-mark]').forEach(function (m) { m.dataset.uvPlain = m.textContent; });
+        });
+        if (!input) { return; }
+        input.dataset.placeholder = input.placeholder;
+
+        var timer = null, last = null;
+        function fields(el, key) {
+            if (key) { return [el.dataset[key] || '']; }
+            return Object.keys(el.dataset).filter(function (k) { return k.indexOf('uv') !== 0; }).map(function (k) { return el.dataset[k]; });
+        }
+        function mark(el, words, key) {
+            el.querySelectorAll('[data-uv-mark]').forEach(function (m) {
+                var plain = m.dataset.uvPlain || '';
+                if (!words.length || (key && m.dataset.uvMark !== key)) { m.textContent = plain; return; }
+                var re = new RegExp('(' + words.map(escapeRe).join('|') + ')', 'gi');
+                m.innerHTML = escapeHtml(plain).replace(re, '<mark>$1</mark>');
+            });
+        }
+        function run() {
+            var q = input.value.trim().toLowerCase();
+            var key = by ? by.value : '';
+            var words = q ? [q.replace(/\s+/g, ' ')] : [];
+            var tight = q.replace(/\s+/g, '');
+            var shown = 0;
+            items.forEach(function (el) {
+                // A row matches when one of its fields holds the whole phrase ("csc 3" finds CSC 301 but not every 3-unit course); spaces don't matter.
+                var ok = !q || fields(el, key).some(function (f) {
+                    f = f.toLowerCase();
+                    return f.indexOf(words[0]) !== -1 || f.replace(/\s+/g, '').indexOf(tight) !== -1;
+                });
+                var wasHidden = el.classList.contains('uv-hide');
+                el.classList.remove('uv-show');
+                if (ok) {
+                    el.classList.remove('uv-hide');
+                    if (wasHidden || last !== q + '|' + key) { el.style.setProperty('--uv-n', shown); void el.offsetWidth; el.classList.add('uv-show'); }
+                    shown++;
+                } else {
+                    el.classList.add('uv-hide');
+                }
+                mark(el, ok ? words : [], key);
+            });
+            last = q + '|' + key;
+            if (count) {
+                count.textContent = q ? shown + ' of ' + items.length : items.length;
+                count.classList.remove('uv-bump'); void count.offsetWidth; count.classList.add('uv-bump');
+            }
+            if (empty) {
+                empty.classList.toggle('d-none', shown > 0);
+                if (term) { term.textContent = input.value.trim(); }
+            }
+        }
+        input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 90); });
+        input.addEventListener('keydown', function (e) { if (e.key === 'Escape') { input.value = ''; run(); } });
+        if (by) {
+            by.addEventListener('change', function () {
+                input.placeholder = by.value ? 'Search by ' + by.options[by.selectedIndex].text.toLowerCase() : input.dataset.placeholder;
+                run(); input.focus();
+            });
+        }
+        card.querySelectorAll('[data-uv-search-clear]').forEach(function (b) {
+            b.addEventListener('click', function () { input.value = ''; if (by) { by.value = ''; } run(); input.focus(); });
+        });
+    }
+    function setupSearches(root) { (root || document).querySelectorAll('[data-uv-search]').forEach(setupSearch); }
+    Uv.setupSearches = setupSearches;
+    document.addEventListener('uv:page', function () { setupSearches(document); });
+
     /* ------------------------------------------------------- last changed by */
 
     /** The ⓘ in a "Last changed by" cell opens the staff member's details and the record's history. */
@@ -636,6 +725,7 @@
         history.replaceState({ uv: 1 }, '', location.href);
         upgrade(document);
         animateTables(document);
+        setupSearches(document);
         ensureIndicator();
         paint();
         probe();

@@ -109,7 +109,7 @@
                                     <tr>@foreach ($split as [$subj])<td>{{ $subj }}</td>@endforeach</tr>
                                     <tr>@foreach ($split as [, $num])<td>{{ $num }}</td>@endforeach</tr>
                                     <tr>@foreach ($block as $r)<td class="u">({{ $r->credit_units }})</td>@endforeach</tr>
-                                    <tr>@foreach ($block as $r)<td class="m {{ $r->is_pass === false ? 'f' : '' }}">{{ $r->total === null ? '—' : MasterSheets::score($r->total) . $r->grade }}</td>@endforeach</tr>
+                                    <tr>@foreach ($block as $r)<td class="m {{ $r->is_pass === false ? 'f' : '' }}">{{ $r->total === null ? 'AR' : MasterSheets::score($r->total) . $r->grade }}</td>@endforeach</tr>
                                 </table>
                             @endforeach
                         @endif
@@ -147,6 +147,7 @@
                     <tr><td>{{ $b->letter }}</td><td>{{ MasterSheets::score($b->min_score) }} – {{ MasterSheets::score($b->max_score) }}</td><td>{{ $b->rank ?? ($b->is_pass ? 'Pass' : 'Fail') }}</td><td>{{ MasterSheets::score($b->points) }}</td></tr>
                 @endforeach
             </table>
+            <div style="margin-top:4px">AR: awaiting result (registered, no score yet).</div>
         </td>
         <td style="width:46%">
             <h4>Key to result</h4>

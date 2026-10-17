@@ -111,7 +111,7 @@ class DepartmentMasterSheet
                     foreach ($block as $i => $r) {
                         $codes[$i] = $r->course->code;
                         $units[$i] = '(' . $r->credit_units . ')';
-                        $marks[$i] = $r->total === null ? '—' : MasterSheets::score($r->total) . $r->grade;
+                        $marks[$i] = $r->total === null ? 'AR' : MasterSheets::score($r->total) . $r->grade;
                     }
                     $tail = array_fill(0, 13, null);
                     if ($b === 0) {

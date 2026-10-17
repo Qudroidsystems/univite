@@ -719,6 +719,40 @@
             .catch(function () { body.innerHTML = '<p class="text-danger mb-0">Could not load the details. Please try again.</p>'; });
     });
 
+    /* ------------------------------------------------------- details on hover */
+
+    /**
+     * A .uv-more button keeps a long list out of a narrow cell: hovering shows it in a popover, clicking opens it in a modal.
+     * The list is the HTML of the <template> right after the button; data-title names it.
+     */
+    function moreHtml(btn) { var t = btn.nextElementSibling; return t && t.tagName === 'TEMPLATE' ? t.innerHTML : ''; }
+    document.addEventListener('mouseover', function (e) {
+        var btn = e.target.closest && e.target.closest('.uv-more');
+        if (!btn || btn.dataset.uvPop || !window.bootstrap) { return; }
+        btn.dataset.uvPop = '1';
+        var pop = new bootstrap.Popover(btn, { trigger: 'hover focus', html: true, placement: 'auto', container: 'body', customClass: 'uv-more-pop',
+            title: btn.dataset.title || '', content: function () { return moreHtml(btn); }, sanitize: false });
+        pop.show();
+    });
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.uv-more');
+        if (!btn) { return; }
+        e.preventDefault();
+        if (window.bootstrap) { var p = bootstrap.Popover.getInstance(btn); if (p) { p.hide(); } }
+        var modal = document.getElementById('uv-more-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = 'uv-more-modal'; modal.tabIndex = -1;
+            modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">'
+                + '<div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>'
+                + '<div class="modal-body"></div></div></div>';
+            document.body.appendChild(modal);
+        }
+        modal.querySelector('.modal-title').textContent = btn.dataset.title || 'Details';
+        modal.querySelector('.modal-body').innerHTML = moreHtml(btn);
+        if (window.bootstrap) { bootstrap.Modal.getOrCreateInstance(modal).show(); }
+    });
+
     /* ------------------------------------------------------------------ start */
 
     function start() {

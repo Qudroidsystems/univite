@@ -4,6 +4,7 @@
 @php
     $params = $q->params();
     $score = fn ($t) => \App\Services\Results\MasterSheets::score($t);
+    $byCode = $sheet ? $sheet->courses->keyBy(fn ($c) => $c->course->code) : collect();
     $badges = ['published' => 'bg-success-subtle text-success', 'approved' => 'bg-info-subtle text-info', 'submitted' => 'bg-warning-subtle text-warning', 'draft' => 'bg-secondary-subtle text-secondary'];
 @endphp
 <style>
@@ -79,7 +80,7 @@
                         <thead class="table-light">
                             <tr><th rowspan="2">S/N</th><th rowspan="2" class="text-start">Matric no.</th><th rowspan="2" class="text-start">Name</th>
                                 @if ($sheet->courses->isNotEmpty())<th colspan="{{ $sheet->courses->count() }}" class="uv-group">Courses (score and grade)</th>@endif
-                                <th colspan="3" class="uv-group">Present</th><th colspan="3" class="uv-group">Previous</th><th colspan="3" class="uv-group">Cumulative</th><th rowspan="2" class="uv-group text-start">Outstanding results</th><th rowspan="2" class="uv-group text-start">Remark</th></tr>
+                                <th colspan="3" class="uv-group">Present</th><th colspan="3" class="uv-group">Previous</th><th colspan="3" class="uv-group">Cumulative</th><th rowspan="2" class="uv-group" title="Registered courses with no score yet (AR). Hover or click the number to see them.">Outstanding<br>results</th><th rowspan="2" class="uv-group text-start">Remark</th></tr>
                             <tr>
                                 @foreach ($sheet->courses as $i => $c)<th class="{{ $i === 0 ? 'uv-group' : '' }}" title="{{ $c->course->title }}">{{ $c->course->code }}<div class="fw-normal">{{ $c->course->credit_units }}u · <span title="{{ \App\Support\CourseType::label($c->type) }}">{{ \App\Support\CourseType::short($c->type) }}</span></div></th>@endforeach
                                 <th class="uv-group">TCP</th><th>TNU</th><th>GPA</th>
@@ -92,12 +93,22 @@
                             <tr><td>{{ $n + 1 }}</td><td class="text-start">{{ $r->student->matric_label }}</td><td class="text-start">{{ $r->student->full_name }}</td>
                                 @foreach ($sheet->courses as $i => $c)
                                     @php $x = $r->results->get($c->course->id); @endphp
-                                    <td class="{{ $i === 0 ? 'uv-group' : '' }} {{ $x && ! $x->is_pass ? 'text-danger fw-semibold' : '' }}">{{ $x ? $score($x->total) . ' ' . $x->grade : '' }}</td>
+                                    @if ($x)<td class="{{ $i === 0 ? 'uv-group' : '' }} {{ ! $x->is_pass ? 'text-danger fw-semibold' : '' }}">{{ $score($x->total) . ' ' . $x->grade }}</td>
+                                    @else @php $m = $r->mark($c->course->id); @endphp<td class="{{ $i === 0 ? 'uv-group' : '' }} {{ $m === 'AR' ? 'text-warning' : 'text-muted' }}" title="{{ \App\Data\Results\MasterSheetRow::MARKS[$m] }}">{{ $m }}</td>@endif
                                 @endforeach
                                 <td class="uv-group">{{ $score($r->tcp) }}</td><td>{{ $r->tnu }}</td><td class="fw-semibold">{{ number_format($r->gpa, 2) }}</td>
                                 <td class="uv-group">{{ $score($r->previousPoints) }}</td><td>{{ $r->previousUnits }}</td><td>{{ number_format($r->previousCgpa, 2) }}</td>
                                 <td class="uv-group">{{ $score($r->cumulativePoints) }}</td><td>{{ $r->cumulativeUnits }}</td><td class="fw-semibold">{{ number_format($r->cgpa, 2) }}</td>
-                                <td class="uv-group text-start text-warning" style="min-width:120px">{{ $r->outstanding->implode(', ') ?: '—' }}</td>
+                                <td class="uv-group text-center">
+                                    @if ($r->outstanding->isEmpty())<span class="text-muted">—</span>@else
+                                        <button type="button" class="badge bg-warning-subtle text-warning uv-more" data-title="Outstanding results · {{ $r->student->full_name }}" aria-label="Show the outstanding results">{{ $r->outstanding->count() }} <i class="ri-information-line"></i></button><template><ul class="uv-more-list">
+                                            @foreach ($r->outstanding as $code)
+                                                @php $oc = $byCode->get($code); @endphp
+                                                <li><strong>{{ $code }}</strong> {{ $oc?->course->title }}@if ($oc)<span class="text-muted"> · {{ $oc->course->credit_units }} units</span><div class="mt-1"><x-course-tag :course="$oc->course" :type="$oc->type" full /></div>@endif</li>
+                                            @endforeach
+                                        </ul><div class="text-muted fs-12 mt-2">Registered this semester with no score yet.</div></template>
+                                        <span class="d-none d-print-inline">{{ $r->outstanding->implode(', ') }}</span>
+                                    @endif</td>
                                 <td class="uv-group text-start {{ in_array($r->bucket, ['withdraw', 'probation'], true) ? 'text-danger' : ($r->bucket === 'carryover' ? 'text-warning' : '') }}">{{ $r->remark }}@if ($r->waived->isNotEmpty())<div class="text-muted">Waived: {{ $r->waived->implode(', ') }}</div>@endif</td></tr>
                         @empty
                             <tr><td colspan="{{ 14 + $sheet->courses->count() }}" class="text-muted py-4">No student of this programme and level has an approved registration for this semester.</td></tr>
@@ -109,7 +120,7 @@
                         <div><strong>{{ $sheet->rows->count() }}</strong> students</div>
                         @foreach (\App\Data\Results\MasterSheet::BUCKETS as $k => $label)<div>{{ $label }}: <strong>{{ $sheet->counts()[$k] }}</strong></div>@endforeach
                     </div>
-                    <div class="text-muted fs-11 mt-1">TCP: total credit points (grade point × units). TNU: total number of units. GPA = TCP ÷ TNU. Previous: before this semester. Cumulative: including this semester.</div>
+                    <div class="text-muted fs-11 mt-1">NR: not registered. AR: awaiting result (registered, no score yet). C: compulsory, CE: compulsory elective, E: elective. TCP: total credit points (grade point × units). TNU: total number of units. GPA = TCP ÷ TNU. Previous: before this semester. Cumulative: including this semester.</div>
 
                     <div class="row mt-5 text-center fs-12">
                         @foreach (['Head of Department', 'Dean of Faculty', 'Chairman, Senate'] as $who)

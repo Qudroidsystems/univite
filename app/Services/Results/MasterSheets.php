@@ -131,6 +131,7 @@ class MasterSheets
                 outstanding: $outstanding,
                 remark: $remark,
                 bucket: $bucket,
+                registered: $byStudent->get($s->id, collect())->pluck('course_id')->values(),
             );
         });
 
@@ -232,7 +233,7 @@ class MasterSheets
             $line = [$i + 1, $r->student->matric_number ?? '', $r->student->full_name];
             foreach ($sheet->courses as $c) {
                 $x = $r->results->get($c->course->id);
-                $line[] = $x ? self::score($x->total) . ' ' . $x->grade : '';
+                $line[] = $x ? self::score($x->total) . ' ' . $x->grade : $r->mark($c->course->id);
             }
             array_push($line, $r->tcp, $r->tnu, round($r->gpa, 2), $r->previousPoints, $r->previousUnits, round($r->previousCgpa, 2),
                 $r->cumulativePoints, $r->cumulativeUnits, round($r->cgpa, 2), $r->outstanding->implode(', '), $r->remark . ($r->waived->isNotEmpty() ? ' (waived: ' . $r->waived->implode(', ') . ')' : ''));
@@ -242,7 +243,7 @@ class MasterSheets
         $notes = [
             $sheet->title(),
             $sheet->provisional ? 'Includes results still going through approval; students only see published results.' : 'Published results only.',
-            'C: compulsory, CE: compulsory elective, E: elective.',
+            'C: compulsory, CE: compulsory elective, E: elective. NR: not registered. AR: awaiting result (registered, no score yet).',
             'TCP: total credit points (grade point x units). TNU: total number of units. GPA = TCP / TNU. Previous: before this semester; cumulative: including it.',
             '',
             'Where each course is:',

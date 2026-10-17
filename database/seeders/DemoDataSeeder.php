@@ -26,6 +26,7 @@ class DemoDataSeeder extends Seeder
         DemoAcademicRecordSeeder::class,
         DemoAssessmentSeeder::class,
         DemoResultApprovalSeeder::class,
+        DemoResultKeySeeder::class,
         DemoFeesSeeder::class,
         DemoCampusSeeder::class,
     ];

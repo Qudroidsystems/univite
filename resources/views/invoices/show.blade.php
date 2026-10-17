@@ -59,7 +59,7 @@
                         <div class="card-header"><h6 class="card-title mb-0">Payments</h6></div>
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
-                                <thead class="table-light"><tr><th>Date</th><th>Reference</th><th>Method</th><th class="text-end">Amount</th><th>Status</th><th></th></tr></thead>
+                                <thead class="table-light"><tr><th>Date</th><th>Reference</th><th>Method</th><th class="text-end">Amount</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
                                 <tbody>
                                     @forelse ($invoice->payments as $p)
                                         <tr>
@@ -70,12 +70,13 @@
                                             <td>@if ($p->status === 'reversed')<span class="badge bg-danger-subtle text-danger">Reversed</span><div class="text-muted fs-12">{{ $p->reversed_at?->format('d M Y') }}: {{ $p->reversal_reason }}</div>
                                                 @elseif ($p->status === 'reversal')<span class="badge bg-secondary-subtle text-secondary">Reversal entry</span><div class="text-muted fs-12">{{ $p->note }}</div>
                                                 @else{{ ucfirst($p->status) }}@if ($p->note && in_array($p->status, ['failed', 'abandoned'], true))<div class="text-muted fs-12">{{ $p->note }}</div>@endif @endif</td>
+                                            <td><x-last-change :record="$p" :among="$invoice->payments" /></td>
                                             <td class="text-end text-nowrap">@if (in_array($p->status, ['successful', 'reversed'], true))<a href="{{ route('payments.receipt', $p->id) }}" class="btn btn-sm btn-soft-primary">Receipt</a>@endif
                                                 @if (in_array($p->status, ['pending', 'abandoned'], true) && $p->gateway !== 'manual')<form method="POST" action="{{ route('payments.check', $p->id) }}" class="d-inline">@csrf<button class="btn btn-sm btn-soft-warning">Check with {{ ucfirst($p->gateway) }}</button></form>@endif
                                                 @if ($p->status === 'successful')@can('Reverse payments')<a href="{{ route('payments.reverse', $p->id) }}" class="btn btn-sm btn-soft-danger">Reverse…</a>@endcan @endif</td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="6" class="text-center text-muted py-4">No payments yet.</td></tr>
+                                        <tr><td colspan="7" class="text-center text-muted py-4">No payments yet.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

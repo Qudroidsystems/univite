@@ -25,6 +25,8 @@ class ScopedAccess
         'Waive carryover courses' => 'Waiving carry-overs of those students',
         'View leave applications' => 'Leave of staff in the department, faculty or unit',
         'View staff records' => 'Records of staff in the department, faculty or unit (pay details stay hidden)',
+        'Compute results' => 'Computing results of the department\'s students and printing its master marks sheet',
+        'Define courses for lecturers' => 'Defining (assigning) the department\'s courses to its lecturers',
     ];
 
     /** @var array<string, AccessScope> */

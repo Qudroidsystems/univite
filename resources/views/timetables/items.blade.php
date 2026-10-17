@@ -4,7 +4,7 @@
 <div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'What to schedule', 'icon' => 'ri-list-check', 'subtitle' => $t->title . ' · ' . $items->count() . ' item(s)', 'back' => [route('timetables.show', $t), 'Back to the timetable']])
     @include('academics.partials.alerts')
-    <p class="text-muted">Class sizes come from course registrations, or from the curriculum where nobody has registered yet. {{ $t->isExam() ? 'Duration is the length of the paper in minutes.' : 'Each course meets the given number of times a week, each meeting lasting the given number of back-to-back periods.' }} Lecturers come from Course Lecturers; they are never put in two places at once.</p>
+    <p class="text-muted">Class sizes come from course registrations, or from the curriculum where nobody has registered yet. {{ $t->isExam() ? 'Duration is the length of the paper in minutes.' : 'Each course meets the given number of times a week, each meeting lasting the given number of back-to-back periods.' }} Lecturers come from Define Courses; they are never put in two places at once.</p>
     @if ($editable)
         <div class="d-flex gap-2 mb-3">
             <form method="POST" action="{{ route('timetables.items.sync', $t) }}">@csrf<button class="btn btn-sm btn-light"><i class="ri-add-circle-line me-1"></i>Add courses not listed yet</button></form>
@@ -13,7 +13,7 @@
     @endif
 
     <div class="card"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
-        <thead class="table-light"><tr><th>Course</th><th style="width:90px">{{ $t->isExam() ? 'Candidates' : 'Students' }}</th>@unless ($t->isExam())<th style="width:80px">Meetings / week</th>@endunless<th style="width:90px">{{ $t->isExam() ? 'Minutes' : 'Periods each' }}</th><th>Needs</th><th>Lecturers</th><th style="width:70px">On</th><th></th></tr></thead>
+        <thead class="table-light"><tr><th>Course</th><th style="width:90px">{{ $t->isExam() ? 'Candidates' : 'Students' }}</th>@unless ($t->isExam())<th style="width:80px">Meetings / week</th>@endunless<th style="width:90px">{{ $t->isExam() ? 'Minutes' : 'Periods each' }}</th><th>Needs</th><th>Lecturers</th><th style="width:70px">On</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
         <tbody>
         @foreach ($items as $i)
             <tr class="{{ $i->is_active ? '' : 'opacity-50' }}">
@@ -27,6 +27,7 @@
                     <select form="item-{{ $i->id }}" name="preferred_venue_id" class="form-select form-select-sm" @disabled(! $editable)><option value="">No preferred venue</option>@foreach ($venues as $v)<option value="{{ $v->id }}" @selected($i->preferred_venue_id === $v->id)>{{ $v->code }}</option>@endforeach</select></td>
                 <td style="min-width:180px"><select form="item-{{ $i->id }}" name="staff[]" multiple size="3" class="form-select form-select-sm" @disabled(! $editable)>@foreach ($staff as $id => $n)<option value="{{ $id }}" @selected(in_array($id, $i->staff ?? []))>{{ $n }}</option>@endforeach</select></td>
                 <td><input type="hidden" form="item-{{ $i->id }}" name="is_active" value="0"><input class="form-check-input" type="checkbox" form="item-{{ $i->id }}" name="is_active" value="1" @checked($i->is_active) @disabled(! $editable) title="Schedule this"></td>
+                <td><x-last-change :record="$i" :among="$items" /></td>
                 <td>@if ($editable)<form method="POST" action="{{ route('timetables.items.update', [$t, $i]) }}" id="item-{{ $i->id }}">@csrf @method('PUT')<button class="btn btn-sm btn-soft-primary">Save</button></form>@endif</td>
             </tr>
         @endforeach

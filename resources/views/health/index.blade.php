@@ -16,12 +16,13 @@
         </div></div>
     </div>
     <div class="card"><div class="card-header d-flex justify-content-between"><h6 class="card-title mb-0">Today</h6>@can('View clinic statistics')<a href="{{ route('clinic.stats') }}" class="fs-13">Statistics</a>@endcan</div>
-        <div class="table-responsive"><table class="table align-middle mb-0"><thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Reason</th><th>Outcome</th><th>Seen by</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table align-middle mb-0"><thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Reason</th><th>Outcome</th><th>Seen by</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead><tbody>
             @forelse ($today as $v)
                 <tr><td>{{ $v->seen_at->format('g:ia') }}</td><td><a href="{{ route('clinic.patient', $v->user) }}">{{ $v->user->name }}</a></td><td>{{ \App\Models\ClinicVisit::CATEGORIES[$v->category] }}</td>
-                    <td>{{ \App\Models\ClinicVisit::OUTCOMES[$v->outcome] }}{{ $v->rest_days ? ' · ' . $v->rest_days . ' day(s) rest' : '' }}</td><td class="fs-13">{{ $v->clinician?->name }}</td></tr>
+                    <td>{{ \App\Models\ClinicVisit::OUTCOMES[$v->outcome] }}{{ $v->rest_days ? ' · ' . $v->rest_days . ' day(s) rest' : '' }}</td><td class="fs-13">{{ $v->clinician?->name }}</td>
+                    <td><x-last-change :record="$v" :among="$today" /></td></tr>
             @empty
-                <tr><td colspan="5" class="text-center text-muted py-4">No visits recorded today.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">No visits recorded today.</td></tr>
             @endforelse
         </tbody></table></div>
     </div>

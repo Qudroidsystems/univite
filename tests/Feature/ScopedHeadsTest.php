@@ -159,3 +159,36 @@ it('lets a head search only the students and staff of their own department', fun
     $staff = collect($this->getJson(route('search', ['q' => 'SP/00']))->json('results'))->where('category', 'Staff')->pluck('title')->sort()->values()->all();
     expect($staff)->toBe(['Hod Bola', 'Staff Alpha']);
 });
+
+it('lets a head of department define only their own department\'s courses for their own staff', function () {
+    $type = \App\Models\SemesterType::orderBy('sort_order')->first();
+    $session = AcademicSession::where('is_current', true)->first();
+    $mine = \App\Models\Course::create(['department_id' => $this->deptA->id, 'code' => 'SED101', 'title' => 'Intro to Science Education', 'credit_units' => 2, 'level' => 100]);
+    $theirs = \App\Models\Course::create(['department_id' => $this->deptB->id, 'code' => 'CHM101', 'title' => 'General Chemistry', 'credit_units' => 3, 'level' => 100]);
+    \App\Models\CourseAssignment::create(['user_id' => $this->staffB->id, 'course_id' => $theirs->id, 'academic_session_id' => $session->id, 'semester_type_id' => $type->id]);
+    $row = fn ($user, $course) => ['user_id' => $user->id, 'course_id' => $course->id, 'academic_session_id' => $session->id, 'semester_type_id' => $type->id];
+
+    $this->actingAs($this->hod)->get(route('academics.course-assignments.index'))->assertOk()
+        ->assertSee('Define Courses')->assertSee('SED101')->assertDontSee('CHM101 - General Chemistry')->assertDontSee('Staff Beta');
+
+    $this->post(route('academics.course-assignments.store'), $row($this->staffA, $mine))->assertSessionHasNoErrors();
+    expect(\App\Models\CourseAssignment::where('user_id', $this->staffA->id)->where('course_id', $mine->id)->exists())->toBeTrue();
+
+    $this->post(route('academics.course-assignments.store'), $row($this->staffB, $mine))->assertSessionHasErrors('user_id');
+    $this->post(route('academics.course-assignments.store'), $row($this->staffA, $theirs))->assertSessionHasErrors('course_id');
+    $other = \App\Models\CourseAssignment::where('course_id', $theirs->id)->first();
+    $this->delete(route('academics.course-assignments.destroy', $other->id))->assertForbidden();
+
+    // Ordinary staff of the department cannot define courses at all.
+    $this->actingAs($this->staffA)->get(route('academics.course-assignments.index'))->assertForbidden();
+});
+
+it('lists only the head\'s own department on Define Courses, even when they may view every assignment', function () {
+    $type = \App\Models\SemesterType::orderBy('sort_order')->first();
+    $session = AcademicSession::where('is_current', true)->first();
+    $theirs = \App\Models\Course::create(['department_id' => $this->deptB->id, 'code' => 'CHM101', 'title' => 'General Chemistry', 'credit_units' => 3, 'level' => 100]);
+    \App\Models\CourseAssignment::create(['user_id' => $this->staffB->id, 'course_id' => $theirs->id, 'academic_session_id' => $session->id, 'semester_type_id' => $type->id]);
+    $this->hod->givePermissionTo('View course assignments');
+
+    $this->actingAs($this->hod)->get(route('academics.course-assignments.index'))->assertOk()->assertDontSee('CHM101 - General Chemistry');
+});

@@ -13,6 +13,7 @@ class ResultPermissionSeeder extends ModulePermissionSeeder
             'Result sheets',
             'Legacy results',
             'Student results',
+            'Result computation',
             'Result settings',
             'Result complaints',
             'Graduation lists',

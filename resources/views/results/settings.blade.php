@@ -6,6 +6,18 @@
         <div class="container-fluid">
             <div class="page-title-box"><h4 class="mb-0">Result settings</h4></div>
             @include('academics.partials.alerts')
+            <div class="row g-3 mb-3">
+                @can('View grade bands')
+                    <div class="col-md-6"><a href="{{ route('academics.grade-bands.index') }}" class="card card-body h-100 mb-0 text-body">
+                        <h5 class="mb-1"><i class="ri-bar-chart-grouped-line text-primary me-1"></i>Key to Grade</h5>
+                        <span class="text-muted">Score ranges, grades, ranks (Distinction, Credit, Merit, Pass, Fail) and points, for the university or each school, department and category.</span></a></div>
+                @endcan
+                @can('View result keys')
+                    <div class="col-md-6"><a href="{{ route('academics.result-keys.index') }}" class="card card-body h-100 mb-0 text-body">
+                        <h5 class="mb-1"><i class="ri-key-2-line text-primary me-1"></i>Key to Result</h5>
+                        <span class="text-muted">CGPA ranges with the remark, rank, action and activity used when results are computed and printed on the master sheet.</span></a></div>
+                @endcan
+            </div>
             <form method="POST" action="{{ route('results.settings.update') }}" class="card">
                 @csrf @method('PUT')
                 <div class="card-body row g-3">

@@ -38,13 +38,14 @@
             <div class="card">
                 <div class="card-header"><form method="GET" class="d-flex gap-2"><select name="source" class="form-select" style="width:auto" onchange="this.form.submit()"><option value="">All</option><option value="head" @selected(request('source') === 'head')>Given to heads</option><option value="manual" @selected(request('source') === 'manual')>Given by hand</option></select></form></div>
                 <div class="table-responsive"><table class="table align-middle mb-0">
-                    <thead class="table-light"><tr><th>Person</th><th>Role</th><th>For</th><th>How</th><th></th></tr></thead><tbody>
+                    <thead class="table-light"><tr><th>Person</th><th>Role</th><th>For</th><th>How</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
                     @forelse ($rows as $r)
                         <tr><td>{{ $r->user->name }}</td><td>{{ $r->role->name }}</td><td>{{ $r->scopeName() }} <span class="text-muted fs-12">({{ $r->scope_type }})</span></td>
                             <td>@if ($r->source === 'head')<span class="badge bg-info-subtle text-info">Head</span>@else<span class="badge bg-light text-body">By hand</span>@endif</td>
+                            <td><x-last-change :record="$r" :among="$rows" /></td>
                             <td class="text-end">@if ($edit && $r->source !== 'head')<form method="POST" action="{{ route('scoped-roles.destroy', $r) }}" data-confirm="Remove {{ $r->role->name }} for {{ $r->scopeName() }} from {{ $r->user->name }}?">@csrf @method('DELETE')<button class="btn btn-sm btn-soft-danger">Remove</button></form>@endif</td></tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted py-5">No scoped roles. Set heads on departments, faculties and units, or give one here.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-5">No scoped roles. Set heads on departments, faculties and units, or give one here.</td></tr>
                     @endforelse
                 </tbody></table></div>
             </div>

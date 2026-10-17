@@ -34,7 +34,7 @@
             <div class="card">
                 <div class="card-header"><h6 class="card-title mb-0">Copies</h6></div>
                 <div class="table-responsive"><table class="table align-middle mb-0">
-                    <thead class="table-light"><tr><th>Accession no.</th><th>Status</th><th>Location</th><th>Price</th>@can('Edit library catalogue')<th></th>@endcan</tr></thead><tbody>
+                    <thead class="table-light"><tr><th>Accession no.</th><th>Status</th><th>Location</th><th>Price</th><th style="width:1%" class="text-nowrap">Last changed by</th>@can('Edit library catalogue')<th></th>@endcan</tr></thead><tbody>
                     @forelse ($item->copies as $c)
                         <tr>
                             <td class="fw-semibold">{{ $c->accession_number }}</td>
@@ -42,6 +42,7 @@
                                 @if ($c->openLoan)<div class="fs-12 text-muted">{{ $c->openLoan->user->name }}, due {{ $c->openLoan->due_at->format('j M Y') }}</div>@endif</td>
                             <td>{{ $c->location ?? '—' }}</td>
                             <td>{{ $c->price !== null ? '₦' . number_format((float) $c->price, 2) : '—' }}</td>
+                            <td><x-last-change :record="$c" :among="$item->copies" /></td>
                             @can('Edit library catalogue')
                                 <td class="text-end"><form method="POST" action="{{ route('library.copies.update', $c) }}" class="d-flex gap-1 justify-content-end">@csrf @method('PUT')
                                     <input name="location" value="{{ $c->location }}" class="form-control form-control-sm" style="width:110px" placeholder="Location">
@@ -51,7 +52,7 @@
                             @endcan
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted py-4">No copies yet.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-4">No copies yet.</td></tr>
                     @endforelse
                 </tbody></table></div>
                 @can('Edit library catalogue')

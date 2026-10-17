@@ -19,7 +19,7 @@
             @endcan
         </div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Title</th><th>Call number</th><th>Kind</th><th class="text-center">Copies</th><th class="text-center">On the shelf</th><th class="text-center">Waiting</th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Title</th><th>Call number</th><th>Kind</th><th class="text-center">Copies</th><th class="text-center">On the shelf</th><th class="text-center">Waiting</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead><tbody>
             @forelse ($items as $i)
                 <tr>
                     <td><a href="{{ route('library.items.show', $i) }}" class="fw-semibold">{{ $i->title }}</a><div class="fs-12 text-muted">{{ $i->authors }}{{ $i->year ? ' · ' . $i->year : '' }}{{ $i->isbn ? ' · ISBN ' . $i->isbn : '' }}</div></td>
@@ -28,9 +28,10 @@
                     <td class="text-center">{{ $i->copies_count }}</td>
                     <td class="text-center">{{ $i->available_count }}</td>
                     <td class="text-center">{{ $i->waiting_count ?: '' }}</td>
+                    <td><x-last-change :record="$i" :among="$items" /></td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="text-center text-muted py-5">Nothing found.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-5">Nothing found.</td></tr>
             @endforelse
         </tbody></table></div>
         @if ($items->hasPages())<div class="card-footer">{{ $items->links() }}</div>@endif

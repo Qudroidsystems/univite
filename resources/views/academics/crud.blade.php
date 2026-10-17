@@ -7,7 +7,7 @@
     $canUpdate = in_array('edit', $actions) && ($abilities['edit'] ?? auth()->user()->can('Edit ' . $permission));
     $canDelete = in_array('delete', $actions) && ($abilities['delete'] ?? auth()->user()->can('Delete ' . $permission));
     $hasOld    = old('_form_mode') !== null;
-    $colspan   = count($columns) + 1;
+    $colspan   = count($columns) + 2;
 @endphp
 
 <div class="main-content">
@@ -76,6 +76,7 @@
                                     @foreach ($columns as [$label])
                                         <th>{{ $label }}</th>
                                     @endforeach
+                                    <th style="width:1%" class="text-nowrap">Last changed by</th>
                                     <th class="text-end" style="width:1%">Actions</th>
                                 </tr>
                             </thead>
@@ -85,6 +86,7 @@
                                         @foreach ($columns as [, $value])
                                             <td>{{ $value($row) }}</td>
                                         @endforeach
+                                        <td><x-last-change :record="$row" :among="$rows" /></td>
                                         <td class="text-end text-nowrap">
                                             @foreach ($rowActions as [$aLabel, $aRoute, $aPerm, $aIcon, $aVisible])
                                                 @if (auth()->user()->can($aPerm) && $aVisible($row))

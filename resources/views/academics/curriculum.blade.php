@@ -88,6 +88,7 @@
                                                         <td>{{ $e->course->title }}</td>
                                                         <td class="text-nowrap"><span class="badge bg-light text-body border">{{ $statuses[$e->status] }}</span></td>
                                                         <td class="text-end text-nowrap">{{ $e->course->credit_units }} u</td>
+                                                        <td><x-last-change :record="$e" :among="$sem['entries']" /></td>
                                                         @if ($canEdit)
                                                             <td class="text-end text-nowrap">
                                                                 <button type="button" class="btn btn-sm btn-soft-primary btn-move" title="Move / change status"

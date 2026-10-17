@@ -24,7 +24,7 @@
                     @csrf
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light"><tr><th style="width:1%"></th><th>Student</th><th>Programme</th><th>Semester</th><th>Units</th><th>Status</th><th></th></tr></thead>
+                            <thead class="table-light"><tr><th style="width:1%"></th><th>Student</th><th>Programme</th><th>Semester</th><th>Units</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
                             <tbody>
                             @forelse ($forms as $f)
                                 <tr>
@@ -34,10 +34,11 @@
                                     <td>{{ $f->session->name }} · {{ $f->semesterType->name }}</td>
                                     <td>{{ $f->total_units }}</td>
                                     <td><span class="badge {{ \App\Models\RegistrationForm::BADGES[$f->status] }}">{{ \App\Models\RegistrationForm::STATUSES[$f->status] }}</span></td>
+                                    <td><x-last-change :record="$f" :among="$forms" /></td>
                                     <td class="text-end"><a class="btn btn-sm btn-soft-primary" href="{{ route('registrations.show', $f->id) }}">Open</a></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="7" class="text-center text-muted py-5">No registration forms here.</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted py-5">No registration forms here.</td></tr>
                             @endforelse
                             </tbody>
                         </table>

@@ -85,14 +85,15 @@
                     </div></div>
                     @endcan
                     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-                        <thead class="table-light"><tr><th class="ps-3">Item</th><th class="text-end">A month</th><th class="text-end">Balance</th><th>Months</th><th></th></tr></thead><tbody>
+                        <thead class="table-light"><tr><th class="ps-3">Item</th><th class="text-end">A month</th><th class="text-end">Balance</th><th>Months</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
                         @forelse ($items as $i)
                             <tr class="{{ $i->is_active ? '' : 'text-muted' }}"><td class="ps-3">{{ $i->name }} <span class="badge {{ $i->kind === 'earning' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }}">{{ $i->kind }}</span>@if ($i->reference)<div class="fs-12 text-muted">{{ $i->reference }}</div>@endif</td>
                                 <td class="text-end">{{ $money($i->amount) }}</td><td class="text-end">{{ $i->isLoan() ? $money($i->balance) : '—' }}</td>
                                 <td class="fs-12">{{ $i->start_month }} → {{ $i->end_month ?? 'open' }}@unless ($i->is_active)<div>Stopped</div>@endunless</td>
+                                <td><x-last-change :record="$i" :among="$items" /></td>
                                 <td class="text-end pe-3">@if ($i->is_active)@can('Change staff pay')<form method="POST" action="{{ route('staff.items.update', $i) }}" data-confirm="Stop {{ $i->name }}?">@csrf @method('PUT')<input type="hidden" name="stop" value="1"><button class="btn btn-sm btn-soft-danger">Stop</button></form>@endcan @endif</td></tr>
                         @empty
-                            <tr><td colspan="5" class="text-center text-muted py-3">None.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-3">None.</td></tr>
                         @endforelse
                     </tbody></table></div>
                 </div>

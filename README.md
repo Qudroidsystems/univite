@@ -109,7 +109,7 @@ connection returns; poor connections get longer timeouts and a retry prompt inst
 
 ## Grading and course registration (phase 4, step 4a)
 
-**Grading scale** (Academic Setup → Grading Scale, Classes of Degree): score bands → letter, grade points, pass/fail; CGPA → class of
+**Key to grade** (Results → Key to Grade; also Classes of Degree): score bands → letter, grade points, pass/fail; CGPA → class of
 degree. Seeded with the common 5-point scale; edit freely (overlaps are refused, gaps are flagged). `App\Support\GradeScale` does
 grade lookup, GPA and class.
 
@@ -125,10 +125,10 @@ course_results. Run `php artisan migrate` and `php artisan db:seed`.
 
 Flow: **assign lecturer → enter / upload scores → submit → approval steps → publish → students see results**.
 
-- *Course Lecturers* (Academic Setup) assigns a lecturer to a course for a session and semester. Assigned lecturers see "My Courses & Scores".
+- *Define Courses* (Academic Setup) assigns ("defines") a course to a lecturer for a session and semester. Assigned lecturers see "My Courses & Scores". Holders of the course assignment permissions define for any department. "Define courses for lecturers" is scopable: a Head of Department gets it for their own department (seeded once, setting `heads.grant.define_courses`) and can then define only that department's courses, only for that department's staff.
 - A score sheet exists per course/session/semester with a row for every student whose registration form is **approved**. CA and exam are
   entered in the grid or uploaded as CSV/Excel (first row: Matric Number, CA, Exam; a fill-in template can be downloaded). Limits come from
-  Result Settings (default 30/70, must total 100). Grades come from the Grading Scale. Every student needs scores (0 = absent) before submitting.
+  Result Settings (default 30/70, must total 100). Grades come from the Key to Grade: the most specific key matching the course's department (or its school) and the student's category, else the university-wide key. **Key to result** (Results → Key to Result) maps a CGPA range to the master sheet remark (PASS, CSO, TOS ...), rank, action and activity, chosen the same way by the student's department and category. Every student needs scores (0 = absent) before submitting.
 - *Result Approval Steps* define the chain (default Head of Department, then Dean); each step can name the role that signs it, or be open to
   anyone with "Approve results". Approvers can return a sheet with a reason. After the last step the sheet is "approved"; **Publish results**
   makes it visible. With no steps, submission goes straight to approved. Every action is logged on the sheet.
@@ -380,3 +380,17 @@ It runs once (it is remembered in `seeder_log`); to start again use `php artisan
 - **Breaking cycles.** When two services would need each other, one side raises an event instead. For example, paying a fee or finishing an onboarding step raises `StudentProgressChanged`, and the `RefreshClearance` listener re-checks clearance. Batch codes come from `MatricBatch::open()`.
 - **DTOs.** Data that crosses a service boundary is a typed, `final readonly` class in `app/Data/<Area>/`. Inputs are built from validated requests with `fromArray()`. Outputs have a fixed shape, for example `Transcript`, `LeaveBalance`, `GraduationCheck`, `RegistrationContext`, `CreditLimits`, `BulkInvoiceResult`, `MatricRun`, `Admission`, `StatusCheck`, `ScoreImport` and the legacy-import report. Only objects that collect results as they go (`ParsedFile`, `BulkInvoicePreview`) are mutable.
 - **Settings stay arrays.** Settings saved as JSON on a record, such as a timetable's configuration and seating rules, are still arrays.
+
+## Compute Results and the department master marks sheet
+
+**Compute Results** (Results → Compute Results, permission "Compute results"; Heads of Department get it for their own department, setting `heads.grant.compute_results`). Pick department, student category (optional), course (optional, narrows the scores table), level, session and semester. The page lists every course the students registered with its defined lecturer(s), status, who submitted it and the day and time, the counts and average; then every student's scores; then the computed results. **Compute**:
+1. regrades every submitted or approved score of that semester (of the chosen course, or all) by the key to grade that applies. Published scores are never changed here (that goes through a correction);
+2. stores each student's semester result in `computed_results`: present / previous / cumulative TCP, TNU and GPA (previous and cumulative follow the CGPA method in Academic Rules and include legacy balances), outstanding courses (failed at the latest attempt, never passed, not waived), SEM RMK (PASS, REP = has courses to repeat, NRI = no registration information, INC = a registered course has no submitted score), CUM RMK, rank, action and activity from the key to result, semesters used / allowed (`max_years` x semesters per session) and whether the level is the programme's final one (Graduating).
+
+Courses not yet submitted do not stop Compute; their students show INC until it is run again.
+
+**Master marks sheet** (buttons on Compute Results once computed): Excel, PDF and a print page in the school's layout: one section per programme ("Programme - 400 Level (Graduating / Non-Graduating)"); per student REG NO, CURRENT SEMESTER (subject, number, units in brackets, score + grade, 8 courses a line), SEM RMK, OUTSTANDING COURSES (R. = repeat), PRESENT / PREVIOUS / CUMULATIVE TCP TNU GPA, CUM RMK and REG NO again, with a line under each student (used semester ratio, units outstanding, rank and activity). It ends with the key to grade, key to result, a summary and signature lines. The PDF uses `dompdf/dompdf` (run `composer install` after pulling).
+
+## Last changed by
+
+Every model created, changed or deleted by a signed-in person is logged in `record_activities` (App\Listeners\RecordModelActivity; chat, polls' votes, device tokens and the logs themselves are skipped). List tables show a "Last changed by" column (`<x-last-change :record="$row" :among="$rows" />`): photo, staff number and an ⓘ that opens the person's details and the record's history (`GET activity/{Model}/{id}`, staff only). Records not touched since this was added show "—". Rows of every table under `.page-content` slide in (public/js/univite-app.js `animateTables`); add class `uv-no-anim` to a table to keep it still.

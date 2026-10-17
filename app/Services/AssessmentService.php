@@ -318,7 +318,7 @@ class AssessmentService
                     $this->distribute($row, $scheme, $row->ca, $row->exam, $user);
                     [$ca, $exam] = $this->components($row, $scheme);
                     $total = ($ca !== null && $exam !== null) ? round($ca + $exam, 2) : null;
-                    $g = \App\Support\GradeScale::grade($total);
+                    $g = \App\Support\GradeScale::gradeResult($row, $total);
                     $row->update(['ca' => $ca, 'exam' => $exam, 'total' => $total, 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null]);
                     $moved++;
                 }

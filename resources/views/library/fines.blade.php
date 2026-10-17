@@ -12,7 +12,7 @@
             @endforeach
         </ul></div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Borrower</th><th>For</th><th class="text-end">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Borrower</th><th>For</th><th class="text-end">Amount</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
             @forelse ($loans as $l)
                 <tr>
                     <td>{{ $l->user->name }}</td>
@@ -20,6 +20,7 @@
                     <td class="text-end">₦{{ number_format((float) $l->fine, 2) }}</td>
                     <td><span class="badge {{ \App\Models\LibraryLoan::FINE_BADGES[$l->fine_status] }}">{{ \App\Models\LibraryLoan::FINE_STATUSES[$l->fine_status] }}</span>
                         @if ($l->invoice)<div class="fs-12">{{ $l->invoice->reference }}: {{ \App\Models\Invoice::STATUSES[$l->invoice->status] }}</div>@endif</td>
+                    <td><x-last-change :record="$l" :among="$loans" /></td>
                     <td class="text-end text-nowrap">
                         @if ($l->fine_status === 'owed' && $u->can('Record library fine payments'))
                             <form method="POST" action="{{ route('library.fines.paid', $l) }}" class="d-inline">@csrf<button class="btn btn-sm btn-success">Paid</button></form>
@@ -30,7 +31,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="text-center text-muted py-5">No fines here.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-5">No fines here.</td></tr>
             @endforelse
         </tbody></table></div>
         @if ($loans->hasPages())<div class="card-footer">{{ $loans->links() }}</div>@endif

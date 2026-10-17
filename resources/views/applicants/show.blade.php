@@ -60,9 +60,9 @@
                     <div class="card">
                         <div class="card-header"><h6 class="card-title mb-0">Results</h6></div>
                         <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-                            <thead class="table-light"><tr><th>Exam</th><th>Year</th><th>Exam number</th><th>Subject</th><th>Grade</th></tr></thead>
-                            <tbody>@forelse ($applicant->results as $r)<tr><td>{{ \App\Models\ApplicantResult::EXAMS[$r->exam_type] }}</td><td>{{ $r->exam_year }}</td><td>{{ $r->exam_number }}</td><td>{{ $r->subject }}</td><td>{{ $r->grade }}</td></tr>
-                                @empty<tr><td colspan="5" class="text-center text-muted py-3">No results entered.</td></tr>@endforelse</tbody>
+                            <thead class="table-light"><tr><th>Exam</th><th>Year</th><th>Exam number</th><th>Subject</th><th>Grade</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead>
+                            <tbody>@forelse ($applicant->results as $r)<tr><td>{{ \App\Models\ApplicantResult::EXAMS[$r->exam_type] }}</td><td>{{ $r->exam_year }}</td><td>{{ $r->exam_number }}</td><td>{{ $r->subject }}</td><td>{{ $r->grade }}</td><td><x-last-change :record="$r" :among="$applicant->results" /></td></tr>
+                                @empty<tr><td colspan="6" class="text-center text-muted py-3">No results entered.</td></tr>@endforelse</tbody>
                         </table></div>
                     </div>
                 </div>

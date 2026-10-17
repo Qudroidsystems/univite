@@ -54,6 +54,7 @@ beforeEach(function () {
     $this->role = Role::create(['name' => 'Lecturer']);
     $this->lecturer = User::factory()->create();
     $this->lecturer->assignRole('Lecturer');
+    \App\Models\StaffProfile::create(['user_id' => $this->lecturer->id, 'department_id' => $this->course->department_id, 'staff_number' => 'SP/9001']);
     CourseAssignment::create(['user_id' => $this->lecturer->id, 'course_id' => $this->course->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id]);
     $this->sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
 });

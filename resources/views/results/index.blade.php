@@ -14,11 +14,12 @@
                         <a href="{{ route('results.broadsheet') }}" class="btn btn-sm btn-soft-primary"><i class="ri-table-line me-1"></i>Approve a whole level from the master sheet</a>
                     </div>
                     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Course</th><th>Department</th><th>Session</th><th class="text-end">Students</th><th>Step</th><th></th></tr></thead>
+                        <thead><tr><th>Course</th><th>Department</th><th>Session</th><th class="text-end">Students</th><th>Step</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
                         <tbody>
                         @foreach ($waiting as $s)
                             <tr><td>{{ $s->course->code }} · {{ $s->course->title }}</td><td>{{ $s->course->department?->name }}</td><td>{{ $s->session->name }} {{ $s->semesterType->name }}</td>
                                 <td class="text-end">{{ $s->results_count }}</td><td>{{ $s->stage?->name }}</td>
+                                <td><x-last-change :record="$s" :among="$waiting" /></td>
                                 <td class="text-end"><a href="{{ route('results.sheets.show', $s->id) }}" class="btn btn-sm btn-soft-success">Review</a></td></tr>
                         @endforeach
                         </tbody>
@@ -71,7 +72,7 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light"><tr><th>Course</th><th>Session</th><th>Students</th><th>Status</th><th></th></tr></thead>
+                            <thead class="table-light"><tr><th>Course</th><th>Session</th><th>Students</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
                             <tbody>
                             @forelse ($all as $s)
                                 <tr>
@@ -79,10 +80,11 @@
                                     <td>{{ $s->session->name }} · {{ $s->semesterType->name }}</td>
                                     <td>{{ $s->results_count }}</td>
                                     <td><span class="badge {{ \App\Models\ResultSheet::BADGES[$s->status] }}">{{ \App\Models\ResultSheet::STATUSES[$s->status] }}</span>@if ($s->stage)<div class="text-muted fs-12">At: {{ $s->stage->name }}</div>@endif</td>
+                                    <td><x-last-change :record="$s" :among="$all" /></td>
                                     <td class="text-end"><a class="btn btn-sm btn-soft-primary" href="{{ route('results.sheets.show', $s->id) }}">Open</a></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted py-5">No score sheets here.</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted py-5">No score sheets here.</td></tr>
                             @endforelse
                             </tbody>
                         </table>

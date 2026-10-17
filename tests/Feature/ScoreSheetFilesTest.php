@@ -54,6 +54,10 @@ it('puts the institution\'s letterhead and logo on the sheet and locks matric nu
     \Illuminate\Support\Facades\Storage::disk('public')->put('branding/logo.png', ob_get_clean());
     \App\Support\Institution::put('name', 'Adeyemi Federal University of Education');
     \App\Support\Institution::put('logo', 'branding/logo.png');
+    foreach (['short_name' => 'AFUED', 'motto' => 'Knowledge and Service', 'address' => 'Ondo Road', 'postal_code' => 'P.M.B. 520', 'country' => 'Nigeria',
+        'website' => 'https://afued.edu.ng', 'email' => 'info@afued.edu.ng', 'support_email' => 'portal@afued.edu.ng', 'phone' => '0800 111'] as $k => $v) {
+        \App\Support\Institution::put($k, $v);
+    }
 
     $data = app(\App\Services\ScoreSheetFile::class)->xlsx(\App\Models\ResultSheet::findOrFail($this->sheet['id']));
     $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
@@ -62,7 +66,9 @@ it('puts the institution\'s letterhead and logo on the sheet and locks matric nu
     $zip->open($path);
     $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
     expect($zip->locateName('xl/media/image1.png'))->not->toBeFalse()
-        ->and($sheet)->toContain('Adeyemi Federal University of Education')->toContain('EDU101')->toContain('<sheetProtection')
+        ->and($sheet)->toContain('Adeyemi Federal University of Education (AFUED)')->toContain('Motto: Knowledge and Service')
+        ->toContain('Ondo Road, P.M.B. 520, Nigeria')->toContain('https://afued.edu.ng  ·  Email: info@afued.edu.ng  ·  Portal support: portal@afued.edu.ng')
+        ->not->toContain('0800 111')->toContain('EDU101')->toContain('<sheetProtection')
         ->and($zip->getFromName('xl/workbook.xml'))->toContain('_xlnm.Print_Titles');
     $zip->close();
 

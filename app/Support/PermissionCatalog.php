@@ -169,12 +169,22 @@ class PermissionCatalog
             ],
 
             'Grade bands' => [
-                'about' => 'The grading scale: which score earns which letter and grade points, and which grades are a pass.',
+                'about' => 'The key to grade: which score earns which letter, grade points and rank, and which grades are a pass, for the university or one school, department or student category.',
                 'permissions' => [
                     ['View grade bands', 'View', 'See the grading scale: score ranges, letters, grade points and pass marks.'],
                     ['Create grade bands', 'Create', 'Add a grade to the scale, for example a new letter or a different pass mark.'],
                     ['Edit grade bands', 'Edit', 'Change the score range, points or pass status of a grade. Results that are already approved are not regraded.'],
                     ['Delete grade bands', 'Delete', 'Remove a grade from the scale. Refused while any result uses it.'],
+                ],
+            ],
+
+            'Result keys' => [
+                'about' => 'The key to result: what a student\'s CGPA means after results are computed (the remark on the master sheet, rank, action and activity).',
+                'permissions' => [
+                    ['View result keys', 'View', 'See the key to result for the university and for each school, department and student category.'],
+                    ['Create result keys', 'Create', 'Add a CGPA range with its remark, rank, action and activity.'],
+                    ['Edit result keys', 'Edit', 'Change a key to result row. Results already computed keep their remark until they are computed again.'],
+                    ['Delete result keys', 'Delete', 'Remove a row from the key to result. Results already computed keep their remark until computed again.'],
                 ],
             ],
 
@@ -211,6 +221,7 @@ class PermissionCatalog
                     ['Create course assignments', 'Create', 'Assign a lecturer to a course for a session and semester.'],
                     ['Edit course assignments', 'Edit', 'Change a lecturer assignment, for example to a different course or semester.'],
                     ['Delete course assignments', 'Delete', 'Remove a lecturer assignment so they can no longer enter scores for that course.'],
+                    ['Define courses for lecturers', 'Define', 'Define (assign) courses to lecturers. Given through a Head of Department role, it covers only that department\'s courses and staff.'],
                 ],
             ],
 
@@ -260,6 +271,13 @@ class PermissionCatalog
                 'permissions' => [
                     ['View student results', 'View', 'Open any student\'s published results and print their transcript with semester GPA, CGPA and class.'],
                     ['Waive carryover courses', 'Manage', 'Waive a student\'s carry-over with a reason: the failed course stays on the transcript and in the CGPA, but no longer has to be registered again or stop the student graduating. Heads of department get this for their own department.'],
+                ],
+            ],
+
+            'Result computation' => [
+                'about' => 'Computing a department\'s semester results once the lecturers have submitted their scores, and its master marks sheet.',
+                'permissions' => [
+                    ['Compute results', 'Compute', 'Pick a department, student category, level, session and semester, see the submitted scores with who submitted them and when, and compute GPA, CGPA and remarks with the key to grade and key to result; then download the master marks sheet. Heads of Department get this for their own department.'],
                 ],
             ],
 

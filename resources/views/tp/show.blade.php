@@ -61,7 +61,7 @@
                     <input name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Name or matric no."><button class="btn btn-sm btn-light">Filter</button></form>
             </div>
             <div class="table-responsive"><table class="table align-middle mb-0">
-                <thead class="table-light"><tr><th>Student</th><th>School</th><th>Visits</th><th>Final</th><th></th></tr></thead><tbody>
+                <thead class="table-light"><tr><th>Student</th><th>School</th><th>Visits</th><th>Final</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
                 @forelse ($postings as $p)
                     <tr>
                         <td>{{ $p->student->full_name }}<div class="fs-12 text-muted">{{ $p->student->matric_number }}{{ $p->subject ? ' · ' . $p->subject : '' }}</div></td>
@@ -69,6 +69,7 @@
                             @if ($p->choices && $p->status === 'pending')<div class="fs-12 text-muted">Wants: {{ collect($p->choices)->map(fn ($id) => $schoolList->firstWhere('id', $id)?->name)->filter()->implode(', ') }}</div>@endif</td>
                         <td class="fs-13">@foreach ($p->assessments as $a)<span class="badge bg-light text-body">{{ $a->visit_no }}: {{ $a->percent }}%</span> @endforeach</td>
                         <td class="fw-semibold">{{ ($f = $tpService->finalScore($p)) !== null ? $f . '%' : '' }}</td>
+                        <td><x-last-change :record="$p" :among="$postings" /></td>
                         <td class="text-end text-nowrap">
                             @if ($p->status === 'posted')<a href="{{ route('tp.letter', $p) }}" target="_blank" class="btn btn-sm btn-light" title="Posting letter"><i class="ri-mail-line"></i></a>
                                 @if ($u->can('Record teaching practice scores'))<a href="{{ route('tp.assess', $p) }}" class="btn btn-sm btn-light">Mark</a>@endif @endif
@@ -83,7 +84,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted py-5">No students yet. Use "Add students it is for".</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-5">No students yet. Use "Add students it is for".</td></tr>
                 @endforelse
             </tbody></table></div>
             @if ($postings->hasPages())<div class="card-footer">{{ $postings->links() }}</div>@endif

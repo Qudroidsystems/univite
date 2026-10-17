@@ -24,7 +24,7 @@
                 <div class="card-header"><h6 class="card-title mb-0">Schemes</h6></div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
-                        <thead class="table-light"><tr><th>Scheme</th><th>Assessments</th><th>CA / Exam</th><th>In use</th><th>Status</th><th class="text-end"></th></tr></thead>
+                        <thead class="table-light"><tr><th>Scheme</th><th>Assessments</th><th>CA / Exam</th><th>In use</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th class="text-end"></th></tr></thead>
                         <tbody>
                         @forelse ($schemes as $s)
                             <tr>
@@ -37,6 +37,7 @@
                                 <td class="text-nowrap">{{ $fmt($s->caMax()) }} / {{ $fmt($s->examMax()) }}</td>
                                 <td class="text-nowrap fs-13">{{ $s->assignments_count }} assignment(s)<br><span class="text-muted">{{ $s->sheets_count }} score sheet(s)</span></td>
                                 <td>{!! $s->is_active ? '<span class="badge bg-success-subtle text-success">On</span>' : '<span class="badge bg-secondary-subtle text-secondary">Off</span>' !!}</td>
+                                <td><x-last-change :record="$s" :among="$schemes" /></td>
                                 <td class="text-end text-nowrap">
                                     @can('Edit assessment schemes')<a href="{{ route('academics.assessments.edit', $s->id) }}" class="btn btn-sm btn-soft-primary">Edit</a>@endcan
                                     @can('Create assessment schemes')
@@ -48,7 +49,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-muted py-4">No schemes yet. Every course uses the CA / exam split from Result Settings.</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted py-4">No schemes yet. Every course uses the CA / exam split from Result Settings.</td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -61,13 +62,14 @@
                         <div class="card-header"><h6 class="card-title mb-0">Where each scheme applies</h6></div>
                         <div class="table-responsive">
                             <table class="table align-middle mb-0">
-                                <thead class="table-light"><tr><th>Applies to</th><th>Session</th><th>Scheme</th><th class="text-end"></th></tr></thead>
+                                <thead class="table-light"><tr><th>Applies to</th><th>Session</th><th>Scheme</th><th style="width:1%" class="text-nowrap">Last changed by</th><th class="text-end"></th></tr></thead>
                                 <tbody>
                                 @forelse ($assignments as $a)
                                     <tr>
                                         <td><span class="badge bg-light text-body me-1">{{ \App\Models\AssessmentAssignment::SCOPES[$a->scope_type] }}</span>{{ $a->scope_type === 'university' ? '' : $a->scopeLabel() }}</td>
                                         <td>{{ $a->session?->name ?? 'Every session' }}</td>
                                         <td>{{ $a->scheme->name }}@unless ($a->scheme->is_active)<span class="badge bg-secondary-subtle text-secondary ms-1">Off, ignored</span>@endunless</td>
+                                        <td><x-last-change :record="$a" :among="$assignments" /></td>
                                         <td class="text-end">
                                             @can('Assign assessment schemes')
                                                 <form method="POST" action="{{ route('academics.assessments.unassign', $a->id) }}" data-confirm="Remove this assignment?">@csrf @method('DELETE')<button class="btn btn-sm btn-soft-danger" type="submit">Remove</button></form>
@@ -75,7 +77,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="4" class="text-center text-muted py-4">No scheme is assigned yet.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted py-4">No scheme is assigned yet.</td></tr>
                                 @endforelse
                                 </tbody>
                             </table>

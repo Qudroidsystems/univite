@@ -24,7 +24,7 @@ it('seeds every permission with a group and a real description', function () {
 it('uses clear names: no technical slugs, and every name starts with a verb', function () {
     foreach (array_keys(PermissionCatalog::all()) as $name) {
         expect($name)->not->toMatch('/[-_]/')
-            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo|Approve|Enter|Publish|Amend|Respond|Reverse|Withdraw|Resend|Prepare|Mark|Issue|Waive|Allocate|Check|Post|Moderate|Handle|Manage) /');
+            ->and($name)->toMatch('/^(View|Add|Create|Edit|Delete|Assign|Remove|Reset|Disable|Set|Copy|Admit|Reject|Change|Generate|Record|Cancel|Verify|Clear|Restore|Import|Undo|Approve|Enter|Publish|Amend|Respond|Reverse|Withdraw|Resend|Prepare|Mark|Issue|Waive|Allocate|Check|Post|Moderate|Handle|Manage|Define|Compute) /');
     }
 });
 
@@ -47,7 +47,7 @@ it('keeps every permission checked in code in the catalog (no typos, nothing und
             preg_match_all("/(?:permission|scoped):([^'\"]+)['\"]/", $source, $m);
             foreach ($m[1] as $list) {
                 foreach (explode('|', $list) as $name) {
-                    if (preg_match('/\\s$|^(View|Create|Edit|Delete)$/', $name)) {
+                    if ($name === '' || str_contains($name, '{$') || preg_match('/\\s$|^(View|Create|Edit|Delete)$/', $name)) {
                         continue; // built at runtime from a controller's $permission slug
                     }
                     $used[trim($name)] = $file->getFilename();

@@ -17,16 +17,17 @@
             </div>
         </div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Timetable</th><th>Session</th><th>Kind</th><th>Status</th><th>Last generated</th><th></th></tr></thead>
+            <thead class="table-light"><tr><th>Timetable</th><th>Session</th><th>Kind</th><th>Status</th><th>Last generated</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
             <tbody>
             @forelse ($timetables as $t)
                 <tr><td><a href="{{ route('timetables.show', $t) }}" class="fw-semibold">{{ $t->title }}</a>@if ($t->summary)<div class="text-muted fs-12">{{ $t->summary['placed'] ?? 0 }} placed · {{ $t->summary['unplaced'] ?? 0 }} not placed · {{ $t->summary['violations'] ?? 0 }} hard-rule problem(s)</div>@endif</td>
                     <td>{{ $t->session?->name }} · {{ $t->semesterType?->name }}</td><td>{{ \App\Models\Timetable::KINDS[$t->kind] }}</td>
                     <td><span class="badge {{ \App\Models\Timetable::BADGES[$t->status] }}">{{ \App\Models\Timetable::STATUSES[$t->status] }}</span></td>
                     <td class="fs-13">{{ $t->generated_at?->format('j M Y H:i') ?? 'Not yet' }}</td>
+                    <td><x-last-change :record="$t" :among="$timetables" /></td>
                     <td class="text-end"><a href="{{ route('timetables.show', $t) }}" class="btn btn-sm btn-light">Open</a></td></tr>
             @empty
-                <tr><td colspan="6" class="text-center text-muted py-4">No timetables yet.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">No timetables yet.</td></tr>
             @endforelse
             </tbody></table></div>
         @if ($timetables->hasPages())<div class="card-body">{{ $timetables->links() }}</div>@endif

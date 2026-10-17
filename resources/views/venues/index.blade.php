@@ -29,7 +29,7 @@
             </div>
         </div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Venue</th><th>Type</th><th>Location</th><th class="text-end">Seats</th><th class="text-end">Teaching</th><th class="text-end">Exams</th><th>Status</th><th></th></tr></thead>
+            <thead class="table-light"><tr><th>Venue</th><th>Type</th><th>Location</th><th class="text-end">Seats</th><th class="text-end">Teaching</th><th class="text-end">Exams</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
             <tbody>
             @forelse ($venues as $v)
                 <tr class="{{ $v->is_active ? '' : 'opacity-50' }}">
@@ -42,10 +42,11 @@
                     <td><span class="badge {{ \App\Models\Venue::BADGES[$v->status] ?? '' }}">{{ \App\Models\Venue::STATUSES[$v->status] ?? $v->status }}</span>
                         @if ($v->open_issues_count)<span class="badge bg-danger-subtle text-danger">{{ $v->open_issues_count }} fault(s)</span>@endif
                         @unless ($v->is_active)<span class="badge bg-light text-muted">Inactive</span>@endunless</td>
+                    <td><x-last-change :record="$v" :among="$venues" /></td>
                     <td class="text-end"><a href="{{ route('venues.show', $v) }}" class="btn btn-sm btn-light">Open</a></td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="text-center text-muted py-4">No venues yet. Add the institution's halls, classrooms and laboratories so timetables can use them.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-4">No venues yet. Add the institution's halls, classrooms and laboratories so timetables can use them.</td></tr>
             @endforelse
             </tbody></table></div>
         @if ($venues->hasPages())<div class="card-body">{{ $venues->links() }}</div>@endif

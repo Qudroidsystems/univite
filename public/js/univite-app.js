@@ -587,11 +587,55 @@
         });
     }
 
+    /* ------------------------------------------------------- table animation */
+
+    /** Rows of every table in the page body slide in. Printed documents and tables marked .uv-no-anim are left still. */
+    function animateTables(root) {
+        (root || document).querySelectorAll('.page-content table:not(.uv-no-anim) > tbody').forEach(function (body) {
+            if (body.closest('.uv-print, .uv-document, .modal') || body.closest('table').classList.contains('uv-scores')) { return; }
+            var i = 0;
+            Array.prototype.forEach.call(body.rows, function (tr) {
+                if (tr.dataset.uvAnim) { return; }
+                tr.dataset.uvAnim = '1';
+                tr.style.setProperty('--uv-i', i++);
+                tr.classList.add('uv-anim-row');
+            });
+        });
+    }
+    Uv.animateTables = animateTables;
+    document.addEventListener('uv:page', function () { animateTables(document); });
+
+    /* ------------------------------------------------------- last changed by */
+
+    /** The ⓘ in a "Last changed by" cell opens the staff member's details and the record's history. */
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.uv-who');
+        if (!btn) { return; }
+        e.preventDefault();
+        var modal = document.getElementById('uv-who-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = 'uv-who-modal'; modal.tabIndex = -1;
+            modal.innerHTML = '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">'
+                + '<div class="modal-header"><h5 class="modal-title">Who changed this</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>'
+                + '<div class="modal-body"></div></div></div>';
+            document.body.appendChild(modal);
+        }
+        var body = modal.querySelector('.modal-body');
+        body.innerHTML = '<div class="text-center text-muted py-4"><span class="uv-spin"></span>Loading…</div>';
+        if (window.bootstrap) { bootstrap.Modal.getOrCreateInstance(modal).show(); }
+        fetch(btn.dataset.url, { headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' }, credentials: 'same-origin' })
+            .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
+            .then(function (html) { body.innerHTML = html; })
+            .catch(function () { body.innerHTML = '<p class="text-danger mb-0">Could not load the details. Please try again.</p>'; });
+    });
+
     /* ------------------------------------------------------------------ start */
 
     function start() {
         history.replaceState({ uv: 1 }, '', location.href);
         upgrade(document);
+        animateTables(document);
         ensureIndicator();
         paint();
         probe();

@@ -19,15 +19,16 @@
         <button class="btn btn-sm btn-primary">Filter</button>
     </form></div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Reference</th><th>Staff</th><th>Leave</th><th>Dates</th><th>Days</th><th>Where it stands</th></tr></thead>
+            <thead class="table-light"><tr><th>Reference</th><th>Staff</th><th>Leave</th><th>Dates</th><th>Days</th><th>Where it stands</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead>
             <tbody>
             @forelse ($rows as $r)
                 <tr><td><a href="{{ route('leave.show', $r) }}" class="fw-semibold">{{ $r->reference }}</a></td>
                     <td>{{ $r->user->name }}<div class="text-muted fs-12">{{ $r->user->staffProfile?->department?->name ?? $r->user->staffProfile?->unit }}</div></td>
                     <td>{{ $r->type->name }}</td><td>{{ $r->start_date->format('j M') }} – {{ $r->end_date->format('j M Y') }}</td><td>{{ $r->days }}</td>
-                    <td><span class="badge {{ \App\Models\LeaveRequest::BADGES[$r->status] }}">{{ $r->phase }}</span>@if ($r->status === 'pending' && ($s = $r->currentStep()))<div class="fs-12 {{ $s->due_at?->isPast() ? 'text-danger' : 'text-muted' }}">With {{ $s->label }}{{ $s->due_at?->isPast() ? ', overdue' : '' }}</div>@endif</td></tr>
+                    <td><span class="badge {{ \App\Models\LeaveRequest::BADGES[$r->status] }}">{{ $r->phase }}</span>@if ($r->status === 'pending' && ($s = $r->currentStep()))<div class="fs-12 {{ $s->due_at?->isPast() ? 'text-danger' : 'text-muted' }}">With {{ $s->label }}{{ $s->due_at?->isPast() ? ', overdue' : '' }}</div>@endif</td>
+                    <td><x-last-change :record="$r" :among="$rows" /></td></tr>
             @empty
-                <tr><td colspan="6" class="text-center text-muted py-4">No applications match.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">No applications match.</td></tr>
             @endforelse
             </tbody></table></div>
         <div class="card-body">{{ $rows->links() }}</div></div>

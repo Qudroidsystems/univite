@@ -52,7 +52,7 @@
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light"><tr><th>Reference</th><th>Student</th><th>Session</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th>Status</th></tr></thead>
+                            <thead class="table-light"><tr><th>Reference</th><th>Student</th><th>Session</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead>
                             <tbody>
                                 @forelse ($invoices as $invoice)
                                     <tr>
@@ -63,9 +63,10 @@
                                         <td class="text-end">₦{{ number_format((float) $invoice->amount_paid, 2) }}</td>
                                         <td class="text-end fw-semibold">₦{{ number_format($invoice->outstanding, 2) }}</td>
                                         <td><span class="badge {{ \App\Models\Invoice::BADGES[$invoice->status] }}">{{ \App\Models\Invoice::STATUSES[$invoice->status] }}</span></td>
+                                        <td><x-last-change :record="$invoice" :among="$invoices" /></td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="7" class="text-center text-muted py-5"><i class="ri-wallet-3-line fs-1 d-block mb-2"></i>No invoices found.</td></tr>
+                                    <tr><td colspan="8" class="text-center text-muted py-5"><i class="ri-wallet-3-line fs-1 d-block mb-2"></i>No invoices found.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

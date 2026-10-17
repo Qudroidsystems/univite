@@ -120,7 +120,7 @@ class ResultService
             AssessmentScore::where('course_result_id', $row->id)->delete();
             $row->unsetRelation('assessmentScores');
             $total = round((float) $total, 2);
-            $g = GradeScale::grade($total);
+            $g = GradeScale::gradeResult($row, $total);
             $row->update([
                 'ca' => null, 'exam' => null, 'total' => $total,
                 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null,
@@ -144,7 +144,7 @@ class ResultService
         }
 
         $total = ($ca !== null && $exam !== null) ? round((float) $ca + (float) $exam, 2) : null;
-        $g = GradeScale::grade($total);
+        $g = GradeScale::gradeResult($row, $total);
         $row->update([
             'ca' => $ca, 'exam' => $exam, 'total' => $total,
             'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null,

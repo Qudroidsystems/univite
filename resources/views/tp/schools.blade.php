@@ -27,15 +27,16 @@
     <div class="card">
         <div class="card-header"><form method="GET" class="d-flex gap-2" style="max-width:420px"><input name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Name, town or LGA"><button class="btn btn-sm btn-light">Search</button></form></div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>School</th><th>Where</th><th>Head</th><th class="text-center">Usual places</th><th></th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>School</th><th>Where</th><th>Head</th><th class="text-center">Usual places</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
             @forelse ($schools as $sc)
                 <tr class="{{ $sc->is_active ? '' : 'text-muted' }}"><td class="fw-semibold">{{ $sc->name }}<div class="fs-12 text-muted">{{ \App\Models\TpSchool::CATEGORIES[$sc->category] }}</div></td>
                     <td class="fs-13">{{ $sc->address }}<div>{{ $sc->place() }}</div></td><td class="fs-13">{{ $sc->head_name }}<div>{{ $sc->phone }}</div></td>
                     <td class="text-center">{{ $sc->default_capacity }}</td>
+                    <td><x-last-change :record="$sc" :among="$schools" /></td>
                     <td class="text-end">@can('Set up teaching practice')<a href="{{ route('tp.schools.index', ['edit' => $sc->id]) }}" class="btn btn-sm btn-light">Edit</a>
                         <form method="POST" action="{{ route('tp.schools.destroy', $sc) }}" class="d-inline" onsubmit="return confirm('Remove this school?')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">Remove</button></form>@endcan</td></tr>
             @empty
-                <tr><td colspan="5" class="text-center text-muted py-5">No schools yet.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-5">No schools yet.</td></tr>
             @endforelse
         </tbody></table></div>
         @if ($schools->hasPages())<div class="card-footer">{{ $schools->links() }}</div>@endif

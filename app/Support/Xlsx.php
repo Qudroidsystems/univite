@@ -60,32 +60,39 @@ class Xlsx
             . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
             . '<bookViews><workbookView activeTab="0"/></bookViews><sheets>'
             . implode('', array_map(fn ($n, $i) => '<sheet name="' . self::esc($n) . '" sheetId="' . ($i + 1) . '" r:id="rId' . ($i + 1) . '"/>', $sheets, array_keys($sheets)))
-            . '</sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">\'' . str_replace("'", "''", self::esc($sheetName)) . '\'!$' . ($offset + 1) . ':$' . ($offset + 1) . '</definedName></definedNames></workbook>');
+            . '</sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">\'' . str_replace("'", "''", self::esc($sheetName)) . '\'!$' . ($offset + 1) . ':$' . ($offset + (int) ($opts['header_rows'] ?? 1)) . '</definedName></definedNames></workbook>');
         $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             . implode('', array_map(fn ($i) => '<Relationship Id="rId' . $i . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' . $i . '.xml"/>', range(1, count($sheets))))
             . '<Relationship Id="rId' . (count($sheets) + 1) . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
             . '</Relationships>');
         // Styles: 0 normal, 1 bold header on a light fill with a border, 2 bold title, 3 wrapped text, 4 letterhead name,
-        // 5 letterhead line, 6 letterhead title, 7 an editable cell in a protected sheet.
+        // 5 letterhead line, 6 letterhead title, 7 an editable cell in a protected sheet, 8 a section heading row,
+        // 9 a small grey note row, 10 a centred header cell (headers of more than one row), 11 a bordered cell with wrapped text, 12 a number with two decimals.
         $zip->addFromString('xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
             . '<fonts count="6"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="13"/><name val="Calibri"/></font>'
             . '<font><b/><sz val="15"/><color rgb="FF' . self::hex($opts['color'] ?? null) . '"/><name val="Calibri"/></font><font><sz val="10"/><color rgb="FF595959"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
-            . '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF' . self::hex($opts['color'] ?? null) . '"/><bgColor indexed="64"/></patternFill></fill></fills>'
+            . '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF' . self::hex($opts['color'] ?? null) . '"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEEF1F6"/><bgColor indexed="64"/></patternFill></fill></fills>'
             . '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>'
             . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-            . '<cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>'
+            . '<cellXfs count="13"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>'
             . '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>'
             . '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
             . '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>'
             . '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
             . '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
             . '<xf numFmtId="0" fontId="5" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyProtection="1"><protection locked="0"/></xf></cellXfs>'
+            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyProtection="1"><protection locked="0"/></xf>'
+            . '<xf numFmtId="0" fontId="5" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>'
+            . '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>'
+            . '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>'
+            . '<xf numFmtId="2" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/></cellXfs>'
             . '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>');
 
-        $zip->addFromString('xl/worksheets/sheet1.xml', self::sheetXml($rows, $opts['widths'] ?? [], $opts['limits'] ?? [], true, false, $lines, $logo !== null, $opts['locked'] ?? null, (int) ($opts['freeze'] ?? 2)));
+        $zip->addFromString('xl/worksheets/sheet1.xml', self::sheetXml($rows, $opts['widths'] ?? [], $opts['limits'] ?? [], true, false, $lines, $logo !== null, $opts['locked'] ?? null, (int) ($opts['freeze'] ?? 2),
+            (int) ($opts['header_rows'] ?? 1), $opts['merges'] ?? [], $opts['row_styles'] ?? [], $opts['wrap'] ?? [], $opts['decimals'] ?? []));
         if ($logo) {
             [$w, $h] = getimagesizefromstring($logo);
             $tall = 20 * min(count($lines), 4) + 6;              // about the height of the letterhead rows, in pixels
@@ -118,7 +125,14 @@ class Xlsx
      * @param  array<int, array{0: string, 1: string}>  $lines  letterhead lines written above the table
      * @param  int[]|null  $locked  column indexes that cannot be changed; null leaves the sheet unprotected
      */
-    private static function sheetXml(array $rows, array $widths, array $limits, bool $table, bool $notes = false, array $lines = [], bool $logo = false, ?array $locked = null, int $freeze = 2): string
+    /**
+     * @param  array<int, array{0: int, 1: int, 2: int, 3: int}>  $cellMerges  [first row, first column, last row, last column] of the table (row 0 = header)
+     * @param  array<int, string>  $rowStyles  table row => 'section' | 'footer'
+     * @param  int[]  $wrap  columns whose text wraps
+     * @param  int[]  $decimals  columns whose numbers show two decimals (GPA)
+     */
+    private static function sheetXml(array $rows, array $widths, array $limits, bool $table, bool $notes = false, array $lines = [], bool $logo = false, ?array $locked = null, int $freeze = 2,
+        int $headerRows = 1, array $cellMerges = [], array $rowStyles = [], array $wrap = [], array $decimals = []): string
     {
         $count = count($rows);
         $offset = $lines ? count($lines) + 1 : 0;
@@ -127,8 +141,9 @@ class Xlsx
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
         if ($table) {
-            $first = self::col($freeze) . ($offset + 2);
-            $xml .= '<sheetViews><sheetView workbookViewId="0" tabSelected="1"><pane xSplit="' . $freeze . '" ySplit="' . ($offset + 1) . '" topLeftCell="' . $first . '" activePane="bottomRight" state="frozen"/><selection pane="bottomRight" activeCell="' . $first . '" sqref="' . $first . '"/></sheetView></sheetViews>';
+            $xml .= '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>';   // print one page wide (pageSetup fitToWidth)
+            $first = self::col($freeze) . ($offset + $headerRows + 1);
+            $xml .= '<sheetViews><sheetView workbookViewId="0" tabSelected="1"><pane xSplit="' . $freeze . '" ySplit="' . ($offset + $headerRows) . '" topLeftCell="' . $first . '" activePane="bottomRight" state="frozen"/><selection pane="bottomRight" activeCell="' . $first . '" sqref="' . $first . '"/></sheetView></sheetViews>';
         }
         if ($widths || $locked !== null) {
             $xml .= '<cols>';
@@ -153,15 +168,26 @@ class Xlsx
             // The blank row under the letterhead, without the borders an editable column would give it.
             $xml .= '<row r="' . $offset . '">' . implode('', array_map(fn ($c) => '<c r="' . self::col($c) . $offset . '" s="5"/>', range(0, $cols - 1))) . '</row>';
         }
+        foreach ($cellMerges as [$r1, $c1, $r2, $c2]) {
+            $merges[] = self::col($c1) . ($r1 + 1 + $offset) . ':' . self::col($c2) . ($r2 + 1 + $offset);
+        }
         foreach (array_values($rows) as $r => $row) {
             $n = $r + 1 + $offset;
-            $xml .= '<row r="' . $n . '">';
+            $rowStyle = ['section' => 8, 'footer' => 9][$rowStyles[$r] ?? ''] ?? null;
+            $header = $table && $r < $headerRows;
+            $xml .= '<row r="' . $n . '"' . ($rowStyle === 8 ? ' ht="20" customHeight="1"' : '') . '>';
+            if ($header && $headerRows > 1 || $rowStyle !== null) {
+                $row = array_pad(array_values($row), $cols, null);   // merged header and section cells keep their fill and border
+            }
             foreach (array_values($row) as $c => $v) {
+                $ref = self::col($c) . $n;
+                $style = $notes ? ($r === 0 ? 2 : 3) : ($header ? ($headerRows > 1 ? 10 : 1) : ($rowStyle ?? ($editable($c) ? 7 : (in_array($c, $wrap, true) ? 11 : (in_array($c, $decimals, true) && is_float($v) ? 12 : 0)))));
                 if ($v === null || $v === '') {
+                    if ($header && $headerRows > 1 || $rowStyle !== null) {
+                        $xml .= '<c r="' . $ref . '" s="' . $style . '"/>';
+                    }
                     continue;
                 }
-                $ref = self::col($c) . $n;
-                $style = $notes ? ($r === 0 ? 2 : 3) : ($r === 0 && $table ? 1 : ($editable($c) ? 7 : 0));
                 $xml .= is_int($v) || is_float($v)
                     ? '<c r="' . $ref . '" s="' . $style . '"><v>' . $v . '</v></c>'
                     : '<c r="' . $ref . '" s="' . $style . '" t="inlineStr"><is><t xml:space="preserve">' . self::esc((string) $v) . '</t></is></c>';

@@ -68,6 +68,8 @@ class UserTableSeeder extends Seeder
                 'Dean' => ['Approve results'],
             ],
         ];
+        $grants['heads.grant.define_courses'] = ['Head of Department' => ['Define courses for lecturers']];
+        $grants['heads.grant.compute_results'] = ['Head of Department' => ['Compute results']];
         foreach ($grants as $key => $roles) {
             if (\App\Models\Setting::get($key)) {
                 continue;

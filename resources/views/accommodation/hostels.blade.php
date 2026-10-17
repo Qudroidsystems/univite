@@ -13,7 +13,7 @@
             </div>
         </div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Hostel</th><th>For</th><th class="text-end">Fee this session</th><th class="text-center">Beds</th><th class="text-center">Awaiting payment</th><th class="text-center">Confirmed</th><th class="text-center">Checked in</th><th class="text-center">Free</th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Hostel</th><th>For</th><th class="text-end">Fee this session</th><th class="text-center">Beds</th><th class="text-center">Awaiting payment</th><th class="text-center">Confirmed</th><th class="text-center">Checked in</th><th class="text-center">Free</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead><tbody>
             @forelse ($rows as $r)
                 <tr class="{{ $r->hostel->is_active ? '' : 'text-muted' }}">
                     <td><a href="{{ route('hostels.show', $r->hostel) }}" class="fw-semibold">{{ $r->hostel->name }}</a>@unless ($r->hostel->is_active) <span class="badge bg-light text-body">Off</span>@endunless
@@ -22,9 +22,10 @@
                     <td class="text-end">{{ $r->rate > 0 ? '₦' . number_format($r->rate, 2) : 'Free' }}</td>
                     <td class="text-center">{{ $r->beds }}</td><td class="text-center">{{ $r->reserved }}</td><td class="text-center">{{ $r->confirmed }}</td><td class="text-center">{{ $r->checkedIn }}</td>
                     <td class="text-center fw-semibold">{{ $r->free() }}</td>
+                    <td><x-last-change :record="$r->hostel" :among="$rows->pluck('hostel')" /></td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="text-center text-muted py-5">No hostels yet.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-5">No hostels yet.</td></tr>
             @endforelse
         </tbody></table></div>
     </div>

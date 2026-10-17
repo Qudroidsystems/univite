@@ -51,7 +51,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>User</th><th>Phone</th><th>Roles</th><th>Last login</th><th>Status</th><th class="text-end">Actions</th></tr>
+                            <tr><th>User</th><th>Phone</th><th>Roles</th><th>Last login</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th class="text-end">Actions</th></tr>
                         </thead>
                         <tbody>
                             @forelse ($users as $u)
@@ -77,6 +77,7 @@
                                     <td>
                                         <span class="badge {{ $u->is_disabled ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">{{ $u->is_disabled ? 'Disabled' : 'Active' }}</span>
                                     </td>
+                                    <td><x-last-change :record="$u" :among="$users" /></td>
                                     <td class="text-end text-nowrap">
                                         @if ($canUpdate)
                                             <button type="button" class="btn btn-sm btn-soft-primary btn-edit" title="Edit"
@@ -101,7 +102,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="text-center text-muted py-5">No users found.</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted py-5">No users found.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

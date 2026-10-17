@@ -30,7 +30,7 @@
 
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
-                        <thead class="table-light"><tr><th>#</th><th>Matric</th><th>Name</th><th class="text-end">Units passed</th><th class="text-end">CGPA</th><th>Class</th><th>Outcome</th></tr></thead>
+                        <thead class="table-light"><tr><th>#</th><th>Matric</th><th>Name</th><th class="text-end">Units passed</th><th class="text-end">CGPA</th><th>Class</th><th>Outcome</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead>
                         <tbody>
                         @forelse ($entries->values() as $i => $e)
                             <tr class="{{ $e->graduates() ? '' : 'text-muted' }}">
@@ -58,9 +58,10 @@
                                         @endcan
                                     @endif
                                 </td>
+                                <td><x-last-change :record="$e" :among="$entries" /></td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-center text-muted py-5">No enrolled student of this programme is in its final level.</td></tr>
+                            <tr><td colspan="8" class="text-center text-muted py-5">No enrolled student of this programme is in its final level.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

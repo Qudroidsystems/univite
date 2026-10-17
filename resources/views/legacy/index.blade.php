@@ -33,14 +33,15 @@
         <div class="col-lg-7">
             <div class="card"><div class="card-header"><h6 class="card-title mb-0">Uploads</h6></div>
                 <div class="table-responsive"><table class="table align-middle mb-0">
-                    <thead class="table-light"><tr><th>File</th><th>Kind</th><th class="text-end">Rows</th><th>Status</th><th>By</th></tr></thead>
+                    <thead class="table-light"><tr><th>File</th><th>Kind</th><th class="text-end">Rows</th><th>Status</th><th>By</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead>
                     <tbody>
                     @forelse ($imports as $i)
                         <tr><td><a href="{{ route('legacy.show', $i) }}" class="fw-semibold">{{ $i->file_name }}</a><div class="text-muted fs-12">{{ $i->created_at->format('j M Y H:i') }}</div></td>
                             <td>{{ \App\Models\LegacyImport::KINDS[$i->kind] }}</td><td class="text-end">{{ number_format($i->rows) }}@if ($i->imported)<div class="text-muted fs-12">{{ number_format($i->imported) }} imported</div>@endif</td>
-                            <td><span class="badge {{ \App\Models\LegacyImport::BADGES[$i->status] }}">{{ \App\Models\LegacyImport::STATUSES[$i->status] }}</span></td><td class="fs-13">{{ $i->creator?->name }}</td></tr>
+                            <td><span class="badge {{ \App\Models\LegacyImport::BADGES[$i->status] }}">{{ \App\Models\LegacyImport::STATUSES[$i->status] }}</span></td><td class="fs-13">{{ $i->creator?->name }}</td>
+                            <td><x-last-change :record="$i" :among="$imports" /></td></tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted py-4">Nothing uploaded yet.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-4">Nothing uploaded yet.</td></tr>
                     @endforelse
                     </tbody></table></div>
                 <div class="card-body">{{ $imports->links() }}</div></div>

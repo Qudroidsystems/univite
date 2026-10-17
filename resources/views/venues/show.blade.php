@@ -107,6 +107,7 @@
                 <div class="table-responsive"><table class="table table-sm align-middle mb-0"><tbody>
                     @forelse ($bookings as $b)
                         <tr><td>{{ $b->date->format('D j M Y') }}, {{ substr($b->starts_at, 0, 5) }}–{{ substr($b->ends_at, 0, 5) }}</td><td>{{ $b->title }}@if ($b->attendees) <span class="text-muted">· {{ $b->attendees }} people</span>@endif</td><td class="text-muted fs-12">{{ $b->booker?->name }}</td>
+                            <td><x-last-change :record="$b" :among="$bookings" /></td>
                             <td class="text-end">@if ($b->booked_by === $u->id || $u->can('Cancel venue bookings'))<form method="POST" action="{{ route('venues.bookings.cancel', [$v, $b]) }}">@csrf<button class="btn btn-sm btn-light">Cancel</button></form>@endif</td></tr>
                     @empty
                         <tr><td class="text-muted">No upcoming bookings.</td></tr>

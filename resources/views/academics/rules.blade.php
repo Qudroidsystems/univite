@@ -133,7 +133,7 @@
             <div class="card">
                 <div class="card-header"><h6 class="card-title mb-0">All overrides</h6></div>
                 <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Scope</th><th>Applies to</th><th>Rules changed</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th>Scope</th><th>Applies to</th><th>Rules changed</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
                     <tbody>
                     @forelse ($overrides as $o)
                         @php $r = $o['row']; @endphp
@@ -141,10 +141,11 @@
                             <td><span class="text-muted fs-12">{{ $o['type'] }}</span><div>{{ $o['name'] }}</div></td>
                             <td>{{ $r->level ? ($levels[$r->level] ?? $r->level) : 'All levels' }} · {{ $r->semesterType?->name ?? 'All semesters' }}</td>
                             <td class="fs-13">@foreach ($r->rules as $k => $v)@if (isset(AcademicRules::DEFS[$k]))<div>{{ AcademicRules::DEFS[$k][1] }}: <strong>{{ AcademicRules::display($k, AcademicRules::cast($k, $v)) }}</strong></div>@endif @endforeach</td>
+                            <td><x-last-change :record="$r" :among="collect($overrides)->pluck('row')" /></td>
                             <td class="text-end"><a class="btn btn-sm btn-soft-primary" href="{{ route('academics.rules.index', array_filter(['scope' => $r->scope_type, 'id' => $r->scope_id, 'level' => $r->level, 'semester_type_id' => $r->semester_type_id])) }}">Open</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="text-center text-muted py-4">Every faculty, department and programme uses the university's rules.</td></tr>
+                        <tr><td colspan="5" class="text-center text-muted py-4">Every faculty, department and programme uses the university's rules.</td></tr>
                     @endforelse
                     </tbody>
                 </table></div>

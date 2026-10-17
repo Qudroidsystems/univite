@@ -103,16 +103,25 @@ class Institution
     }
 
     /**
-     * The top of a spreadsheet: logo, name, address, contacts, then the document's own title lines.
+     * The top of a spreadsheet: logo; full name and acronym; motto; street address, P.M.B. and country; website and
+     * emails; then the document's own title lines.
      *
      * @param  string[]  $title
      * @return array{lines: array<int, array{0: string, 1: string}>, logo: ?string, logo_ext: ?string}
      */
     public static function letterhead(array $title = []): array
     {
-        $contacts = collect([self::get('phone'), self::get('email'), self::get('website')])->filter()->implode('  ·  ');
-        $lines = [[(string) self::get('name'), 'name']];
-        foreach ([self::get('motto'), self::addressLine(), $contacts] as $l) {
+        $name = (string) self::get('name');
+        $short = self::get('short_name');
+        $lines = [[$short && mb_strtoupper($short) !== mb_strtoupper($name) ? "{$name} ({$short})" : $name, 'name']];
+        $address = collect([self::get('address'), self::get('postal_code'), self::get('country')])
+            ->filter()->map(fn ($v) => trim(preg_replace('/\s+/', ' ', $v)))->implode(', ');
+        $contacts = collect([
+            self::get('website'),
+            self::get('email') ? 'Email: ' . self::get('email') : null,
+            self::get('support_email') && self::get('support_email') !== self::get('email') ? 'Portal support: ' . self::get('support_email') : null,
+        ])->filter()->implode('  ·  ');
+        foreach ([self::get('motto') ? 'Motto: ' . self::get('motto') : null, $address, $contacts] as $l) {
             if ($l) {
                 $lines[] = [$l, 'line'];
             }
@@ -127,6 +136,20 @@ class Institution
         $logo = $path && $disk->exists($path) ? $disk->get($path) : null;
 
         return ['lines' => $lines, 'logo' => $logo, 'logo_ext' => $logo ? pathinfo($path, PATHINFO_EXTENSION) : null];
+    }
+
+    /** The logo as a data: URI, for documents rendered without the web server (PDF), or null. */
+    public static function logoDataUri(): ?string
+    {
+        $path = self::get('logo');
+        $disk = Storage::disk('public');
+        if (! $path || ! $disk->exists($path)) {
+            return null;
+        }
+        $bytes = $disk->get($path);
+        $info = @getimagesizefromstring($bytes);
+
+        return $info ? 'data:' . $info['mime'] . ';base64,' . base64_encode($bytes) : null;
     }
 
     public static function initials(): string

@@ -15,6 +15,7 @@ class AcademicSetupPermissionSeeder extends ModulePermissionSeeder
             'Semester types',
             'Custom fields',
             'Grade bands',
+            'Result keys',
             'Degree classes',
             'Student statuses',
             'Entry modes',

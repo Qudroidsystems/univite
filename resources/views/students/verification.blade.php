@@ -33,7 +33,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light"><tr><th>Student</th><th>Programme</th><th>Progress</th><th>Documents</th><th class="text-end">Action</th></tr></thead>
+                        <thead class="table-light"><tr><th>Student</th><th>Programme</th><th>Progress</th><th>Documents</th><th style="width:1%" class="text-nowrap">Last changed by</th><th class="text-end">Action</th></tr></thead>
                         <tbody>
                             @forelse ($students as $s)
                                 @php $list = $onboarding->checklist($s); $left = collect($list)->reject(fn ($i) => $i[2] || $i[0] === 'verified'); @endphp
@@ -50,6 +50,7 @@
                                         @endif
                                     </td>
                                     <td class="fs-12">@foreach ($onboarding->documents($s) as $d)<div><a href="{{ route('verification.documents.show', $d->id) }}" target="_blank">{{ $d->label }}</a></div>@endforeach</td>
+                                    <td><x-last-change :record="$s" :among="$students" /></td>
                                     <td class="text-end">
                                         @if ($canVerify)
                                             @if ($s->verified_at)
@@ -64,7 +65,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted py-5">No students here.</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted py-5">No students here.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

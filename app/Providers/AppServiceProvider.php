@@ -14,6 +14,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(\App\Support\AcademicRules::class);
         // Scoped-role lookups are cached for the request.
         $this->app->scoped(\App\Services\Access\ScopedAccess::class);
+        // "Last changed by" lookups are batched per page.
+        $this->app->scoped(\App\Services\Activity\RecordActivities::class);
     }
 
     public function boot(): void
@@ -44,6 +46,9 @@ class AppServiceProvider extends ServiceProvider
 
         // The sidebar and the search box are built from one menu (App\Support\Navigation\Menu).
         \Illuminate\Support\Facades\View::composer('layouts.master', \App\View\Composers\ShellComposer::class);
+
+        // Who created, changed or deleted each record (the "Last changed by" column on tables).
+        \Illuminate\Support\Facades\Event::listen(['eloquent.created: *', 'eloquent.updated: *', 'eloquent.deleted: *'], \App\Listeners\RecordModelActivity::class);
 
         // Super Admin passes every permission check (including future permissions).
         Gate::before(fn ($user) => $user->hasRole('Super Admin') ? true : null);

@@ -55,7 +55,7 @@
             @can('Issue identity cards')@if ($unprinted)<a href="{{ route('id-cards.print', ['kind' => request('kind')]) }}" class="btn btn-sm btn-primary" target="_blank"><i class="ri-printer-line me-1"></i>Print {{ $unprinted }} unprinted</a>@endif @endcan
         </div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Holder</th><th>Card</th><th>Status</th><th>Issued / expires</th><th>Printed / collected</th><th></th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Holder</th><th>Card</th><th>Status</th><th>Issued / expires</th><th>Printed / collected</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
             @forelse ($cards as $c)
                 @php $holder = $c->snap('name') ?? ($c->user?->student?->full_name ?: $c->user?->name); @endphp
                 <tr>
@@ -67,6 +67,7 @@
                         @if ($c->cancel_reason)<div class="fs-12 text-muted">{{ $c->cancel_reason }}</div>@endif</td>
                     <td class="fs-12">{{ $c->issued_at?->format('j M Y') ?? 'Asked ' . $c->requested_at?->format('j M Y') }}@if ($c->expires_on)<div class="text-muted">to {{ $c->expires_on->format('j M Y') }}</div>@endif</td>
                     <td class="fs-12">{{ $c->printed_at?->format('j M Y') ?? '—' }}@if ($c->collected_at)<div class="text-success">Collected {{ $c->collected_at->format('j M Y') }}</div>@endif</td>
+                    <td><x-last-change :record="$c" :among="$cards" /></td>
                     <td class="text-end text-nowrap">
                         @if ($c->status === 'requested' && $u->can('Issue identity cards'))
                             <form method="POST" action="{{ route('id-cards.approve', $c) }}" class="d-inline">@csrf<button class="btn btn-sm btn-primary">Issue</button></form>
@@ -81,7 +82,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="text-center text-muted py-5">No cards here.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-5">No cards here.</td></tr>
             @endforelse
         </tbody></table></div>
         @if ($cards->hasPages())<div class="card-footer">{{ $cards->links() }}</div>@endif

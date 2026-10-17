@@ -79,16 +79,17 @@
 
     <div class="card"><div class="card-header"><h6 class="card-title mb-0">My applications</h6></div>
         <div class="table-responsive"><table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th>Reference</th><th>Leave</th><th>Dates</th><th>Days</th><th>Where it stands</th></tr></thead>
+            <thead class="table-light"><tr><th>Reference</th><th>Leave</th><th>Dates</th><th>Days</th><th>Where it stands</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead>
             <tbody>
             @forelse ($requests as $r)
                 <tr><td><a href="{{ route('leave.show', $r) }}" class="fw-semibold">{{ $r->reference }}</a></td><td>{{ $r->type->name }}</td>
                     <td>{{ $r->start_date->format('j M') }} – {{ $r->end_date->format('j M Y') }}</td><td>{{ $r->days }}</td>
                     <td><span class="badge {{ \App\Models\LeaveRequest::BADGES[$r->status] }}">{{ $r->phase }}</span>
                         @if ($r->status === 'pending' && ($s = $r->currentStep()))<div class="text-muted fs-12">With: {{ $s->label }}</div>@endif
-                        @if ($r->status === 'returned')<div><a href="{{ route('leave.edit', $r) }}" class="fs-12">Correct and resubmit</a></div>@endif</td></tr>
+                        @if ($r->status === 'returned')<div><a href="{{ route('leave.edit', $r) }}" class="fs-12">Correct and resubmit</a></div>@endif</td>
+                    <td><x-last-change :record="$r" :among="$requests" /></td></tr>
             @empty
-                <tr><td colspan="5" class="text-center text-muted py-4">You have not applied for leave yet.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">You have not applied for leave yet.</td></tr>
             @endforelse
             </tbody></table></div></div>
 </div></div></div>

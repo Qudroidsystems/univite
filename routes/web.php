@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('student-statuses', StudentStatusController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('entry-modes', EntryModeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('grade-bands', GradeBandController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('result-keys', \App\Http\Controllers\Academics\ResultKeyController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('degree-classes', DegreeClassController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('course-assignments', CourseAssignmentController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('result-stages', ResultStageController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -271,6 +272,10 @@ Route::middleware('auth')->group(function () {
     Route::put('results/settings', [\App\Http\Controllers\ResultSettingsController::class, 'update'])->name('results.settings.update');
     Route::get('results/summary', [\App\Http\Controllers\ResultSummaryController::class, 'index'])->name('results.summary');
     Route::post('results/summary/allow/{student}', [\App\Http\Controllers\ResultSummaryController::class, 'waive'])->name('results.summary.waive');
+    $cr = \App\Http\Controllers\ComputeResultsController::class;
+    Route::get('results/compute', [$cr, 'index'])->name('results.compute');
+    Route::post('results/compute', [$cr, 'compute'])->name('results.compute.run');
+    Route::get('results/compute/master-sheet/{format}', [$cr, 'masterSheet'])->whereIn('format', ['excel', 'pdf', 'print'])->name('results.compute.sheet');
     $ms = \App\Http\Controllers\MasterSheetController::class;
     Route::get('results/broadsheet', [$ms, 'index'])->name('results.broadsheet');
     Route::get('results/broadsheet/excel', [$ms, 'excel'])->name('results.broadsheet.excel');
@@ -483,6 +488,7 @@ Route::middleware('auth')->group(function () {
     Route::post('access/scoped-roles', [\App\Http\Controllers\ScopedRoleController::class, 'store'])->name('scoped-roles.store');
     Route::put('access/scoped-roles/settings', [\App\Http\Controllers\ScopedRoleController::class, 'settings'])->name('scoped-roles.settings');
     Route::delete('access/scoped-roles/{scopedRole}', [\App\Http\Controllers\ScopedRoleController::class, 'destroy'])->name('scoped-roles.destroy');
+    Route::get('activity/{type}/{id}', [\App\Http\Controllers\ActivityController::class, 'show'])->whereNumber('id')->name('activity.show');
     // ---- Results from before the portal ----
     Route::prefix('legacy-results')->name('legacy.')->controller(\App\Http\Controllers\LegacyImportController::class)->group(function () {
         Route::get('/', 'index')->name('index');

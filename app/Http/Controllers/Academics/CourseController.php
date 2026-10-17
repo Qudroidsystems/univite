@@ -131,6 +131,7 @@ class CourseController extends CrudController
     protected function columns(): array
     {
         return [
+            ['ID', fn ($r) => new HtmlString('<span class="text-muted fs-12">#' . $r->id . '</span>')],
             ['Code', fn ($r) => new HtmlString('<span class="badge bg-primary-subtle text-primary">' . e($r->code) . '</span>')],
             ['Title', fn ($r) => new HtmlString('<span class="fw-semibold">' . e($r->title) . '</span>')],
             ['Department', fn ($r) => new HtmlString(e($r->department->name) . '<div class="text-muted fs-12">' . e($r->department->faculty?->name) . '</div>')],

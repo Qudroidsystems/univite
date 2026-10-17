@@ -13,16 +13,17 @@
         @can('Create polls')<a href="{{ route('polls.create') }}" class="btn btn-primary"><i class="ri-add-line me-1"></i>New poll or election</a>@endcan
     </div></div>
     <div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
-        <thead class="table-light"><tr><th>Title</th><th>Kind</th><th>Status</th><th>Voting</th><th class="text-end">Voted</th></tr></thead><tbody>
+        <thead class="table-light"><tr><th>Title</th><th>Kind</th><th>Status</th><th>Voting</th><th class="text-end">Voted</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead><tbody>
         @forelse ($polls as $p)
             @php [$label, $badge] = $p->phaseBadge(); @endphp
             <tr><td><a href="{{ route('polls.show', $p) }}" class="fw-semibold">{{ $p->title }}</a></td>
                 <td>{{ \App\Models\Poll::KINDS[$p->kind] }}</td>
                 <td><span class="badge {{ $badge }}">{{ $label }}</span>@if ($p->results_published_at)<span class="badge bg-primary-subtle text-primary ms-1">Results published</span>@endif</td>
                 <td class="fs-12">{{ $p->opens_at->format('j M Y, g:ia') }} – {{ $p->closes_at->format('j M Y, g:ia') }}</td>
-                <td class="text-end">{{ number_format($p->voters_count) }}</td></tr>
+                <td class="text-end">{{ number_format($p->voters_count) }}</td>
+                <td><x-last-change :record="$p" :among="$polls" /></td></tr>
         @empty
-            <tr><td colspan="5" class="text-center text-muted py-5">No polls yet.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-5">No polls yet.</td></tr>
         @endforelse
     </tbody></table></div>
     @if ($polls->hasPages())<div class="card-footer">{{ $polls->links() }}</div>@endif</div>

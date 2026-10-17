@@ -45,7 +45,7 @@
         </div>
         @if ($tab === 'allocations')
             <div class="table-responsive"><table class="table align-middle mb-0">
-                <thead class="table-light"><tr><th>Student</th><th>Place</th><th>Status</th><th>Fee</th><th></th></tr></thead><tbody>
+                <thead class="table-light"><tr><th>Student</th><th>Place</th><th>Status</th><th>Fee</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead><tbody>
                 @forelse ($allocations as $a)
                     <tr>
                         <td>{{ $a->student->full_name }}<div class="fs-12 text-muted">{{ $a->student->matric_number }} · {{ $a->student->current_level }} level</div></td>
@@ -54,6 +54,7 @@
                             @if ($a->status === 'reserved')<div class="fs-12 text-muted">Pay by {{ $a->reserved_until->format('j M Y') }}</div>@endif
                             @if ($a->end_reason)<div class="fs-12 text-muted">{{ $a->end_reason }}</div>@endif</td>
                         <td class="fs-13">@if ($a->invoice){{ $a->invoice->reference }} <span class="badge {{ \App\Models\Invoice::BADGES[$a->invoice->status] }}">{{ \App\Models\Invoice::STATUSES[$a->invoice->status] }}</span>@else Free @endif</td>
+                        <td><x-last-change :record="$a" :among="$allocations" /></td>
                         <td class="text-end text-nowrap">
                             @if ($a->status === 'confirmed' && $u->can('Check students in and out of hostels'))<form method="POST" action="{{ route('accommodation.check-in', $a) }}" class="d-inline">@csrf<button class="btn btn-sm btn-success">Check in</button></form>@endif
                             @if ($a->status === 'checked_in' && $u->can('Check students in and out of hostels'))<form method="POST" action="{{ route('accommodation.check-out', $a) }}" class="d-inline">@csrf<button class="btn btn-sm btn-light">Check out</button></form>@endif
@@ -69,21 +70,22 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted py-5">Nothing here.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-5">Nothing here.</td></tr>
                 @endforelse
             </tbody></table></div>
             @if ($allocations->hasPages())<div class="card-footer">{{ $allocations->links() }}</div>@endif
         @else
             @php $names = $hostels->pluck('name', 'id'); @endphp
             <div class="table-responsive"><table class="table align-middle mb-0">
-                <thead class="table-light"><tr><th>Student</th><th>Choices</th><th>Applied</th><th>Status</th></tr></thead><tbody>
+                <thead class="table-light"><tr><th>Student</th><th>Choices</th><th>Applied</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th></tr></thead><tbody>
                 @forelse ($applications as $p)
                     <tr><td>{{ $p->student->full_name }}<div class="fs-12 text-muted">{{ $p->student->matric_number }} · {{ $p->student->current_level }} level</div></td>
                         <td class="fs-13">{{ collect($p->preferences)->map(fn ($id) => $names[$id] ?? '?')->implode(', ') }}</td>
                         <td class="fs-13">{{ $p->created_at->format('j M Y, g:ia') }}</td>
-                        <td><span class="badge {{ \App\Models\AccommodationApplication::BADGES[$p->status] }}">{{ \App\Models\AccommodationApplication::STATUSES[$p->status] }}</span></td></tr>
+                        <td><span class="badge {{ \App\Models\AccommodationApplication::BADGES[$p->status] }}">{{ \App\Models\AccommodationApplication::STATUSES[$p->status] }}</span></td>
+                        <td><x-last-change :record="$p" :among="$applications" /></td></tr>
                 @empty
-                    <tr><td colspan="4" class="text-center text-muted py-5">No applications here.</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-5">No applications here.</td></tr>
                 @endforelse
             </tbody></table></div>
             @if ($applications->hasPages())<div class="card-footer">{{ $applications->links() }}</div>@endif

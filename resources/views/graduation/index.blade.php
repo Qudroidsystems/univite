@@ -22,7 +22,7 @@
             <div class="card">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light"><tr><th>Programme</th><th>Session</th><th>Checked</th><th>Eligible</th><th>Status</th><th></th></tr></thead>
+                        <thead class="table-light"><tr><th>Programme</th><th>Session</th><th>Checked</th><th>Eligible</th><th>Status</th><th style="width:1%" class="text-nowrap">Last changed by</th><th></th></tr></thead>
                         <tbody>
                         @forelse ($lists as $l)
                             <tr>
@@ -31,10 +31,11 @@
                                 <td>{{ $l->entries_count }}<div class="text-muted fs-12">{{ $l->checked_at?->format('j M Y, H:i') }}</div></td>
                                 <td>{{ $l->eligible_count }}</td>
                                 <td>@if ($l->isDraft())<span class="badge bg-warning-subtle text-warning">Draft</span>@else<span class="badge bg-success-subtle text-success">Approved</span>@endif</td>
+                                <td><x-last-change :record="$l" :among="$lists" /></td>
                                 <td class="text-end"><a href="{{ route('graduation.show', $l->id) }}" class="btn btn-sm btn-soft-primary">Open</a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center text-muted py-5">No graduation lists yet.</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted py-5">No graduation lists yet.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

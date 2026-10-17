@@ -152,10 +152,9 @@ class Menu
                     ['Entry Modes', 'academics.entry-modes.index', 'View entry modes', 'academics.entry-modes.*'],
                     ['Clearance Items', 'academics.clearance-items.index', 'View clearance items', 'academics.clearance-items.*'],
                     ['Custom Form Fields', 'academics.custom-fields.index', 'View custom fields', 'academics.custom-fields.*'],
-                    ['Grading Scale', 'academics.grade-bands.index', 'View grade bands', 'academics.grade-bands.*'],
                     ['Classes of Degree', 'academics.degree-classes.index', 'View degree classes', 'academics.degree-classes.*'],
                     ['Academic Rules', 'academics.rules.index', ['View academic rules', 'Edit academic rules', 'Edit department academic rules'], 'academics.rules.*'],
-                    ['Course Lecturers', 'academics.course-assignments.index', 'View course assignments', 'academics.course-assignments.*'],
+                    ['Define Courses', 'academics.course-assignments.index', ['View course assignments', 'Define courses for lecturers'], 'academics.course-assignments.*'],
                     ['Assessment Schemes', 'academics.assessments.index', 'View assessment schemes', 'academics.assessments.*'],
                     ['Result Approval Steps', 'academics.result-stages.index', 'View result stages', 'academics.result-stages.*'],
                     ['Reference Lists', 'academics.lists.index', 'View reference lists', 'academics.lists.*'],
@@ -176,6 +175,7 @@ class Menu
                 ['sidebarResults', 'Results', 'ph-chart-bar', [
                     ['Score Sheets', 'results.sheets.index', ['View result sheets', 'Approve results', 'Approve results for any stage'], 'results.sheets.*', 'results.open'],
                     ['Enter Scores', 'results.entry', 'Enter results for any course', 'results.entry'],
+                    ['Compute Results', 'results.compute', 'Compute results', 'results.compute*'],
                     ['Master Sheet', 'results.broadsheet', ['View student results', 'Approve results', 'Approve results for any stage', 'Publish results'], 'results.broadsheet*'],
                     ['Carry-over Waivers', 'results.waivers.index', 'Waive carryover courses', 'results.waivers.*'],
                     ['Result Summary', 'results.summary', ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],
@@ -183,6 +183,8 @@ class Menu
                     ['Legacy Results', 'legacy.index', 'Import legacy results', 'legacy.*'],
                     ['Graduation Lists', 'graduation.index', 'View graduation lists', 'graduation.*'],
                     ['Result Settings', 'results.settings', 'View result settings', 'results.settings*'],
+                    ['Key to Grade', 'academics.grade-bands.index', 'View grade bands', 'academics.grade-bands.*'],
+                    ['Key to Result', 'academics.result-keys.index', 'View result keys', 'academics.result-keys.*'],
                 ]],
                 ['sidebarPlanning', 'Venues & Timetables', 'ph-calendar-check', [
                     ['Venues', 'venues.index', 'View venues', 'venues.index', 'venues.show', 'venues.create', 'venues.edit'],

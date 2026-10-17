@@ -67,9 +67,9 @@ class TeachingController extends ApiController
         $this->staff($request);
         $user = $request->user();
         $ctx = $this->registration->context();
-        $mine = $ctx ? $user->courseAssignments()->with('course')->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
+        $mine = $ctx ? $user->scoringAssignments()->with('course')->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
         $sheets = ResultSheet::with('course', 'session', 'semesterType', 'stage', 'scheme.items')->withCount('results')
-            ->whereIn('course_id', $user->courseAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
+            ->whereIn('course_id', $user->scoringAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
             ->filter(fn ($s) => $this->results->canEnter($user, $s));
         $current = $ctx ? $sheets->filter(fn ($s) => $s->academic_session_id === $ctx->session->id && $s->semester_type_id === $ctx->type->id)->keyBy('course_id') : collect();
 

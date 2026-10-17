@@ -98,7 +98,7 @@ class ResultService
 
     public function canEnter(User $user, ResultSheet $sheet): bool
     {
-        return $user->can('Enter results for any course') || $user->courseAssignments()
+        return $user->can('Enter results for any course') || $user->scoringAssignments()
             ->where('course_id', $sheet->course_id)->where('academic_session_id', $sheet->academic_session_id)->where('semester_type_id', $sheet->semester_type_id)->exists();
     }
 
@@ -324,9 +324,108 @@ class ResultService
         return $sheet;
     }
 
+    /** Whether this person approved the sheet at a step since it was last submitted. */
+    public function hasSigned(User $user, ResultSheet $sheet): bool
+    {
+        $since = ResultSheetEvent::where('result_sheet_id', $sheet->id)->where('action', 'submitted')->max('id');
+
+        return ResultSheetEvent::where('result_sheet_id', $sheet->id)->where('action', 'approved')->where('user_id', $user->id)
+            ->when($since, fn ($q) => $q->where('id', '>', $since))->exists();
+    }
+
+    /**
+     * Whether this person may still return the sheet to the lecturer or correct its scores: it is in the approval
+     * chain or approved but not yet published, and it waits at their step, or they already approved it at an earlier
+     * step, or it is approved and they publish results.
+     */
+    public function canReview(User $user, ResultSheet $sheet): bool
+    {
+        if (! in_array($sheet->status, ['submitted', 'approved'], true)) {
+            return false;
+        }
+
+        return $this->canApprove($user, $sheet) || ($sheet->status === 'approved' && $user->can('Publish results')) || $this->hasSigned($user, $sheet);
+    }
+
+    /** canReview, and "Edit scores while approving" held outright or for the course's department or faculty. */
+    public function canCorrect(User $user, ResultSheet $sheet): bool
+    {
+        if (! $this->canReview($user, $sheet)) {
+            return false;
+        }
+        $sheet->loadMissing('course');
+
+        return $this->access->scope($user, 'Edit scores while approving')->coversDepartment($sheet->course?->department_id);
+    }
+
+    /**
+     * An approver's corrections to a sheet in the approval chain (or approved and unpublished). Only rows whose marks
+     * differ from what is stored are changed; the sheet keeps its status and step. Each change, old and new total,
+     * goes on the sheet's history and the operations log.
+     *
+     * @param  array<int, Score>  $scores  keyed by student id
+     * @return array{changed: int, problems: string[]}
+     */
+    public function correct(ResultSheet $sheet, array $scores, User $user, ?string $note = null): array
+    {
+        if (! $this->canCorrect($user, $sheet)) {
+            throw new RuntimeException('You cannot change the scores on this sheet.');
+        }
+        $rows = $sheet->results()->with('student', 'assessmentScores')->get()->keyBy('student_id');
+        $scheme = $sheet->scheme?->loadMissing('items');
+        $problems = $changes = $before = $after = [];
+
+        DB::transaction(function () use ($scores, $rows, $scheme, $user, &$problems, &$changes, &$before, &$after) {
+            foreach ($scores as $studentId => $s) {
+                $row = $rows->get((int) $studentId);
+                if (! $row || ! $this->differs($row, $s)) {
+                    continue;
+                }
+                $was = $row->total;
+                try {
+                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user, $s->total));
+                } catch (RuntimeException $e) {
+                    $problems[] = $row->student->matric_number . ': ' . $e->getMessage();
+
+                    continue;
+                }
+                $label = $row->student->matric_number;
+                $changes[] = $label . ' ' . self::show($was) . ' to ' . self::show($row->total);
+                $before[$label] = $was;
+                $after[$label] = $row->total;
+            }
+        });
+
+        if ($changes) {
+            $this->log($sheet, $user, 'corrected', $sheet->stage?->name, trim(($note ? rtrim($note, '. ') . '. ' : '') . 'Totals: ' . implode(', ', $changes) . '.'));
+            $this->audit->note('result_correct', 'results', $user, 'corrected', $sheet, $before, $after, $note, $sheet->academic_session_id);
+        }
+
+        return ['changed' => count($changes), 'problems' => $problems];
+    }
+
+    private static function show($n): string
+    {
+        return $n === null ? 'blank' : rtrim(rtrim(number_format((float) $n, 2, '.', ''), '0'), '.');
+    }
+
+    /** Whether the marks sent for a row are not the ones stored (blank and missing are the same). */
+    private function differs(CourseResult $row, Score $s): bool
+    {
+        $same = fn ($a, $b) => blank($a) ? blank($b) : (! blank($b) && abs((float) $a - (float) $b) < 0.005);
+        $stored = $row->assessmentScores->mapWithKeys(fn ($m) => [$m->assessment_item_id => $m->score]);
+        foreach ($s->items ?? [] as $id => $v) {
+            if (! $same($v, $stored->get((int) $id))) {
+                return true;
+            }
+        }
+
+        return ! $same($s->ca, $row->ca) || ! $same($s->exam, $row->exam) || ($s->total !== null && ! $same($s->total, $row->total));
+    }
+
     public function returnToLecturer(ResultSheet $sheet, User $user, ?string $note): ResultSheet
     {
-        if (! $this->canApprove($user, $sheet) && ! ($sheet->status === 'approved' && $user->can('Publish results'))) {
+        if (! $this->canReview($user, $sheet)) {
             throw new RuntimeException('This sheet is not waiting for you.');
         }
         if (blank($note)) {

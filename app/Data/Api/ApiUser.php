@@ -18,7 +18,7 @@ final readonly class ApiUser
     {
         return new self($u->id, $u->name, $u->email, $u->phone_number, $u->avatar_url, $u->getRoleNames()->values()->all(),
             $u->student ? ApiStudent::from($u->student) : null, (bool) ($u->notify_push ?? true),
-            ! $u->student && ($u->courseAssignments()->exists() || $u->can('Enter results for any course')), $u->photoUrl());
+            ! $u->student && ($u->scoringAssignments()->exists() || $u->can('Enter results for any course')), $u->photoUrl());
     }
 
     public function toArray(): array

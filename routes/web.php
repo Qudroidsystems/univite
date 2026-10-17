@@ -299,6 +299,7 @@ Route::middleware('auth')->group(function () {
     Route::post('graduation/entries/{entry}/exclude', [$gr, 'exclude'])->name('graduation.exclude');
     Route::get('results/{sheet}', [$rs, 'show'])->name('results.sheets.show');
     Route::post('results/{sheet}/save', [$rs, 'save'])->name('results.sheets.save');
+    Route::post('results/{sheet}/correct', [$rs, 'correct'])->name('results.sheets.correct');
     Route::post('results/{sheet}/upload', [$rs, 'upload'])->name('results.sheets.upload');
     Route::get('results/{sheet}/template', [$rs, 'template'])->name('results.sheets.template');
     Route::post('results/{sheet}/submit', [$rs, 'submit'])->name('results.sheets.submit');

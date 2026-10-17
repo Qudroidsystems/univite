@@ -3,7 +3,7 @@
 namespace App\Reversals;
 
 use App\Services\OperationAudit;
-use App\Http\Controllers\Academics\AcademicRuleController;
+use App\Services\Access\AcademicRuleAccess;
 use App\Models\OperationBatch;
 use App\Models\User;
 use App\Support\AcademicRules;
@@ -15,7 +15,7 @@ use App\Support\Institution;
  */
 class SettingsReversal extends BaseReversal
 {
-    public function __construct(OperationAudit $audit, private AcademicRules $rules)
+    public function __construct(OperationAudit $audit, private AcademicRules $rules, private AcademicRuleAccess $access)
     {
         parent::__construct($audit);
     }
@@ -28,7 +28,7 @@ class SettingsReversal extends BaseReversal
     public function allowed(User $user, OperationBatch $op): bool
     {
         return $op->type === 'rules_change'
-            ? AcademicRuleController::canEdit($user, $op->meta['scope'] ?? 'university', ($op->meta['id'] ?? 0) ?: null)
+            ? $this->access->canEdit($user, $op->meta['scope'] ?? 'university', ($op->meta['id'] ?? 0) ?: null)
             : $user->can('Edit institution profile');
     }
 

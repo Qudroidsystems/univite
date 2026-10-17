@@ -4,7 +4,6 @@ namespace App\Services\Results;
 
 use App\Data\Results\ScoreEntryQuery;
 use App\Models\Course;
-use App\Models\CourseAssignment;
 use App\Models\CourseResult;
 use App\Models\ProgrammeCourse;
 use App\Models\ResultSheet;
@@ -26,7 +25,7 @@ class ScoreEntry
     /** Whether this person enters scores at all (assigned courses, or any course). */
     public function canUse(User $user): bool
     {
-        return $user->can('Enter results for any course') || $user->courseAssignments()->exists();
+        return $user->can('Enter results for any course') || $user->scoringAssignments()->exists();
     }
 
     /** @return Collection<int, Course> */
@@ -37,7 +36,7 @@ class ScoreEntry
         }
         $courses = $user->can('Enter results for any course')
             ? Course::with('department')->where('is_active', true)
-            : Course::with('department')->whereIn('id', CourseAssignment::where('user_id', $user->id)
+            : Course::with('department')->whereIn('id', $user->scoringAssignments()
                 ->where('academic_session_id', $q->session->id)->where('semester_type_id', $q->semesterType->id)->select('course_id'));
 
         if ($q->department || $q->category || $q->level) {

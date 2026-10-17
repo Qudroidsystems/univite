@@ -7,7 +7,7 @@
                 <div class="fs-15 fw-semibold">{{ $l->department }}</div>
                 @if ($l->faculty)<div class="text-muted fs-13"><i class="ri-building-2-line me-1"></i>{{ $l->faculty }}</div>@endif
             </div>
-            @foreach ([$l->hod ?? 'Head of Department', $l->dean ?? 'Dean'] as $i => $p)
+            @foreach ([$l->hod ?? $l->hodTitle, $l->dean ?? $l->deanTitle] as $i => $p)
                 <div class="col-sm-6 col-lg-4 uv-leader-in" style="--uv-i:{{ $i + 1 }}">
                     @if (is_string($p))
                         <div class="text-muted fs-11 text-uppercase fw-semibold">{{ $p }}</div>

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Academics\AcademicRuleController;
 use App\Models\AcademicSession;
 use App\Models\Department;
 use App\Models\SemesterType;
@@ -20,7 +19,7 @@ use Illuminate\View\View;
  */
 class ResultSummaryController extends Controller
 {
-    public function __construct(private ResultService $results, private \App\Services\OperationAudit $audit, private \App\Services\RegistrationService $registration, private \App\Services\Results\CarryoverWaivers $waivers, private \App\Services\Access\ScopedAccess $access)
+    public function __construct(private ResultService $results, private \App\Services\OperationAudit $audit, private \App\Services\RegistrationService $registration, private \App\Services\Results\CarryoverWaivers $waivers, private \App\Services\Access\ScopedAccess $access, private \App\Services\Access\AcademicRuleAccess $rules)
     {
     }
 
@@ -32,7 +31,7 @@ class ResultSummaryController extends Controller
         $view = $this->access->scope($user, 'View student results');
         $waive = $this->access->scope($user, 'Waive carryover courses');
 
-        return $all->filter(fn ($d) => $view->coversDepartment($d->id) || $waive->coversDepartment($d->id) || AcademicRuleController::canEdit($user, 'department', $d->id))->values();
+        return $all->filter(fn ($d) => $view->coversDepartment($d->id) || $waive->coversDepartment($d->id) || $this->rules->canEdit($user, 'department', $d->id))->values();
     }
 
     public function index(Request $request): View
@@ -45,6 +44,7 @@ class ResultSummaryController extends Controller
         $level = $request->filled('level') ? (int) $request->query('level') : null;
 
         return view('results.summary', [
+            'canAllow' => fn (Student $student) => $this->rules->canEdit(auth()->user(), 'programme', $student->programme_id),
             'pagetitle' => 'Result summary', 'departments' => $departments->pluck('name', 'id'), 'dept' => $dept,
             'groups' => $dept && $session && $type ? $this->results->summary($dept->id, $level, $session, $type) : null,
             'f' => compact('session', 'type', 'level'), 'sessions' => AcademicSession::orderByDesc('name')->pluck('name', 'id'),
@@ -58,7 +58,7 @@ class ResultSummaryController extends Controller
     /** Let a student advised to withdraw register in the current session. */
     public function waive(Request $request, Student $student): RedirectResponse
     {
-        abort_unless(AcademicRuleController::canEdit($request->user(), 'programme', $student->programme_id), 403);
+        abort_unless($this->rules->canEdit($request->user(), 'programme', $student->programme_id), 403);
         $d = $request->validate(['note' => ['required', 'string', 'max:500']]);
         $session = AcademicSession::current() ?? abort(422, 'No session is current.');
         $waiver = StandingWaiver::updateOrCreate(['student_id' => $student->id, 'academic_session_id' => $session->id], ['note' => $d['note'], 'granted_by' => $request->user()->id]);

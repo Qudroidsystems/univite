@@ -14,8 +14,8 @@ class UserTableSeeder extends Seeder
      * Creates the Super Admin / Admin roles and the first administrator.
      * Safe to re-run: nothing is duplicated and an existing password is never reset.
      * Set ADMIN_NAME / ADMIN_EMAIL / ADMIN_PASSWORD in .env to customise.
-     * Also creates the roles heads of department, faculty and unit get for their own area (only if missing, so
-     * changes made on the Roles page are kept), and gives every current head theirs.
+     * Then gives every current head of department, dean and head of unit their role for what they head (the roles
+     * themselves come from RoleSeeder).
      */
     public function run(HeadRoles $heads): void
     {
@@ -41,17 +41,7 @@ class UserTableSeeder extends Seeder
             $user->assignRole($superAdmin);
         }
 
-        $headRoles = [
-            'Head of Department' => ['View students', 'View student results', 'View course registrations', 'Approve course registrations', 'View leave applications', 'View staff records'],
-            'Dean' => ['View students', 'View student results', 'View course registrations', 'View leave applications', 'View staff records'],
-            'Head of Unit' => ['View leave applications', 'View staff records'],
-        ];
-        foreach ($headRoles as $name => $permissions) {
-            if (! Role::where('name', $name)->exists()) {
-                Role::create(['name' => $name, 'guard_name' => 'web', 'badge' => 'badge bg-secondary'])
-                    ->syncPermissions(array_values(array_intersect($permissions, $allPermissions)));
-            }
-        }
+        // The head roles and the other office roles come from RoleSeeder, which runs first.
         $this->laterGrants($allPermissions);
         $heads->syncAll();
     }

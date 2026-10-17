@@ -3,6 +3,7 @@
 @section('content')
 @php
     $edit = $canEnter && $sheet->isEditable();
+    $locked = ! $edit && $canCorrect;
     $items = $scheme?->items ?? collect();
     $fmt = fn ($n) => rtrim(rtrim(number_format((float) $n, 2, '.', ''), '0'), '.');
     $marksOf = fn ($r) => $r->assessmentScores->mapWithKeys(fn ($m) => [$m->assessment_item_id => $fmt($m->score)]);
@@ -55,9 +56,15 @@
                 <div class="d-flex justify-content-end mb-2">@include('results.partials.download-menu', ['sheet' => $sheet, 'label' => 'Download', 'small' => true])</div>
             @endif
 
-            <form method="POST" action="{{ route('results.sheets.save', $sheet->id) }}">
+            <form method="POST" action="{{ route($locked ? 'results.sheets.correct' : 'results.sheets.save', $sheet->id) }}" @if ($locked) data-lock-form data-confirm="Save your changes to these scores? Each change is recorded on the sheet's history." @endif>
                 @csrf
-                @include('results.partials.score-table', ['rows' => $rows, 'scheme' => $scheme, 'edit' => $edit, 'caMax' => $caMax, 'examMax' => $examMax])
+                @if ($locked && $rows->isNotEmpty())
+                    <div class="alert alert-info fs-13 d-flex flex-wrap gap-2 align-items-center"><i class="ri-lock-2-line fs-16"></i>
+                        <span class="flex-grow-1" style="min-width:240px">You can change scores on this sheet before it is published. Each score is locked: click its lock to unlock it, make the change, then click the lock again. Save once every score is locked.</span>
+                        <input name="note" class="form-control form-control-sm" style="max-width:320px" maxlength="400" placeholder="Reason for the change (shown on the history)">
+                    </div>
+                @endif
+                @include('results.partials.score-table', ['rows' => $rows, 'scheme' => $scheme, 'edit' => $edit || $locked, 'locked' => $locked, 'caMax' => $caMax, 'examMax' => $examMax, 'saveLabel' => $locked ? 'Save changes' : null])
                 @if ($edit && $rows->isNotEmpty() && $missing)
                     <p class="text-muted fs-13 mt-n2">{{ $missing }} student(s) still need scores.</p>
                 @endif
@@ -69,12 +76,12 @@
                 </form>
             @endif
 
-            @if ($canApprove || ($sheet->status === 'approved' && auth()->user()->can('Publish results')))
-                <div class="card"><form method="POST" action="{{ route('results.sheets.decide', $sheet->id) }}" class="card-body d-flex flex-wrap gap-2 align-items-start">
+            @if ($canReview)
+                <div class="card"><form method="POST" action="{{ route('results.sheets.decide', $sheet->id) }}" class="card-body d-flex flex-wrap gap-2 align-items-start" data-lock-guard>
                     @csrf
                     <input name="note" class="form-control" style="flex:1;min-width:240px" placeholder="Note (needed when returning the sheet)">
                     @if ($canApprove)<button class="btn btn-success" name="decision" value="approve"><i class="ri-check-line me-1"></i>Approve{{ $sheet->stage ? ' as ' . $sheet->stage->name : '' }}</button>@endif
-                    @if ($sheet->status === 'approved')<button class="btn btn-primary" name="decision" value="publish" data-confirm="Publish these results? Students will see them immediately."><i class="ri-megaphone-line me-1"></i>Publish to students</button>@endif
+                    @if ($sheet->status === 'approved' && auth()->user()->can('Publish results'))<button class="btn btn-primary" name="decision" value="publish" data-confirm="Publish these results? Students will see them immediately."><i class="ri-megaphone-line me-1"></i>Publish to students</button>@endif
                     <button class="btn btn-danger" name="decision" value="return"><i class="ri-arrow-go-back-line me-1"></i>Return to lecturer</button>
                 </form></div>
             @endif

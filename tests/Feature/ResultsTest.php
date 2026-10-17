@@ -51,7 +51,7 @@ beforeEach(function () {
         return $s;
     });
 
-    $this->role = Role::create(['name' => 'Lecturer']);
+    $this->role = Role::findByName('Lecturer');
     $this->lecturer = User::factory()->create();
     $this->lecturer->assignRole('Lecturer');
     \App\Models\StaffProfile::create(['user_id' => $this->lecturer->id, 'department_id' => $this->course->department_id, 'staff_number' => 'SP/9001']);
@@ -499,4 +499,47 @@ it('reverses a graduation approval back to the students\' earlier status and kee
         ->and($list->fresh()->status)->toBe('draft')->and($op->fresh()->status)->toBe('reversed')
         ->and($op->events()->count())->toBe(2);   // the original events (one student + the list) are untouched
     $this->get(route('operations.show', $op))->assertOk()->assertSee('Graduation approval reversed')->assertSee('Approved before the Senate meeting.');
+});
+
+it('lets an approver unlock and change scores, and still return the sheet, after approving it until it is published', function () {
+    $this->actingAs($this->lecturer);
+    $this->post(route('results.sheets.save', $this->sheet->id), ['scores' => scoresFor([[25, 50], [10, 20]])]);
+    $this->post(route('results.sheets.submit', $this->sheet->id));
+
+    $hod = User::factory()->create();
+    Role::create(['name' => 'Approver'])->givePermissionTo('Approve results', 'Edit scores while approving');
+    $hod->assignRole('Approver');
+    $plain = User::factory()->create();
+    $plain->givePermissionTo('Approve results');
+
+    // Waiting at the HOD's step: the scores show locked, with a lock to click.
+    $this->actingAs($hod)->get(route('results.sheets.show', $this->sheet->id))->assertOk()
+        ->assertSee('data-lock', false)->assertSee('readonly data-lockable', false)->assertSee('Save changes');
+    $this->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'approve']);
+    expect($this->sheet->fresh()->stage->name)->toBe('Dean of Faculty');
+
+    // Already approved by them: they can still change a score; only the changed row is touched.
+    $okon = $this->students[1];
+    $this->post(route('results.sheets.correct', $this->sheet->id), ['scores' => scoresFor([[25, 50], [15, 30]]), 'note' => 'Marking error'])
+        ->assertSessionHas('success', fn ($m) => str_contains($m, 'for 1 student'));
+    $row = CourseResult::where('student_id', $okon->id)->first();
+    expect((float) $row->total)->toBe(45.0)->and($row->status)->toBe('submitted')
+        ->and($this->sheet->fresh()->status)->toBe('submitted')
+        ->and($this->sheet->events()->where('action', 'corrected')->first()->note)->toContain('Marking error')->toContain('2026/0002 30 to 45');
+
+    // Without "Edit scores while approving" the scores cannot be changed, even by an approver.
+    $this->actingAs($plain)->post(route('results.sheets.correct', $this->sheet->id), ['scores' => scoresFor([[1, 1], [1, 1]])])->assertForbidden();
+
+    // The HOD can still send it back after approving, even once it is fully approved, but not once it is published.
+    $this->actingAs($plain)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'approve']);
+    expect($this->sheet->fresh()->status)->toBe('approved');
+    $this->actingAs($hod)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'return', 'note' => 'Recheck'])->assertSessionHas('success');
+    expect($this->sheet->fresh()->status)->toBe('draft');
+
+    $this->actingAs($this->lecturer)->post(route('results.sheets.submit', $this->sheet->id));
+    $this->actingAs($hod)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'approve']);
+    $this->actingAs($plain)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'approve']);
+    $this->actingAs($this->admin)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'publish']);
+    $this->actingAs($hod)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'return', 'note' => 'Too late'])->assertSessionHas('error');
+    $this->post(route('results.sheets.correct', $this->sheet->id), ['scores' => scoresFor([[1, 1], [1, 1]])])->assertForbidden();
 });

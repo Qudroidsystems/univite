@@ -56,7 +56,7 @@ beforeEach(function () {
         return $s;
     });
 
-    $this->role = Role::create(['name' => 'Lecturer']);
+    $this->role = Role::findByName('Lecturer');
     $this->lecturer = User::factory()->create();
     $this->lecturer->assignRole('Lecturer');
     CourseAssignment::create(['user_id' => $this->lecturer->id, 'course_id' => $this->course->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id]);
@@ -148,7 +148,7 @@ it('downloads the master sheet as Excel and opens a print layout', function () {
     expect($rows[0])->toContain('BIO 101 (3) C')->toContain('CGPA')->toContain('Remark')
         ->and(collect($rows)->flatten()->implode('|'))->toContain('2026/0002')->toContain('Carry over BIO 101');
 
-    $this->get(route('results.broadsheet.print', masterQuery()))->assertOk()->assertSee('window.print()', false)->assertSee('Chairman, Senate');
+    $this->get(route('results.broadsheet.print', masterQuery()))->assertOk()->assertSee('window.print()', false)->assertSee('Dean of Faculty');
 });
 
 it('lets the head of department waive a carry-over, and withdraw the waiver', function () {

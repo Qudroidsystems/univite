@@ -25,7 +25,7 @@ class ResultSheetController extends Controller
     {
         $u = auth()->user();
 
-        return $this->results->canEnter($u, $sheet) || $u->can('View result sheets') || $this->results->canApprove($u, $sheet);
+        return $this->results->canEnter($u, $sheet) || $u->can('View result sheets') || $this->results->canReview($u, $sheet);
     }
 
     private function authorizeEntry(ResultSheet $sheet): void
@@ -37,7 +37,7 @@ class ResultSheetController extends Controller
     {
         $user = auth()->user();
         $ctx = $this->registration->context();
-        $mine = $ctx ? $user->courseAssignments()->with('course.department', 'course.studyCategory')
+        $mine = $ctx ? $user->scoringAssignments()->with('course.department', 'course.studyCategory')
             ->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
 
         $sheets = ResultSheet::with('course', 'session', 'semesterType', 'stage')->withCount('results');
@@ -49,7 +49,7 @@ class ResultSheetController extends Controller
         // Sheets waiting at a step this person signs (heads see their department's or faculty's courses).
         $waiting = (clone $sheets)->with('course.department')->where('status', 'submitted')->oldest('submitted_at')->get()
             ->filter(fn ($s) => $this->results->canApprove($user, $s))->values();
-        $mySheets = (clone $sheets)->whereIn('course_id', $user->courseAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
+        $mySheets = (clone $sheets)->whereIn('course_id', $user->scoringAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
             ->filter(fn ($s) => $this->results->canEnter($user, $s));
 
         // What each of my courses is marked on this semester: the opened sheet's scheme, or the one that applies.
@@ -98,6 +98,8 @@ class ResultSheetController extends Controller
             'rows'       => $sheet->results->sortBy(fn ($r) => $r->student->last_name . $r->student->first_name),
             'canEnter'   => $this->results->canEnter(auth()->user(), $sheet),
             'canApprove' => $this->results->canApprove(auth()->user(), $sheet),
+            'canReview'  => $this->results->canReview(auth()->user(), $sheet),
+            'canCorrect' => $this->results->canCorrect(auth()->user(), $sheet),
             'caMax'      => $caMax, 'examMax' => $examMax,
             'scheme'     => $sheet->scheme,
             'schemes'    => ($sheet->isEditable() && (auth()->user()->can('Assign assessment schemes') || auth()->user()->can('Enter results for any course')))
@@ -121,6 +123,25 @@ class ResultSheetController extends Controller
         return $problems
             ? back()->with('warning', 'Saved, except: ' . implode(' ', $problems))
             : back()->with('success', 'Scores saved.');
+    }
+
+    /** An approver's changes to the scores of a sheet they are approving or approved (each score unlocked one by one). */
+    public function correct(Request $request, ResultSheet $sheet): RedirectResponse
+    {
+        abort_unless($this->results->canCorrect($request->user(), $sheet), 403);
+        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array'], 'scores.*.total' => ['nullable'],
+            'note' => ['nullable', 'string', 'max:400']]);
+
+        try {
+            $out = $this->results->correct($sheet, Score::many($data['scores']), $request->user(), $data['note'] ?? null);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        if ($out['problems']) {
+            return back()->with('warning', ($out['changed'] ? "{$out['changed']} score(s) changed, except: " : 'Nothing changed: ') . implode(' ', $out['problems']));
+        }
+
+        return back()->with($out['changed'] ? 'success' : 'warning', $out['changed'] ? "Scores changed for {$out['changed']} student(s). The change is recorded on the sheet's history." : 'No score was changed.');
     }
 
     public function upload(Request $request, ResultSheet $sheet): RedirectResponse

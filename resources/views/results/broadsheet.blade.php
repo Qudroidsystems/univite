@@ -123,8 +123,8 @@
                     <div class="text-muted fs-11 mt-1">NR: not registered. AR: awaiting result (registered, no score yet). C: compulsory, CE: compulsory elective, E: elective. TCP: total credit points (grade point × units). TNU: total number of units. GPA = TCP ÷ TNU. Previous: before this semester. Cumulative: including this semester.</div>
 
                     <div class="row mt-5 text-center fs-12">
-                        @foreach (['Head of Department', 'Dean of Faculty', 'Chairman, Senate'] as $who)
-                            <div class="col-4"><div class="border-top mx-4 pt-1">{{ $who }}<div class="text-muted">Name, signature and date</div></div></div>
+                        @foreach ($signatories as $who)
+                            <div class="col"><div class="border-top mx-4 pt-1">{{ $who }}<div class="text-muted">Name, signature and date</div></div></div>
                         @endforeach
                     </div>
                 </div></div>

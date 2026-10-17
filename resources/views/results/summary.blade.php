@@ -66,7 +66,7 @@
                                         @if ($k === 'withdraw' && $current)
                                             @if ($waivers->has($r['student']->id))
                                                 <div class="text-success fs-12 d-print-none">Allowed to register in {{ $current->name }}</div>
-                                            @elseif (\App\Http\Controllers\Academics\AcademicRuleController::canEdit(auth()->user(), 'programme', $r['student']->programme_id))
+                                            @elseif ($canAllow($r['student']))
                                                 <form method="POST" action="{{ route('results.summary.waive', $r['student']->id) }}" class="d-flex gap-1 mt-1 d-print-none">@csrf
                                                     <input name="note" class="form-control form-control-sm" placeholder="Reason (e.g. Senate approved)" required>
                                                     <button class="btn btn-sm btn-soft-primary text-nowrap" type="submit">Allow to register in {{ $current->name }}</button></form>

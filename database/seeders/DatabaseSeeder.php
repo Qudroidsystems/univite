@@ -44,6 +44,7 @@ class DatabaseSeeder extends Seeder
                 'PermissionSeeder' => '🔐 Seeding permissions (core, then one named seeder per module)...',
             ]],
             '👤 PART 2: ROLES, HEADS AND ADMINISTRATOR' => ['always', [
+                'RoleSeeder' => '🎭 Seeding the office roles (heads, lecturer, Senate, registrar, bursar ...) and their permissions...',
                 'UserTableSeeder' => '👤 Seeding roles, head roles and the administrator account...',
             ]],
             '📚 PART 3: REFERENCE DATA (first install only)' => ['once', [

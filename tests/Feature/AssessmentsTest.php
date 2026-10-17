@@ -55,7 +55,7 @@ beforeEach(function () {
         return $s;
     });
 
-    $this->role = Role::create(['name' => 'Lecturer']);
+    $this->role = Role::findByName('Lecturer');
     $this->lecturer = User::factory()->create();
     $this->lecturer->assignRole('Lecturer');
     CourseAssignment::create(['user_id' => $this->lecturer->id, 'course_id' => $this->course->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id]);

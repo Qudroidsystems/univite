@@ -6,6 +6,9 @@
  *  - typing the overall total (data-grand) clears every assessment and both part totals; the total is saved as typed
  *  - the total and grade (from the university's grade bands on data-bands) follow, with a short highlight
  *  - the header shows how many students are complete, passed and failed, and the average
+ *  - on an approver's sheet (data-locked) every score is read-only behind a lock icon: clicking it unlocks that score,
+ *    clicking again locks it. A form holding the table (data-lock-form) will not save while a score is unlocked, and
+ *    the approval form (data-lock-guard) will not go while a score is unlocked or a change is not saved yet
  * Works on pages swapped in without a reload (uv:page) as well as on a full load.
  */
 (function () {
@@ -147,6 +150,67 @@
         var target = next && next.children[col] && next.children[col].querySelector('input');
         if (target) { target.focus(); target.select(); }
     });
+
+    /* ------------------------------------------------------------ locks (approver's changes) */
+
+    function setLock(btn, locked) {
+        var td = btn.closest('td'), input = td && td.querySelector('input[data-lockable]');
+        if (!input) { return; }
+        input.readOnly = locked;
+        td.classList.toggle('is-unlocked', !locked);
+        td.classList.remove('uv-must-lock');
+        btn.innerHTML = locked ? '<i class="ri-lock-2-line"></i>' : '<i class="ri-lock-unlock-line"></i>';
+        btn.title = locked ? 'Unlock to change this score' : 'Lock this score again';
+        btn.setAttribute('aria-label', locked ? 'Unlock' : 'Lock');
+        if (!locked) { input.focus(); input.select(); }
+    }
+
+    function unlocked(root) { return Array.prototype.slice.call((root || document).querySelectorAll('[data-locked] td.is-unlocked')); }
+
+    function changed(root) {
+        return Array.prototype.some.call((root || document).querySelectorAll('[data-locked] input[data-lockable]'), function (i) { return i.value !== i.defaultValue; });
+    }
+
+    function nudge(cells) {
+        cells.forEach(function (td) { td.classList.remove('uv-must-lock'); void td.offsetWidth; td.classList.add('uv-must-lock'); });
+        if (cells[0]) { cells[0].scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    }
+
+    function warn(title, text) {
+        if (window.Uv && window.Uv.alert) { window.Uv.alert('warning', title, text); } else { window.console && console.warn(title, text); }
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('[data-lock]');
+        if (!btn) { return; }
+        e.preventDefault();
+        setLock(btn, btn.closest('td').classList.contains('is-unlocked'));
+    });
+
+    // Runs before the page's own submit handling (capture), which skips a submit already stopped here.
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!(form instanceof HTMLFormElement)) { return; }
+        if (form.hasAttribute('data-lock-form')) {
+            var open = unlocked(form);
+            if (open.length) {
+                e.preventDefault(); e.stopImmediatePropagation();
+                nudge(open);
+                warn('Lock the scores first', open.length + ' score(s) are still unlocked. Click each open lock to lock it, then save.');
+            } else if (!changed(form)) {
+                e.preventDefault(); e.stopImmediatePropagation();
+                warn('Nothing to save', 'No score has been changed. Unlock a score, change it and lock it again first.');
+            }
+        } else if (form.hasAttribute('data-lock-guard')) {
+            var still = unlocked();
+            if (still.length || changed()) {
+                e.preventDefault(); e.stopImmediatePropagation();
+                if (still.length) { nudge(still); }
+                warn(still.length ? 'Lock the scores first' : 'Save your changes first',
+                    still.length ? 'Lock every score you unlocked and save your changes before you decide on this sheet.' : 'You changed scores on this sheet. Click Save changes before you decide on it.');
+            }
+        }
+    }, true);
 
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', function () { init(); }); } else { init(); }
     document.addEventListener('uv:page', function () { init(); });

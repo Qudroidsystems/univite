@@ -16,35 +16,14 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Academic rules per scope. "Edit academic rules" edits any scope; "Edit department academic rules" lets a head of
- * department or department administrator edit their department and its programmes, and a dean their faculty and
- * everything in it.
+ * Academic rules per scope. "Edit academic rules" edits any scope. "Edit department academic rules" held through a
+ * role for a department or faculty (heads get theirs automatically) edits that department and its programmes, or the
+ * faculty and everything in it; held outright, it lets a department's administrators edit that department.
  */
 class AcademicRuleController extends Controller
 {
-    public function __construct(private AcademicRules $rules, private \App\Services\OperationAudit $audit)
+    public function __construct(private AcademicRules $rules, private \App\Services\OperationAudit $audit, private \App\Services\Access\AcademicRuleAccess $access, private \App\Services\Access\ScopedAccess $scoped)
     {
-    }
-
-    /** Can this user change the rules of this scope? */
-    public static function canEdit(User $user, string $type, ?int $id): bool
-    {
-        if ($user->can('Edit academic rules')) {
-            return true;
-        }
-        if (! $user->can('Edit department academic rules') || $type === 'university' || ! $id) {
-            return false;
-        }
-
-        $department = match ($type) {
-            'department' => Department::find($id),
-            'programme' => Programme::find($id)?->department,
-            default => null,
-        };
-        $faculty = $type === 'faculty' ? Faculty::find($id) : $department?->faculty;
-
-        return ($faculty && $faculty->dean_id === $user->id)
-            || ($department && ($department->hod_id === $user->id || $department->admins()->whereKey($user->id)->exists()));
     }
 
     /** [value "type:id" => label] of the scopes the page offers this user, grouped. */
@@ -57,7 +36,7 @@ class AcademicRuleController extends Controller
         }
         foreach ([['Faculties', 'faculty', Faculty::orderBy('name')->get()], ['Departments', 'department', Department::orderBy('name')->get()], ['Programmes', 'programme', Programme::orderBy('name')->get()]] as [$label, $type, $rows]) {
             foreach ($rows as $r) {
-                if ($all || self::canEdit($user, $type, $r->id)) {
+                if ($all || $this->access->canEdit($user, $type, $r->id)) {
                     $groups[$label]["{$type}:{$r->id}"] = $r->name;
                 }
             }
@@ -84,7 +63,8 @@ class AcademicRuleController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        abort_unless($user->canAny(['View academic rules', 'Edit academic rules', 'Edit department academic rules']), 403);
+        abort_unless($user->canAny(['View academic rules', 'Edit academic rules', 'Edit department academic rules'])
+            || ! $this->scoped->held($user, 'Edit department academic rules')->isEmpty(), 403);
         $options = $this->scopeOptions($user);
         [$type, $id, $level, $sem] = $this->scopeFrom($request, $user, $options);
         $term = $level || $sem;
@@ -105,7 +85,7 @@ class AcademicRuleController extends Controller
 
         $department = $type === 'department' ? Department::with('admins', 'hod')->find($id) : null;
         $programme = $type === 'programme' ? Programme::with('studyCategory')->find($id) : null;
-        $canEdit = self::canEdit($user, $type, $id ?: null);
+        $canEdit = $this->access->canEdit($user, $type, $id ?: null);
 
         return view('academics.rules', [
             'pagetitle' => 'Academic rules', 'options' => $options, 'type' => $type, 'id' => $id, 'level' => $level, 'sem' => $sem,
@@ -124,7 +104,7 @@ class AcademicRuleController extends Controller
         $type = $request->input('scope');
         $id = (int) $request->input('id', 0);
         abort_unless(in_array($type, array_keys(AcademicRules::SCOPES), true), 404);
-        abort_unless(self::canEdit($user, $type, $id ?: null), 403);
+        abort_unless($this->access->canEdit($user, $type, $id ?: null), 403);
         $level = $request->filled('level') ? (int) $request->input('level') : null;
         $sem = $request->filled('semester_type_id') ? (int) $request->input('semester_type_id') : null;
         $term = $level || $sem;
@@ -178,7 +158,7 @@ class AcademicRuleController extends Controller
     /** Assign a course adviser to one level of a programme (by whoever may edit that programme's rules). */
     public function addAdviser(Request $request, Programme $programme): RedirectResponse
     {
-        abort_unless(self::canEdit($request->user(), 'programme', $programme->id), 403);
+        abort_unless($this->access->canEdit($request->user(), 'programme', $programme->id), 403);
         $d = $request->validate(['level' => ['required', 'integer', Rule::in($programme->levels())], 'user_id' => ['required', 'exists:users,id']]);
         \App\Models\CourseAdviser::firstOrCreate(['programme_id' => $programme->id, 'level' => $d['level'], 'user_id' => $d['user_id']]);
 
@@ -187,7 +167,7 @@ class AcademicRuleController extends Controller
 
     public function removeAdviser(Request $request, \App\Models\CourseAdviser $adviser): RedirectResponse
     {
-        abort_unless(self::canEdit($request->user(), 'programme', $adviser->programme_id), 403);
+        abort_unless($this->access->canEdit($request->user(), 'programme', $adviser->programme_id), 403);
         $adviser->delete();
 
         return back()->with('success', 'Course adviser removed.');

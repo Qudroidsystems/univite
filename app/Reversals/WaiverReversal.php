@@ -2,15 +2,21 @@
 
 namespace App\Reversals;
 
-use App\Http\Controllers\Academics\AcademicRuleController;
 use App\Models\OperationBatch;
 use App\Models\RegistrationForm;
 use App\Models\StandingWaiver;
 use App\Models\User;
+use App\Services\Access\AcademicRuleAccess;
+use App\Services\OperationAudit;
 
 /** Withdraw an allowance that let a student on probation or advised to withdraw register for a session. */
 class WaiverReversal extends BaseReversal
 {
+    public function __construct(OperationAudit $audit, private AcademicRuleAccess $rules)
+    {
+        parent::__construct($audit);
+    }
+
     public function title(OperationBatch $op): string
     {
         return 'Withdraw this allowance';
@@ -20,7 +26,7 @@ class WaiverReversal extends BaseReversal
     {
         $waiver = $this->subject($op, StandingWaiver::class);
 
-        return $waiver && AcademicRuleController::canEdit($user, 'programme', $waiver->student?->programme_id);
+        return $waiver && $this->rules->canEdit($user, 'programme', $waiver->student?->programme_id);
     }
 
     public function plan(OperationBatch $op, ?string $mode = null): ReversalPlan

@@ -60,6 +60,12 @@ class User extends Authenticatable
         return $this->hasMany(CourseAssignment::class);
     }
 
+    /** The courses this person enters scores for: those defined for them, when they hold "Enter results for assigned courses". */
+    public function scoringAssignments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->courseAssignments()->when(! $this->can(\App\Services\Access\LecturerRole::PERMISSION), fn ($q) => $q->whereRaw('1 = 0'));
+    }
+
     public function staffProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(StaffProfile::class);

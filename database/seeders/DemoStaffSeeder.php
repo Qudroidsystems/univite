@@ -13,11 +13,8 @@ use App\Models\StaffProfile;
 use App\Models\Unit;
 use App\Models\User;
 use App\Services\Access\HeadRoles;
-use App\Support\PermissionCatalog;
 use Database\Seeders\Demo\DemoPeople;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
@@ -36,18 +33,6 @@ class DemoStaffSeeder extends Seeder
 
         return $hash ??= \Illuminate\Support\Facades\Hash::make(self::PASSWORD);
     }
-
-    /** Role => permission groups from the catalog it gets. */
-    private const ROLES = [
-        'Registrar' => ['Applicants', 'Application settings', 'Students', 'Clearance', 'Matric numbers', 'Course registrations', 'Student results', 'Graduation lists', 'Academic sessions', 'Staff leave'],
-        'Bursar' => ['Bill items', 'School bills', 'Invoices & payments'],
-        'HR Officer' => ['Staff records', 'Staff leave', 'Units', 'Payroll'],
-        'Librarian' => ['Library'],
-        'Hostel Officer' => ['Accommodation'],
-        'Medical Officer' => ['Health & clinic'],
-        'Exams Officer' => ['Timetables', 'Examination seating', 'Venues'],
-        'Lecturer' => [],
-    ];
 
     /** [title, unit, designation, role, grade on CONTISS] */
     private const OFFICERS = [
@@ -68,12 +53,8 @@ class DemoStaffSeeder extends Seeder
         $conuass = SalaryStructure::where('code', 'CONUASS')->first();
         $contiss = SalaryStructure::where('code', 'CONTISS')->first();
 
-        foreach (self::ROLES as $name => $groups) {
-            $role = Role::firstOrCreate(['name' => $name, 'guard_name' => 'web'], ['badge' => 'badge bg-secondary']);
-            $names = collect($groups)->flatMap(fn ($g) => collect(PermissionCatalog::groups()[$g]['permissions'] ?? [])->pluck(0))
-                ->merge($name === 'Lecturer' ? ['View result sheets', 'View course assignments'] : [])->all();
-            $role->givePermissionTo(Permission::whereIn('name', $names)->get());
-        }
+        // The office roles (Registrar, Bursar, Lecturer ...) and their permissions come from RoleSeeder.
+        $this->call(RoleSeeder::class);
         $registrar->forgetCachedPermissions();
 
         $make = function (string $title, string $designation, string $category, ?int $deptId, ?int $unitId, ?SalaryStructure $structure, int $grade, ?string $gender = null) use ($people, &$n) {

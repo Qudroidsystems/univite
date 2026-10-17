@@ -250,8 +250,10 @@ class PermissionCatalog
                 'about' => 'Course score sheets: lecturers enter or upload CA and exam scores, then the sheet is approved step by step and published to students.',
                 'permissions' => [
                     ['View result sheets', 'View', 'See every course score sheet and where it is in the approval chain, even for courses you do not teach.'],
+                    ['Enter results for assigned courses', 'Manage', 'Enter, upload and submit scores for the courses defined (assigned) to you under Define Courses. Give this to lecturers.'],
                     ['Enter results for any course', 'Manage', 'Enter, upload and submit scores for any course, not only the ones you are assigned to. Give this to the exams officer.'],
                     ['Approve results', 'Manage', 'Approve or return a score sheet waiting at your approval step (the role set on each step decides which steps are yours).'],
+                    ['Edit scores while approving', 'Manage', 'Change a student\'s scores on a sheet you are approving or have already approved, before it is published. Each score stays locked until you unlock it, and every change is recorded on the sheet\'s history.'],
                     ['Approve results for any stage', 'Manage', 'Approve or return a score sheet at any step of the chain, whatever role the step asks for.'],
                     ['Amend published results', 'Manage', 'Correct a single student\'s score on a published sheet. A reason is required and the old and new scores are recorded on the sheet\'s history.'],
                     ['Withdraw published results', 'Manage', 'Formally withdraw a published score sheet (for example when Senate sets it aside) after a preview. Scores are kept, students are emailed, and the sheet can be published again. Not allowed once a student on it has graduated.'],

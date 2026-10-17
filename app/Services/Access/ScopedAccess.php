@@ -22,11 +22,13 @@ class ScopedAccess
         'View course registrations' => 'Course registration forms of those students',
         'Approve course registrations' => 'Approving or returning those forms',
         'Approve results' => 'Approving score sheets of courses the department or faculty owns, at the steps the role signs',
+        'Edit scores while approving' => 'Changing scores on those score sheets while approving them, before they are published',
         'Waive carryover courses' => 'Waiving carry-overs of those students',
         'View leave applications' => 'Leave of staff in the department, faculty or unit',
         'View staff records' => 'Records of staff in the department, faculty or unit (pay details stay hidden)',
         'Compute results' => 'Computing results of the department\'s students and printing its master marks sheet',
         'Define courses for lecturers' => 'Defining (assigning) the department\'s courses to its lecturers',
+        'Edit department academic rules' => 'Changing the academic rules of the department and its programmes, or of the faculty and everything in it',
     ];
 
     /** @var array<string, AccessScope> */
@@ -54,6 +56,24 @@ class ScopedAccess
         }
 
         return false;
+    }
+
+    /** Faculties where the person holds the permission through a role held for the whole faculty. @return int[] */
+    public function faculties(?User $user, string $permission): array
+    {
+        if (! $user || ! array_key_exists($permission, self::SCOPABLE)) {
+            return [];
+        }
+
+        return ScopedRole::with('role.permissions')->where('user_id', $user->id)->where('scope_type', 'faculty')->get()
+            ->filter(fn ($r) => $r->role && $r->role->permissions->contains('name', $permission))
+            ->pluck('scope_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /** Where the person holds the permission through roles held for a faculty, department or unit only (ignoring roles held outright). */
+    public function held(?User $user, string $permission): AccessScope
+    {
+        return $user ? $this->resolve($user, $permission) : AccessScope::nothing();
     }
 
     public function forget(): void

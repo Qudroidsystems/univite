@@ -321,6 +321,29 @@ The search box opens with **Ctrl+K** (⌘K on a Mac) or **/**. It finds pages as
 
 `PermissionSeeder` seeds every permission (`php artisan db:seed --class=PermissionSeeder`). It applies renames, seeds the core groups (dashboard, users, roles, permissions) and then calls one named seeder per module: `InstitutionPermissionSeeder`, `AcademicSetupPermissionSeeder`, `CourseRegistrationPermissionSeeder`, `ResultPermissionSeeder`, `AdmissionPermissionSeeder`, `FinancePermissionSeeder`, `VenueTimetablePermissionSeeder`, `StaffPermissionSeeder`, `PayrollPermissionSeeder`, `LeavePermissionSeeder`, `MessagingPermissionSeeder`, `PollPermissionSeeder`, `IdCardPermissionSeeder`, `LibraryPermissionSeeder`, `HealthPermissionSeeder`, `AccommodationPermissionSeeder` and `TeachingPracticePermissionSeeder`. Each one can also run on its own. The names, groups and descriptions live in `App\Support\PermissionCatalog` (which the role editor also reads); a test fails if a catalog group has no named seeder. `PermissionTableSeeder` is kept as an alias of `PermissionSeeder`.
 
+## Roles are data, permissions decide
+
+No page checks a role's name; every check is a permission (Super Admin passes all of them). Roles are bundles of permissions an administrator can rename or change on the Roles page.
+
+`RoleSeeder` (runs with `php artisan db:seed`, or `--class=RoleSeeder`) creates the usual offices with their permissions: Head of Department, Dean, Head of Unit, Lecturer, Senate, Registrar, Bursar, HR Officer, Exams Officer, Librarian, Hostel Officer and Medical Officer (`RoleSeeder::ROLES`). A missing role is created; each default permission is given once (remembered in the `roles.seeded` setting), so one taken away on the Roles page stays away, while permissions added in an update still arrive.
+
+Who gets them:
+- **Heads.** Naming a head of department, dean or head of unit gives that person the head role *for that department, faculty or unit only* (Scoped Roles & Heads; the role names are settings). Heads can do only what the role's permissions allow, and only there. The same role can be given to anyone else for an area on that page (an acting head, a department administrator).
+- **Lecturers.** Entering scores needs "Enter results for assigned courses" plus the course defined for you (Define Courses), or "Enter results for any course". Defining a course for someone who lacks the permission gives them the Lecturer role (setting `courses.lecturer_role`, blank to turn off); `RoleSeeder` does the same for everyone who already has courses.
+- **Result approval** steps name the role that signs each step (Result Approval Steps); the master sheet's signature lines are those steps.
+- **Officers** (registrar, bursar ...) are given their roles on the Users page; the sample data does this for its staff.
+
+## Approvers can still return or change a score sheet
+
+Until a sheet is published, whoever approves it can send it back to the lecturer, even after they have approved it
+and it has moved to a later step or is fully approved. People who publish results can return an approved sheet too.
+
+Approvers who also hold **Edit scores while approving** (Head of Department, Dean and Senate get it from RoleSeeder,
+held for their own department or faculty) see the scores in their fields, each behind a small lock. Clicking the lock
+unlocks that score; clicking it again locks it. The page will not save while any score is unlocked, and the approval
+buttons will not work while a change is unlocked or unsaved. Only the students whose marks changed are touched; the
+old and new totals and the reason go on the sheet's history and the operations log. The sheet keeps its step.
+
 ## Mobile app API and push notifications
 
 - The mobile app talks to `/api/v1` with a token from `POST /api/v1/auth/login` (Laravel Sanctum). Students sign in with a matric number or email. The full list of routes and the push payload is in [docs/MOBILE_API.md](docs/MOBILE_API.md).

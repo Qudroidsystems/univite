@@ -81,6 +81,8 @@ class MasterSheetController extends Controller
 
         return view('results.broadsheet', [
             'pagetitle' => 'Master sheet', 'sheet' => $sheet, 'q' => $q, 'print' => $print,
+            // one signature line per approval step, as set under Result Approval Steps
+            'signatories' => \App\Models\ResultStage::chain()->pluck('name')->whenEmpty(fn ($c) => $c->push('Approved by'))->all(),
             'approvable' => $sheet ? $this->sheets->approvable($sheet, $user) : collect(),
             'publishable' => $sheet ? $this->sheets->publishable($sheet, $user) : collect(),
             'shared' => $sheet ? $this->sheets->sharedCourses($sheet) : collect(),

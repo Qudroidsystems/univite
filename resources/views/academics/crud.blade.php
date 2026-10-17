@@ -140,8 +140,9 @@
             <input type="hidden" name="_form_mode" value="{{ old('_form_mode', 'create') }}" id="crud-mode">
             <input type="hidden" name="_form_id" value="{{ old('_form_id') }}" id="crud-id">
 
-            <div class="modal-header bg-light">
-                <h5 class="modal-title" id="crud-title">Add {{ $singular }}</h5>
+            <div class="modal-header" id="crud-head">
+                <h5 class="modal-title"><i class="{{ $icon }} me-2"></i><span id="crud-title">Add {{ $singular }}</span>
+                    <span class="uv-modal-sub" id="crud-sub">Fill in the details below. Fields marked * are required.</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
@@ -230,6 +231,8 @@
         document.getElementById('crud-mode').value   = mode;
         document.getElementById('crud-id').value     = id || '';
         document.getElementById('crud-title').textContent = (editing ? 'Edit ' : 'Add ') + singular;
+        document.getElementById('crud-head').classList.toggle('is-edit', editing);
+        document.getElementById('crud-sub').textContent = editing ? 'Change what you need and save. Fields marked * are required.' : 'Fill in the details below. Fields marked * are required.';
         form.querySelectorAll('[data-only]').forEach(el => {
             const show = el.dataset.only === (editing ? 'edit' : 'create');
             el.style.display = show ? '' : 'none';

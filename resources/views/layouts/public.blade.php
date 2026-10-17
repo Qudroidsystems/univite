@@ -17,6 +17,7 @@
     <link href="{{ asset('theme/layouts/assets/css/icons.min.css') }}" rel="stylesheet">
     <link href="{{ asset('theme/layouts/assets/css/app.min.css') }}" rel="stylesheet">
     <link href="{{ asset('theme/layouts/assets/css/custom.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/univite-forms.css') }}?v={{ @filemtime(public_path('css/univite-forms.css')) }}" rel="stylesheet">
     <style>
         body { background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%, #e0f2fe 100%); min-height: 100vh; }
         .pub-card { border: 0; border-radius: 14px; box-shadow: 0 8px 30px rgba(64, 81, 137, .10); }
@@ -49,6 +50,7 @@
 <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
 <script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
+<script src="{{ asset('js/univite-select.js') }}?v={{ @filemtime(public_path('js/univite-select.js')) }}"></script>
 <div id="uv-page-scripts">
 @stack('scripts')
 </div>

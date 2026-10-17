@@ -344,6 +344,17 @@ unlocks that score; clicking it again locks it. The page will not save while any
 buttons will not work while a change is unlocked or unsaved. Only the students whose marks changed are touched; the
 old and new totals and the reason go on the sheet's history and the operations log. The sheet keeps its step.
 
+## Searchable dropdowns and the add / edit form look
+
+Every `<select>` in the portal and the application pages opens as a searchable list (public/js/univite-select.js,
+styles in public/css/univite-forms.css). Typing narrows the list; arrows, Enter and Esc work; lists with several
+choices show ticks and chips. The real select stays in the form, so `change` handlers, required checks, filters that
+submit on change and lists that load when opened (`data-lookup`) work as before. Add `data-no-search` to a select (or
+a container) to keep the browser's own dropdown.
+
+Every Bootstrap modal uses the same add / edit look: a coloured header (green when editing on the setup pages), small
+upper-case labels, rounded fields and gradient buttons. New add / edit forms get it by being a `.modal`.
+
 ## Mobile app API and push notifications
 
 - The mobile app talks to `/api/v1` with a token from `POST /api/v1/auth/login` (Laravel Sanctum). Students sign in with a matric number or email. The full list of routes and the push payload is in [docs/MOBILE_API.md](docs/MOBILE_API.md).

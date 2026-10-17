@@ -89,7 +89,8 @@ class MasterSheets
             $passedEver = $mine->where('is_pass', true)->pluck('course_id')->flip();
             $failed = $latest->filter(fn ($r) => ! $r->is_pass && $r->grade !== null && ! $passedEver->has($r->course_id));
             $carryovers = $failed->reject(fn ($r) => $waived->has($r->course_id))->map(fn ($r) => $r->course->code)->sort()->values();
-            $missing = $byStudent->get($s->id, collect())->reject(fn ($c) => $term->has($c->course_id))->count();
+            $outstanding = $byStudent->get($s->id, collect())->reject(fn ($c) => $term->has($c->course_id))->map(fn ($c) => $c->course->code)->sort()->values();
+            $missing = $outstanding->count();
 
             $bucket = match (true) {
                 $missing > 0 => 'incomplete',
@@ -109,9 +110,8 @@ class MasterSheets
             return new MasterSheetRow(
                 student: $s,
                 results: $term,
-                tcr: (int) $term->sum('credit_units'),
-                tce: (int) $term->where('is_pass', true)->sum('credit_units'),
-                tgp: round($graded->sum(fn ($r) => $r->points * $r->credit_units), 2),
+                tcp: round($graded->sum(fn ($r) => $r->points * $r->credit_units), 2),
+                tnu: (int) $graded->sum('credit_units'),
                 gpa: GradeScale::gpa($term),
                 previousUnits: $previous->units,
                 previousPoints: $previous->tcp,
@@ -123,6 +123,7 @@ class MasterSheets
                 waived: $waived->map(fn ($w) => $w->course->code)->sort()->values(),
                 standing: $cumulative->standing,
                 missing: $missing,
+                outstanding: $outstanding,
                 remark: $remark,
                 bucket: $bucket,
             );
@@ -218,7 +219,7 @@ class MasterSheets
         foreach ($sheet->courses as $c) {
             $head[] = "{$c->course->code} ({$c->course->credit_units})";
         }
-        array_push($head, 'TCR', 'TCE', 'TGP', 'GPA', 'Previous CTCR', 'Previous CTGP', 'Previous CGPA', 'CTCR', 'CTGP', 'CGPA', 'Remark');
+        array_push($head, 'Present TCP', 'Present TNU', 'GPA', 'Previous TCP', 'Previous TNU', 'Previous CGPA', 'Cumulative TCP', 'Cumulative TNU', 'CGPA', 'Outstanding results', 'Remark');
 
         $table = [$head];
         foreach ($sheet->rows->values() as $i => $r) {
@@ -227,15 +228,15 @@ class MasterSheets
                 $x = $r->results->get($c->course->id);
                 $line[] = $x ? self::score($x->total) . ' ' . $x->grade : '';
             }
-            array_push($line, $r->tcr, $r->tce, $r->tgp, round($r->gpa, 2), $r->previousUnits, $r->previousPoints, round($r->previousCgpa, 2),
-                $r->cumulativeUnits, $r->cumulativePoints, round($r->cgpa, 2), $r->remark . ($r->waived->isNotEmpty() ? ' (waived: ' . $r->waived->implode(', ') . ')' : ''));
+            array_push($line, $r->tcp, $r->tnu, round($r->gpa, 2), $r->previousPoints, $r->previousUnits, round($r->previousCgpa, 2),
+                $r->cumulativePoints, $r->cumulativeUnits, round($r->cgpa, 2), $r->outstanding->implode(', '), $r->remark . ($r->waived->isNotEmpty() ? ' (waived: ' . $r->waived->implode(', ') . ')' : ''));
             $table[] = $line;
         }
 
         $notes = [
             $sheet->title(),
             $sheet->provisional ? 'Includes results still going through approval; students only see published results.' : 'Published results only.',
-            'TCR: units registered this semester. TCE: units passed. TGP: grade points. CTCR / CTGP: the same, cumulative.',
+            'TCP: total credit points (grade point x units). TNU: total number of units. GPA = TCP / TNU. Previous: before this semester; cumulative: including it.',
             '',
             'Where each course is:',
         ];
@@ -251,7 +252,7 @@ class MasterSheets
         foreach ($sheet->courses as $c) {
             $widths[] = 11;
         }
-        array_push($widths, 6, 6, 8, 6, 9, 9, 9, 7, 8, 7, 40);
+        array_push($widths, 9, 9, 6, 9, 9, 9, 11, 11, 7, 30, 40);
 
         return Xlsx::write($table, 'Master sheet', ['widths' => $widths, 'notes' => $notes, 'notes_title' => 'About this master sheet', 'notes_sheet' => 'About',
             'letterhead' => Institution::letterhead([$sheet->title(), $sheet->provisional ? 'Provisional: includes results still going through approval' : 'Published results']),

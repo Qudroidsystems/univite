@@ -79,12 +79,12 @@
                         <thead class="table-light">
                             <tr><th rowspan="2">S/N</th><th rowspan="2" class="text-start">Matric no.</th><th rowspan="2" class="text-start">Name</th>
                                 @if ($sheet->courses->isNotEmpty())<th colspan="{{ $sheet->courses->count() }}" class="uv-group">Courses (score and grade)</th>@endif
-                                <th colspan="4" class="uv-group">This semester</th><th colspan="3" class="uv-group">Previous</th><th colspan="3" class="uv-group">Cumulative</th><th rowspan="2" class="uv-group text-start">Remark</th></tr>
+                                <th colspan="3" class="uv-group">Present</th><th colspan="3" class="uv-group">Previous</th><th colspan="3" class="uv-group">Cumulative</th><th rowspan="2" class="uv-group text-start">Outstanding results</th><th rowspan="2" class="uv-group text-start">Remark</th></tr>
                             <tr>
                                 @foreach ($sheet->courses as $i => $c)<th class="{{ $i === 0 ? 'uv-group' : '' }}" title="{{ $c->course->title }}">{{ $c->course->code }}<div class="fw-normal">{{ $c->course->credit_units }}u</div></th>@endforeach
-                                <th class="uv-group">TCR</th><th>TCE</th><th>TGP</th><th>GPA</th>
-                                <th class="uv-group">CTCR</th><th>CTGP</th><th>CGPA</th>
-                                <th class="uv-group">CTCR</th><th>CTGP</th><th>CGPA</th>
+                                <th class="uv-group">TCP</th><th>TNU</th><th>GPA</th>
+                                <th class="uv-group">TCP</th><th>TNU</th><th>CGPA</th>
+                                <th class="uv-group">TCP</th><th>TNU</th><th>CGPA</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,9 +94,10 @@
                                     @php $x = $r->results->get($c->course->id); @endphp
                                     <td class="{{ $i === 0 ? 'uv-group' : '' }} {{ $x && ! $x->is_pass ? 'text-danger fw-semibold' : '' }}">{{ $x ? $score($x->total) . ' ' . $x->grade : '' }}</td>
                                 @endforeach
-                                <td class="uv-group">{{ $r->tcr }}</td><td>{{ $r->tce }}</td><td>{{ $score($r->tgp) }}</td><td class="fw-semibold">{{ number_format($r->gpa, 2) }}</td>
-                                <td class="uv-group">{{ $r->previousUnits }}</td><td>{{ $score($r->previousPoints) }}</td><td>{{ number_format($r->previousCgpa, 2) }}</td>
-                                <td class="uv-group">{{ $r->cumulativeUnits }}</td><td>{{ $score($r->cumulativePoints) }}</td><td class="fw-semibold">{{ number_format($r->cgpa, 2) }}</td>
+                                <td class="uv-group">{{ $score($r->tcp) }}</td><td>{{ $r->tnu }}</td><td class="fw-semibold">{{ number_format($r->gpa, 2) }}</td>
+                                <td class="uv-group">{{ $score($r->previousPoints) }}</td><td>{{ $r->previousUnits }}</td><td>{{ number_format($r->previousCgpa, 2) }}</td>
+                                <td class="uv-group">{{ $score($r->cumulativePoints) }}</td><td>{{ $r->cumulativeUnits }}</td><td class="fw-semibold">{{ number_format($r->cgpa, 2) }}</td>
+                                <td class="uv-group text-start text-warning" style="min-width:120px">{{ $r->outstanding->implode(', ') ?: '—' }}</td>
                                 <td class="uv-group text-start {{ in_array($r->bucket, ['withdraw', 'probation'], true) ? 'text-danger' : ($r->bucket === 'carryover' ? 'text-warning' : '') }}">{{ $r->remark }}@if ($r->waived->isNotEmpty())<div class="text-muted">Waived: {{ $r->waived->implode(', ') }}</div>@endif</td></tr>
                         @empty
                             <tr><td colspan="{{ 14 + $sheet->courses->count() }}" class="text-muted py-4">No student of this programme and level has an approved registration for this semester.</td></tr>
@@ -108,7 +109,7 @@
                         <div><strong>{{ $sheet->rows->count() }}</strong> students</div>
                         @foreach (\App\Data\Results\MasterSheet::BUCKETS as $k => $label)<div>{{ $label }}: <strong>{{ $sheet->counts()[$k] }}</strong></div>@endforeach
                     </div>
-                    <div class="text-muted fs-11 mt-1">TCR: units registered. TCE: units passed. TGP: grade points. CTCR and CTGP: the same totals, cumulative. Previous: before this semester.</div>
+                    <div class="text-muted fs-11 mt-1">TCP: total credit points (grade point × units). TNU: total number of units. GPA = TCP ÷ TNU. Previous: before this semester. Cumulative: including this semester.</div>
 
                     <div class="row mt-5 text-center fs-12">
                         @foreach (['Head of Department', 'Dean of Faculty', 'Chairman, Senate'] as $who)

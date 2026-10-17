@@ -108,8 +108,10 @@ it('shows the master sheet with results still going through approval, which stud
     submitSheet();
 
     $this->actingAs($this->hod)->get(route('results.broadsheet', masterQuery()))->assertOk()
-        ->assertSee('At Head of Department')->assertSee('75 A')->assertSee('30 F')->assertSee('Carry over BIO 101')->assertSee('Provisional');
-    $this->get(route('results.broadsheet', masterQuery() + ['published_only' => 1]))->assertOk()->assertDontSee('75 A');
+        ->assertSee('At Head of Department')->assertSee('75 A')->assertSee('30 F')->assertSee('Carry over BIO 101')->assertSee('Provisional')
+        ->assertSee('TCP')->assertSee('TNU')->assertDontSee('TCR')->assertSee('Outstanding results');
+    $published = $this->get(route('results.broadsheet', masterQuery() + ['published_only' => 1]))->assertOk()->assertDontSee('75 A');
+    expect($published->viewData('sheet')->rows->first()->outstanding->all())->toContain('BIO 101');
 
     $this->actingAs($this->otherHod)->get(route('results.broadsheet', masterQuery()))->assertForbidden();
     $this->actingAs($this->students[0]->user)->get(route('results.broadsheet', masterQuery()))->assertForbidden();

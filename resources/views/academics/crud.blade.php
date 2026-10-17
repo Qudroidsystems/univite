@@ -261,12 +261,12 @@
     form.addEventListener('change', applyShowWhen);
 
     document.getElementById('btn-add')?.addEventListener('click', () => {
-        resetForm(); setMode('create'); applyShowWhen(); modal.show();
+        touched.clear(); clearLive(); resetForm(); setMode('create'); applyShowWhen(); modal.show();
     });
 
     document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => {
         const rec = JSON.parse(btn.dataset.record);
-        resetForm(); setMode('edit', rec.id);
+        touched.clear(); clearLive(); resetForm(); setMode('edit', rec.id);
         Object.entries(rec).forEach(([key, val]) => {
             if (key.endsWith('__file')) {
                 const note = form.querySelector('[data-file-for="' + key.slice(0, -6) + '"]');
@@ -281,6 +281,54 @@
         });
         applyShowWhen(); modal.show();
     }));
+
+    // Check the form as it is filled in: the server runs the same rules a save would (duplicates included) and
+    // nothing is saved. A field shows its problem once it has a value or has been touched.
+    const touched = new Set();
+    const submitBtn = document.getElementById('crud-submit');
+    let timer = null, seq = 0;
+    function fieldOf(name) { return form.querySelector('[name="' + name + '"]:not([type=hidden])') || form.querySelector('[name="' + name + '"]'); }
+    function clearLive() {
+        form.querySelectorAll('.uv-live-error').forEach(el => el.remove());
+        form.querySelectorAll('.is-invalid[data-live]').forEach(el => { el.classList.remove('is-invalid'); el.removeAttribute('data-live'); el.dispatchEvent(new Event('uv:invalid-changed')); });
+        submitBtn.disabled = false; submitBtn.removeAttribute('title');
+    }
+    function showLive(errors) {
+        clearLive();
+        let shown = 0;
+        Object.entries(errors).forEach(([name, msgs]) => {
+            const input = fieldOf(name.split('.')[0]);
+            if (!input || input.disabled || input.type === 'file') return;
+            const filled = input.type === 'checkbox' ? true : String(input.value ?? '').trim() !== '';
+            if (!filled && !touched.has(input.name)) return;
+            input.classList.add('is-invalid'); input.setAttribute('data-live', '1');
+            const box = input.closest('[class*="col-"]');
+            if (box && !box.querySelector('.invalid-feedback:not(.uv-live-error)')) {
+                const div = document.createElement('div');
+                div.className = 'invalid-feedback d-block uv-live-error';
+                div.innerHTML = '<i class="ri-error-warning-line me-1"></i>' + String(msgs[0]).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+                box.appendChild(div);
+            }
+            shown++;
+        });
+        if (shown) { submitBtn.disabled = true; submitBtn.title = 'Fix the highlighted fields first'; }
+        if (window.UvSelect) { form.querySelectorAll('select').forEach(el => window.UvSelect.refresh(el)); }
+    }
+    function check() {
+        const data = new FormData(form);
+        form.querySelectorAll('input[type=file]').forEach(f => data.delete(f.name));
+        const mine = ++seq;
+        fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin',
+            headers: { 'X-Uv-Check': '1', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.status === 422 ? r.json() : (r.ok ? { errors: {} } : null))
+            .then(out => { if (out && mine === seq && modalEl.classList.contains('show')) { showLive(out.errors || {}); } })
+            .catch(() => {});
+    }
+    function soon(delay) { clearTimeout(timer); timer = setTimeout(check, delay); }
+    form.addEventListener('change', e => { if (e.target.name) touched.add(e.target.name); soon(150); });
+    form.addEventListener('input', e => { if (e.target.name && e.target.tagName !== 'SELECT') { touched.add(e.target.name); soon(450); } });
+    modalEl.addEventListener('shown.bs.modal', () => { if (document.getElementById('crud-mode').value === 'edit') soon(0); });
+    modalEl.addEventListener('hidden.bs.modal', () => { touched.clear(); seq++; clearLive(); });
 
     // Re-open the modal after a failed validation.
     @if ($errors->any() && $hasOld)

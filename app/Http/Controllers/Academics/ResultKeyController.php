@@ -37,7 +37,11 @@ class ResultKeyController extends CrudController
     protected function rules(Request $request, ?Model $record): array
     {
         return $this->scopeRules($request) + [
-            'code' => ['required', 'string', 'max:12'],
+            'code' => ['required', 'string', 'max:12', function ($attr, $value, $fail) use ($request, $record) {
+                if (ResultKey::sameScope(...$this->scopeInput($request))->when($record, fn ($q) => $q->where('id', '!=', $record->id))->where('code', $value)->exists()) {
+                    $fail("{$value} is already in this set. Edit that one instead.");
+                }
+            }],
             'min_gpa' => ['required', 'numeric', 'between:0,10'],
             'max_gpa' => ['required', 'numeric', 'between:0,10', 'gte:min_gpa', function ($attr, $value, $fail) use ($request, $record) {
                 $overlap = ResultKey::sameScope(...$this->scopeInput($request))->when($record, fn ($q) => $q->where('id', '!=', $record->id))

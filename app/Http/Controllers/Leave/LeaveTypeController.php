@@ -34,7 +34,7 @@ class LeaveTypeController extends PolicyCrud
     {
         return [
             'code' => ['required', 'string', 'max:30', 'alpha_dash', Rule::unique('leave_types', 'code')->ignore($record?->id)],
-            'name' => ['required', 'string', 'max:100'], 'description' => ['nullable', 'string', 'max:1000'],
+            'name' => ['required', 'string', 'max:100', Rule::unique('leave_types', 'name')->ignore($record?->id)], 'description' => ['nullable', 'string', 'max:1000'],
             'default_days' => ['required', 'integer', 'between:0,730'], 'working_days' => ['nullable', 'boolean'], 'paid' => ['nullable', 'boolean'],
             'needs_document' => ['nullable', 'boolean'], 'document_label' => ['nullable', 'string', 'max:150'], 'confidential' => ['nullable', 'boolean'],
             'gender' => ['nullable', Rule::in(['male', 'female'])], 'min_service_months' => ['required', 'integer', 'between:0,600'],

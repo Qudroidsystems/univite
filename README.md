@@ -352,6 +352,11 @@ choices show ticks and chips. The real select stays in the form, so `change` han
 submit on change and lists that load when opened (`data-lookup`) work as before. Add `data-no-search` to a select (or
 a container) to keep the browser's own dropdown.
 
+The Add / Edit forms of the setup pages (everything built on CrudController) check themselves as they are filled in:
+the form sends what has been typed with an `X-Uv-Check` header, the controller runs the same rules a save would
+(duplicates included) and returns the errors without saving. A field shows its problem once it has a value or has been
+touched, and Save stays disabled until it is fixed. Give a rule a clear message through `messages()` on the controller.
+
 Every Bootstrap modal uses the same add / edit look: a coloured header (green when editing on the setup pages), small
 upper-case labels, rounded fields and gradient buttons. New add / edit forms get it by being a `.modal`.
 

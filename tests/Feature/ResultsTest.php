@@ -543,3 +543,21 @@ it('lets an approver unlock and change scores, and still return the sheet, after
     $this->actingAs($hod)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'return', 'note' => 'Too late'])->assertSessionHas('error');
     $this->post(route('results.sheets.correct', $this->sheet->id), ['scores' => scoresFor([[1, 1], [1, 1]])])->assertForbidden();
 });
+
+it('flags a duplicate course definition while the form is filled in, without saving anything', function () {
+    $row = ['user_id' => $this->lecturer->id, 'course_id' => $this->course->id, 'academic_session_id' => $this->session->id, 'semester_type_id' => $this->type->id];
+    $check = ['X-Uv-Check' => '1', 'Accept' => 'application/json'];
+    $count = CourseAssignment::count();
+
+    $this->actingAs($this->admin)->postJson(route('academics.course-assignments.store'), $row, $check)->assertStatus(422)
+        ->assertJsonPath('errors.semester_type_id.0', 'This lecturer is already defined for this course in this session and semester.');
+    $this->postJson(route('academics.course-assignments.store'), ['course_id' => $this->course2->id] + $row, $check)->assertOk()->assertJson(['ok' => true]);
+    expect(CourseAssignment::count())->toBe($count);
+
+    // Editing the record itself is not a duplicate of itself.
+    $mine = CourseAssignment::where('user_id', $this->lecturer->id)->first();
+    $this->putJson(route('academics.course-assignments.update', $mine->id), $row, $check)->assertOk();
+
+    // Other setup lists refuse duplicates too, with the field's own name in the message.
+    $this->postJson(route('academics.result-stages.store'), ['name' => 'Head of Department', 'sort_order' => 5], $check)->assertStatus(422)->assertJsonValidationErrors('name');
+});

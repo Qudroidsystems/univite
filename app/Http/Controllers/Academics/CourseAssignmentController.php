@@ -129,6 +129,11 @@ class CourseAssignmentController extends CrudController
         ];
     }
 
+    protected function messages(): array
+    {
+        return ['semester_type_id.unique' => 'This lecturer is already defined for this course in this session and semester.'];
+    }
+
     public function destroy($id): RedirectResponse
     {
         $record = CourseAssignment::with('course')->findOrFail($id);

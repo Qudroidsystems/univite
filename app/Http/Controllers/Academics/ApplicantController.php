@@ -145,7 +145,7 @@ class ApplicantController extends CrudController
         }
     }
 
-    public function update(Request $request, $id): RedirectResponse
+    public function update(Request $request, $id): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         if (Applicant::findOrFail($id)->status === 'admitted') {
             return back()->with('error', 'This applicant has already been admitted. Edit the student record instead.');

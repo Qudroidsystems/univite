@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -132,14 +133,33 @@ abstract class CrudController extends Controller
         return array_merge($this->fields(), \App\Support\CustomFields::formFields($this->customTarget));
     }
 
+    /** Messages for particular rules, such as 'semester_type_id.unique' => 'This lecturer already has…'. */
+    protected function messages(): array
+    {
+        return [];
+    }
+
+    /** Field labels, so a message names "Course code" rather than "code". */
+    private function attributeNames(): array
+    {
+        $names = [];
+        foreach ($this->fields() as $f) {
+            if (! empty($f['label'])) {
+                $names[$f['name']] = strtolower(strip_tags($f['label']));
+            }
+        }
+
+        return $names + \App\Support\CustomFields::attributeNames($this->customTarget);
+    }
+
     /** Validate with the page rules plus custom-field rules; returns only the page's own data. */
     private function validated(Request $request, ?Model $record): array
     {
         $custom = \App\Support\CustomFields::rules($this->customTarget, $record, enforceRequired: $record === null);
         $data = $request->validate(
             $this->rules($request, $record) + $custom,
-            [],
-            \App\Support\CustomFields::attributeNames($this->customTarget)
+            $this->messages(),
+            $this->attributeNames()
         );
 
         return array_diff_key($data, $custom);
@@ -169,9 +189,21 @@ abstract class CrudController extends Controller
         ], $this->viewData($request)));
     }
 
-    public function store(Request $request): RedirectResponse
+    /**
+     * The form checks itself as it is filled in: it sends what has been typed with the X-Uv-Check header, and gets
+     * back the same validation errors a save would give (duplicates included) without anything being saved.
+     */
+    protected function isCheck(Request $request): bool
+    {
+        return $request->headers->has('X-Uv-Check');
+    }
+
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $this->validated($request, null);
+        if ($this->isCheck($request)) {
+            return response()->json(['ok' => true]);
+        }
         $data = $this->prepare($this->normalise($data, $request), $request, null);
 
         $modelClass = $this->model();
@@ -182,12 +214,15 @@ abstract class CrudController extends Controller
         return back()->with('success', "{$this->singular} created successfully.");
     }
 
-    public function update(Request $request, $id): RedirectResponse
+    public function update(Request $request, $id): RedirectResponse|JsonResponse
     {
         $modelClass = $this->model();
         $record = $modelClass::findOrFail($id);
 
         $data = $this->validated($request, $record);
+        if ($this->isCheck($request)) {
+            return response()->json(['ok' => true]);
+        }
         $data = $this->prepare($this->normalise($data, $request), $request, $record);
 
         $record->update($data);

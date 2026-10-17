@@ -44,7 +44,7 @@ class PayElementController extends PolicyCrud
     {
         return [
             'code' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9_]+$/', Rule::unique('pay_elements', 'code')->ignore($record?->id), Rule::notIn(['BASIC', 'basic'])],
-            'name' => ['required', 'string', 'max:120'], 'kind' => ['required', Rule::in(array_keys(PayElement::KINDS))],
+            'name' => ['required', 'string', 'max:120', Rule::unique('pay_elements', 'name')->ignore($record?->id)], 'kind' => ['required', Rule::in(array_keys(PayElement::KINDS))],
             'method' => ['required', Rule::in(array_keys(PayElement::METHODS))], 'amount' => ['nullable', 'required_if:method,fixed', 'numeric', 'min:0'],
             'rate' => ['nullable', 'required_if:method,percent_basic,percent_pensionable', 'numeric', 'between:0,100'],
             'taxable' => ['nullable', 'boolean'], 'pensionable' => ['nullable', 'boolean'], 'tax_relief' => ['nullable', 'boolean'],

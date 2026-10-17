@@ -30,7 +30,7 @@ class HolidayController extends PolicyCrud
 
     protected function rules(Request $request, ?Model $record): array
     {
-        return ['date' => ['required', 'date'], 'name' => ['required', 'string', 'max:100'], 'recurring' => ['nullable', 'boolean']];
+        return ['date' => ['required', 'date', \Illuminate\Validation\Rule::unique('holidays', 'date')->ignore($record?->id)], 'name' => ['required', 'string', 'max:100'], 'recurring' => ['nullable', 'boolean']];
     }
 
     protected function fields(): array

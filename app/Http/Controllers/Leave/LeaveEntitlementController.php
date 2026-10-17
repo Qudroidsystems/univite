@@ -34,7 +34,16 @@ class LeaveEntitlementController extends PolicyCrud
         return [
             'leave_type_id' => ['required', 'exists:leave_types,id'], 'category' => ['nullable', 'string', 'max:40'], 'appointment_type' => ['nullable', 'string', 'max:40'],
             'min_grade' => ['nullable', 'integer', 'between:1,20'], 'max_grade' => ['nullable', 'integer', 'between:1,20', 'gte:min_grade'],
-            'min_years' => ['required', 'integer', 'between:0,60'], 'days' => ['required', 'integer', 'between:0,730'],
+            'min_years' => ['required', 'integer', 'between:0,60', function ($attr, $value, $fail) use ($request, $record) {
+                $same = LeaveEntitlement::where('leave_type_id', $request->input('leave_type_id'))->where('min_years', $value)
+                    ->when($record, fn ($q) => $q->where('id', '!=', $record->id));
+                foreach (['category', 'appointment_type', 'min_grade', 'max_grade'] as $f) {
+                    $request->filled($f) ? $same->where($f, $request->input($f)) : $same->whereNull($f);
+                }
+                if ($same->exists()) {
+                    $fail('An entitlement for exactly these staff already exists. Edit that one instead.');
+                }
+            }], 'days' => ['required', 'integer', 'between:0,730'],
         ];
     }
 

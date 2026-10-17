@@ -36,7 +36,7 @@ class SalaryStructureController extends PolicyCrud
     {
         return [
             'code' => ['required', 'string', 'max:20', Rule::unique('salary_structures', 'code')->ignore($record?->id)],
-            'name' => ['required', 'string', 'max:150'], 'max_grade' => ['required', 'integer', 'between:1,20'], 'max_step' => ['required', 'integer', 'between:1,20'],
+            'name' => ['required', 'string', 'max:150', Rule::unique('salary_structures', 'name')->ignore($record?->id)], 'max_grade' => ['required', 'integer', 'between:1,20'], 'max_step' => ['required', 'integer', 'between:1,20'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }

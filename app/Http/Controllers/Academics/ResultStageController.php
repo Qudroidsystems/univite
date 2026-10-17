@@ -33,7 +33,7 @@ class ResultStageController extends CrudController
     protected function rules(Request $request, ?Model $record): array
     {
         return [
-            'name' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:100', Rule::unique('result_stages', 'name')->ignore($record?->id)],
             'office_role' => ['nullable', Rule::in(Role::pluck('name')->all())],
             'sort_order' => ['required', 'integer', 'between:1,99'],
             'is_active' => ['nullable', 'boolean'],

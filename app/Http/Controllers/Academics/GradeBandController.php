@@ -54,7 +54,11 @@ class GradeBandController extends CrudController
     protected function rules(Request $request, ?Model $record): array
     {
         return $this->scopeRules($request) + [
-            'letter'    => ['required', 'string', 'max:5'],
+            'letter'    => ['required', 'string', 'max:5', function ($attr, $value, $fail) use ($request, $record) {
+                if (GradeBand::sameScope(...$this->scopeInput($request))->when($record, fn ($q) => $q->where('id', '!=', $record->id))->where('letter', $value)->exists()) {
+                    $fail("Grade {$value} is already in this set. Edit that band instead.");
+                }
+            }],
             'min_score' => ['required', 'numeric', 'between:0,100'],
             'max_score' => ['required', 'numeric', 'between:0,100', 'gte:min_score', function ($attr, $value, $fail) use ($request, $record) {
                 $overlap = GradeBand::sameScope(...$this->scopeInput($request))->when($record, fn ($q) => $q->where('id', '!=', $record->id))

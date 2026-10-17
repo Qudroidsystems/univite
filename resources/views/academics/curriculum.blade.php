@@ -23,7 +23,8 @@
 
             @include('academics.partials.alerts')
 
-            <p class="text-muted mb-3">Choose a programme, then place courses into each level and semester. Credit units are totalled per semester and checked against the programme's credit-load limits (electives are not counted towards the minimum). C: compulsory, CE: compulsory elective, E: elective.</p>
+            <p class="text-muted mb-3">Choose a programme, then place courses into each level and semester. Credit units are totalled per semester and checked against the programme's credit-load limits (electives are not counted towards the minimum). C: compulsory, CE: compulsory elective, E: elective.
+                A programme may take its own department's courses as any type, and another department's course only the way that department shares it (on the course: Other departments).</p>
 
             <div class="card">
                 <div class="card-body">
@@ -93,7 +94,8 @@
                                                                 <button type="button" class="btn btn-sm btn-soft-primary btn-move" title="Move or change type"
                                                                         data-url="{{ route('academics.curriculum.update', $e->id) }}"
                                                                         data-title="{{ $e->course->code }} — {{ $e->course->title }}"
-                                                                        data-level="{{ $e->level }}" data-semester="{{ $e->semester_order }}" data-status="{{ $e->status }}"><i class="ri-pencil-line"></i></button>
+                                                                        data-level="{{ $e->level }}" data-semester="{{ $e->semester_order }}" data-status="{{ $e->status }}"
+                                                                        data-allowed="{{ implode(',', \App\Support\CourseSharing::allowed($e->course, $programme)) }}"><i class="ri-pencil-line"></i></button>
                                                                 <form method="POST" action="{{ route('academics.curriculum.destroy', $e->id) }}" class="d-inline" onsubmit="return confirm('Remove this course from the curriculum?')">
                                                                     @csrf @method('DELETE')
                                                                     <button class="btn btn-sm btn-soft-danger" title="Remove"><i class="ri-delete-bin-line"></i></button>
@@ -146,21 +148,35 @@
                             <label class="form-label">Course type</label>
                             <select name="status" class="form-select">
                                 <option value="">Each course's own type</option>
-                                @foreach ($statuses as $v => $l) <option value="{{ $v }}">{{ $l }}</option> @endforeach
+                                @foreach ($statuses as $v => $l) <option value="{{ $v }}" @selected(old('status') === $v)>{{ $l }}</option> @endforeach
                             </select>
+                            <div class="form-text">A course from another department takes the type that department allows.</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Courses <span class="text-danger">*</span> <span class="text-muted fs-12">(hold Ctrl/Cmd to select several)</span></label>
                             <input type="search" class="form-control mb-2" id="course-filter" placeholder="Filter by code or title…">
+                            @php
+                                $own = $courseOptions->where('department_id', $programme->department_id);
+                                $shared = $courseOptions->where('department_id', '!=', $programme->department_id);
+                                $picked = array_map('strval', (array) old('course_ids', []));
+                            @endphp
                             <select name="course_ids[]" id="course-select" class="form-select" multiple size="10" required>
-                                @foreach ($courseOptions->groupBy(fn ($c) => $c->department->name) as $dept => $courses)
-                                    <optgroup label="{{ $dept }}">
+                                @if ($own->isNotEmpty())
+                                    <optgroup label="{{ $programme->department->name }} (this department) — any type">
+                                        @foreach ($own as $c)
+                                            <option value="{{ $c->id }}" @selected(in_array((string) $c->id, $picked, true))>{{ $c->code }} — {{ $c->title }} ({{ $c->credit_units }}u, {{ \App\Support\CourseType::short($c->course_type) }})</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @foreach ($shared->groupBy(fn ($c) => $c->department->name)->sortKeys() as $dept => $courses)
+                                    <optgroup label="{{ $dept }} — shared with other departments">
                                         @foreach ($courses as $c)
-                                            <option value="{{ $c->id }}">{{ $c->code }} — {{ $c->title }} ({{ $c->credit_units }}u, {{ \App\Support\CourseType::short($c->course_type) }})</option>
+                                            <option value="{{ $c->id }}" @selected(in_array((string) $c->id, $picked, true))>{{ $c->code }} — {{ $c->title }} ({{ $c->credit_units }}u, as {{ \App\Support\CourseSharing::short($c->shared_as) }})</option>
                                         @endforeach
                                     </optgroup>
                                 @endforeach
                             </select>
+                            <div class="form-text">Courses of other departments appear here only when their department shares them, with the type you may give them.</div>
                             @if ($courseOptions->isEmpty()) <div class="form-text text-warning">Every active course is already in this curriculum, or no courses exist yet.</div> @endif
                         </div>
                     </div>
@@ -219,7 +235,10 @@
             document.getElementById('move-title').textContent = btn.dataset.title;
             document.getElementById('move-level').value = btn.dataset.level;
             document.getElementById('move-semester').value = btn.dataset.semester;
+            const allowed = (btn.dataset.allowed || '').split(',').filter(Boolean);
+            document.querySelectorAll('#move-status option').forEach(o => { o.disabled = allowed.length > 0 && !allowed.includes(o.value); });
             document.getElementById('move-status').value = btn.dataset.status;
+            if (window.UvSelect) window.UvSelect.refresh(document.getElementById('move-status'));
             moveModal.show();
         }));
 

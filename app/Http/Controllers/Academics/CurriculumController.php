@@ -54,10 +54,12 @@ class CurriculumController extends Controller
                 }
             }
 
+            // Courses the programme may take: its own department's, and those other departments share.
             $taken = $entries->pluck('course_id')->all();
             $courseOptions = Course::with('department')
                 ->where('is_active', true)
                 ->whereNotIn('id', $taken)
+                ->where(fn ($q) => $q->where('department_id', $programme->department_id)->orWhereNotNull('shared_as'))
                 ->orderBy('code')
                 ->get();
         }
@@ -70,6 +72,21 @@ class CurriculumController extends Controller
             'courseOptions' => $courseOptions,
             'statuses'      => \App\Support\CourseType::options(),
         ]);
+    }
+
+    /** The courses a programme may not take as asked, with why; empty when all are fine. @return string[] */
+    private function sharingProblems(Programme $programme, iterable $courses, ?string $status): array
+    {
+        $problems = [];
+        foreach ($courses as $course) {
+            $type = $status ?: \App\Support\CourseSharing::defaultType($course, $programme);
+            $why = $type ? \App\Support\CourseSharing::problem($course, $programme, $type) : \App\Support\CourseSharing::problem($course, $programme, \App\Support\CourseType::ELECTIVE);
+            if ($why) {
+                $problems[] = $why;
+            }
+        }
+
+        return $problems;
     }
 
     public function store(Request $request): RedirectResponse
@@ -88,13 +105,18 @@ class CurriculumController extends Controller
             return back()->withInput()->with('error', "{$programme->name} does not run {$data['level']} level.");
         }
 
+        // A course from another department goes in only the way that department shares it.
+        $courses = Course::with('department')->whereIn('id', $data['course_ids'])->get();
+        if ($problems = $this->sharingProblems($programme, $courses, $data['status'] ?? null)) {
+            return back()->withInput()->with('error', implode(' ', $problems));
+        }
+
         $added = 0;
-        $ownTypes = Course::whereIn('id', $data['course_ids'])->pluck('course_type', 'id');
-        foreach ($data['course_ids'] as $courseId) {
-            // no type chosen: each course keeps the type set on the course itself
+        foreach ($courses as $course) {
+            // no type chosen: the course's own type in its department, or the type it is shared as
             $entry = ProgrammeCourse::firstOrCreate(
-                ['programme_id' => $programme->id, 'course_id' => $courseId],
-                ['level' => $data['level'], 'semester_order' => $data['semester_order'], 'status' => ($data['status'] ?? null) ?: ($ownTypes[$courseId] ?? \App\Support\CourseType::COMPULSORY)]
+                ['programme_id' => $programme->id, 'course_id' => $course->id],
+                ['level' => $data['level'], 'semester_order' => $data['semester_order'], 'status' => ($data['status'] ?? null) ?: \App\Support\CourseSharing::defaultType($course, $programme)]
             );
             $added += $entry->wasRecentlyCreated ? 1 : 0;
         }
@@ -105,12 +127,16 @@ class CurriculumController extends Controller
 
     public function update(Request $request, $entry): RedirectResponse
     {
-        $entry = ProgrammeCourse::with('programme')->findOrFail($entry);
+        $entry = ProgrammeCourse::with('programme', 'course.department')->findOrFail($entry);
 
         $data = $request->validate([
             'level'          => ['required', Rule::in($entry->programme->levels())],
             'semester_order' => ['required', Rule::in(array_keys(\App\Models\SemesterType::options()))],
-            'status'         => ['required', Rule::in(array_keys(\App\Support\CourseType::options()))],
+            'status'         => ['required', Rule::in(array_keys(\App\Support\CourseType::options())), function ($attr, $value, $fail) use ($entry) {
+                if ($why = \App\Support\CourseSharing::problem($entry->course, $entry->programme, (string) $value)) {
+                    $fail($why);
+                }
+            }],
         ]);
 
         $entry->update($data);

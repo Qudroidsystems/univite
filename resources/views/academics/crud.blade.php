@@ -189,6 +189,23 @@
                                             @endif
                                         @endforeach
                                     </select>
+                                @elseif ($type === 'multiselect')
+                                    @php $chosen = array_map('strval', (array) old($name, $f['default'] ?? [])); @endphp
+                                    <select class="form-select @error($name) is-invalid @enderror" id="f-{{ $name }}" name="{{ $name }}[]" multiple data-multi="1"
+                                            @if (! empty($f['exclude_self'])) data-exclude-self="1" @endif data-placeholder="{{ $f['placeholder'] ?? 'Search and tick…' }}">
+                                        @foreach ($f['options'] as $optValue => $optLabel)
+                                            @if (is_array($optLabel))
+                                                <optgroup label="{{ $optValue }}">
+                                                    @foreach ($optLabel as $v => $l)
+                                                        <option value="{{ $v }}" @selected(in_array((string) $v, $chosen, true))>{{ $l }}</option>
+                                                    @endforeach
+                                                </optgroup>
+                                            @else
+                                                <option value="{{ $optValue }}" @selected(in_array((string) $optValue, $chosen, true))>{{ $optLabel }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                    <div class="mt-2 d-flex flex-wrap gap-1" data-chosen-for="{{ $name }}"></div>
                                 @elseif ($type === 'file')
                                     <input type="file" class="form-control @error($name) is-invalid @enderror" id="f-{{ $name }}" name="{{ $name }}" @if (! empty($f['accept'])) accept="{{ $f['accept'] }}" @endif>
                                     <div class="form-text text-success d-none" data-file-for="{{ $name }}"></div>
@@ -251,8 +268,35 @@
             el.classList.remove('is-invalid');
         });
         form.querySelectorAll('input[type=checkbox]').forEach(el => { el.checked = el.dataset.default === '1'; });
+        form.querySelectorAll('select[data-multi]').forEach(el => {
+            Array.from(el.options).forEach(o => { o.selected = false; o.disabled = false; });
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
         form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
     }
+
+    // Under a multi-select (prerequisites), list what is ticked so it can be checked at a glance and removed.
+    function showChosen(sel) {
+        const box = form.querySelector('[data-chosen-for="' + sel.name.replace('[]', '') + '"]');
+        if (!box) return;
+        const picked = Array.from(sel.selectedOptions);
+        box.innerHTML = picked.length ? '' : '<span class="text-muted fs-12">None ticked.</span>';
+        picked.forEach(o => {
+            const chip = document.createElement('span');
+            chip.className = 'badge bg-primary-subtle text-primary fs-12 d-inline-flex align-items-center gap-1';
+            chip.textContent = o.textContent;
+            const x = document.createElement('button');
+            x.type = 'button'; x.className = 'btn-close btn-close-sm ms-1'; x.style.fontSize = '.55rem'; x.title = 'Remove';
+            x.addEventListener('click', () => { o.selected = false; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+            chip.appendChild(x);
+            box.appendChild(chip);
+        });
+        if (window.UvSelect) window.UvSelect.refresh(sel);
+    }
+    form.querySelectorAll('select[data-multi]').forEach(sel => {
+        sel.addEventListener('change', () => showChosen(sel));
+        showChosen(sel);
+    });
 
     function applyShowWhen() {
         form.querySelectorAll('[data-show-when]').forEach(el => {
@@ -276,6 +320,16 @@
                 if (note && val) { note.textContent = 'Current file: ' + val + ' (choose a new file to replace it)'; note.classList.remove('d-none'); }
                 return;
             }
+            const multi = form.querySelector('select[data-multi][name="' + key + '[]"]');
+            if (multi) {
+                const want = (Array.isArray(val) ? val : []).map(String);
+                Array.from(multi.options).forEach(o => {
+                    o.selected = want.includes(o.value);
+                    o.disabled = multi.dataset.excludeSelf === '1' && String(o.value) === String(rec.id);   // a course is not its own prerequisite
+                });
+                multi.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
             const input = form.querySelector('[name="' + key + '"]:not([type=hidden])');
             if (!input) return;
             if (input.type === 'file') return;
@@ -290,7 +344,7 @@
     const touched = new Set();
     const submitBtn = document.getElementById('crud-submit');
     let timer = null, seq = 0;
-    function fieldOf(name) { return form.querySelector('[name="' + name + '"]:not([type=hidden])') || form.querySelector('[name="' + name + '"]'); }
+    function fieldOf(name) { return form.querySelector('[name="' + name + '"]:not([type=hidden])') || form.querySelector('[name="' + name + '[]"]') || form.querySelector('[name="' + name + '"]'); }
     function clearLive() {
         form.querySelectorAll('.uv-live-error').forEach(el => el.remove());
         form.querySelectorAll('.is-invalid[data-live]').forEach(el => { el.classList.remove('is-invalid'); el.removeAttribute('data-live'); el.dispatchEvent(new Event('uv:invalid-changed')); });

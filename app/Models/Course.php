@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Course extends Model
 {
-    protected $fillable = ['department_id', 'study_category_id', 'code', 'title', 'credit_units', 'course_type', 'level', 'semester_type_id', 'academic_session_id', 'description', 'is_active'];
+    protected $fillable = ['department_id', 'study_category_id', 'code', 'title', 'credit_units', 'course_type', 'shared_as', 'level', 'semester_type_id', 'academic_session_id', 'description', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 
@@ -39,6 +39,12 @@ class Course extends Model
     public function prerequisites(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Course::class, 'course_prerequisites', 'course_id', 'prerequisite_id');
+    }
+
+    /** Courses that need this one first. */
+    public function requiredBy(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_prerequisites', 'prerequisite_id', 'course_id');
     }
 
     public function programmeCourses(): HasMany

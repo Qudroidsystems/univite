@@ -211,15 +211,13 @@ it('manages lecturer assignments, approval steps and the mark split', function (
 });
 
 it('reads an Excel upload too', function () {
-    $book = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-    $book->getActiveSheet()->fromArray([['Matric No', 'CA', 'Exam'], ['2026/0001', 30, 70], ['2026/0002', 5, 5]]);
     $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
-    (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($book))->save($path);
+    file_put_contents($path, \App\Support\Xlsx::write([['Matric No', 'CA', 'Exam'], ['2026/0001', 30, 70], ['2026/0002', 5, 5]]));
 
     $this->actingAs($this->lecturer)->post(route('results.sheets.upload', $this->sheet->id), ['file' => new UploadedFile($path, 'scores.xlsx', null, null, true)])->assertSessionHas('success');
     expect(CourseResult::where('student_id', $this->students[0]->id)->value('grade'))->toBe('A')
         ->and(CourseResult::where('student_id', $this->students[1]->id)->value('total'))->toBe(10.0);
-})->skip(! class_exists(\PhpOffice\PhpSpreadsheet\Spreadsheet::class), 'PhpSpreadsheet not installed');
+});
 
 it('corrects a published score with a logged reason, and refuses for lack of permission or reason', function () {
     $this->actingAs($this->lecturer)->post(route('results.sheets.save', $this->sheet->id), ['scores' => scoresFor([[20, 40], [10, 20]])]);

@@ -45,10 +45,8 @@ class PermissionController extends Controller
      */
     public function create()
     {
-         #page title
-         $pagetitle = "Role Management";
-
-        return view('permissions.create')->with('pagetitle', $pagetitle);
+        // Permissions are managed on the list page; there is no separate page for one.
+        return redirect()->route('permissions.index');
     }
 
     /**
@@ -80,14 +78,8 @@ class PermissionController extends Controller
      */
     public function show($id)
     {
-
-         #page title
-         $pagetitle = "Role Management";
-
-
-        $permission = Permission::find($id);
-
-        return view('permissions.show', compact('permission'))->with('pagetitle', $pagetitle);
+        // Permissions are managed on the list page; there is no separate page for one.
+        return redirect()->route('permissions.index');
     }
 
     /**
@@ -98,14 +90,8 @@ class PermissionController extends Controller
      */
     public function edit($id)
     {
-
-         #page title
-         $pagetitle = "Role Management";
-
-
-        $permission = Permission::find($id);
-
-        return view('permissions.edit', compact('permission'))->with('pagetitle', $pagetitle);
+        // Permissions are managed on the list page; there is no separate page for one.
+        return redirect()->route('permissions.index');
     }
 
     /**

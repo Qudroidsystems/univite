@@ -48,10 +48,12 @@ class RoleController extends Controller
             ->with('pagetitle', $pagetitle);
     }
 
-    public function create(): View
+    /**
+     * Roles are created from the modal on the roles list, so this page just goes there.
+     */
+    public function create(): RedirectResponse
     {
-        $permission = Permission::get();
-        return view('roles.create', compact('permission'));
+        return redirect()->route('roles.index');
     }
 
     public function store(Request $request): RedirectResponse
@@ -130,28 +132,14 @@ class RoleController extends Controller
         ))->with('perm_title', $ex);
     }
 
-    public function edit($id): View
+    /**
+     * Roles are edited from the modal on the role page, so this page just goes there.
+     */
+    public function edit($id): RedirectResponse
     {
-        $pagetitle = "Role Management";
+        Role::findOrFail($id);
 
-        $role = Role::find($id);
-        $rolePermissions = DB::table("role_has_permissions")
-            ->where("role_has_permissions.role_id", $id)
-            ->pluck('role_has_permissions.permission_id', 'role_has_permissions.permission_id')
-            ->all();
-        $permission = Permission::get();
-        $perm_title = Permission::get(['title']);
-        $array = [];
-        foreach ($perm_title as $title) {
-            $array[] = $title->title;
-        }
-
-        $ar = implode(',', $array);
-        $ex = explode(',', $ar);
-
-        return view('roles.edit', compact('role', 'permission', 'rolePermissions'))
-            ->with('perm_title', $ex)
-            ->with('pagetitle', $pagetitle);
+        return redirect()->route('roles.show', $id);
     }
 
     public function update(Request $request, $id): RedirectResponse

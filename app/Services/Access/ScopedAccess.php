@@ -29,6 +29,11 @@ class ScopedAccess
         'Compute results' => 'Computing results of the department\'s students and printing its master marks sheet',
         'Define courses for lecturers' => 'Defining (assigning) the department\'s courses to its lecturers',
         'Edit department academic rules' => 'Changing the academic rules of the department and its programmes, or of the faculty and everything in it',
+        'Verify O Level results' => 'Confirming or returning the O Level results of the department\'s students',
+        'View O Level results' => 'O Level results of the department\'s students',
+        'View senate review' => 'The Senate review of the department\'s or faculty\'s programmes and courses',
+        'Record senate decisions' => 'Senate decisions on the department\'s or faculty\'s students and courses',
+        'View fee access' => 'The fee eligibility list of the department\'s students',
     ];
 
     /** @var array<string, AccessScope> */

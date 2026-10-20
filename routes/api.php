@@ -21,13 +21,15 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
     ]]))->name('ping');
     Route::post('auth/login', [V1\AuthController::class, 'login'])->middleware('throttle:mobile-login')->name('login');
 
-    Route::middleware(['auth:sanctum', 'throttle:mobile-api'])->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:mobile-api', \App\Http\Middleware\FeeAccessGate::class])->group(function () {
         Route::post('auth/logout', [V1\AuthController::class, 'logout'])->name('logout');
         Route::get('me', [V1\AuthController::class, 'me'])->name('me');
         Route::get('dashboard', V1\DashboardController::class)->name('dashboard');
 
         Route::get('results', [V1\AcademicsController::class, 'results'])->name('results');
         Route::get('courses', [V1\AcademicsController::class, 'courses'])->name('courses');
+        Route::get('outstanding', [V1\AcademicsController::class, 'outstanding'])->name('outstanding');
+        Route::get('olevel', [V1\AcademicsController::class, 'olevel'])->name('olevel');
         Route::get('timetable/lectures', [V1\AcademicsController::class, 'lectures'])->name('timetable.lectures');
         Route::get('timetable/exams', [V1\AcademicsController::class, 'exams'])->name('timetable.exams');
         Route::get('timetable/teaching', [V1\AcademicsController::class, 'teaching'])->name('timetable.teaching');
@@ -42,6 +44,8 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
 
         Route::get('fees', [V1\FeesController::class, 'index'])->name('fees');
         Route::get('fees/{invoice}', [V1\FeesController::class, 'show'])->name('fees.show');
+        Route::get('loans', [V1\FeesController::class, 'loans'])->name('loans');
+        Route::post('loans', [V1\FeesController::class, 'applyLoan'])->middleware('throttle:10,1')->name('loans.apply');
 
         Route::get('clearance', [V1\CampusController::class, 'clearance'])->name('clearance');
         Route::get('library', [V1\CampusController::class, 'library'])->name('library');

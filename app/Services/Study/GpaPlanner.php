@@ -26,7 +26,7 @@ use Illuminate\Support\Collection;
  */
 class GpaPlanner
 {
-    public function __construct(private MySchedule $schedule, private MobileAppSettings $settings, private AcademicRules $rules)
+    public function __construct(private MySchedule $schedule, private MobileAppSettings $settings, private AcademicRules $rules, private \App\Services\RegistrationService $registration)
     {
     }
 
@@ -47,6 +47,8 @@ class GpaPlanner
         }
 
         [$tnu, $tcp, $byCourse, $method] = $this->record($student);
+        $outstanding = $this->registration->outstanding($student);
+        $outstandingIds = $outstanding->map(fn ($o) => $o['course']->id)->flip();
 
         return [
             'term' => $term->semester ? trim(($term->semester->session?->name ?? '') . ' · ' . $term->semester->name, ' ·') : null,
@@ -56,7 +58,10 @@ class GpaPlanner
             'units' => $tnu,
             'points' => round($tcp, 2),
             'method' => $method,
-            'courses' => $courses->map(function (Course $c) use ($units, $running, $byCourse) {
+            // Failed courses still to pass: the planner and the reading plan give them extra weight.
+            'outstanding' => $outstanding->map(fn ($o) => ['id' => $o['course']->id, 'code' => $o['course']->code, 'title' => $o['course']->title,
+                'units' => (int) $o['course']->credit_units, 'last_grade' => $o['last_grade'], 'offered_in' => $o['semester'], 'registered_now' => $o['chosen_now']])->values()->all(),
+            'courses' => $courses->map(function (Course $c) use ($units, $running, $byCourse, $outstandingIds) {
                 $row = $running->get($c->id);
                 [$caMax, $examMax] = $row?->sheet ? ResultService::limits($row->sheet) : [ResultService::caMax(), ResultService::examMax()];
                 $prev = $byCourse->get($c->id);
@@ -67,6 +72,7 @@ class GpaPlanner
                     'ca' => $row && $row->ca !== null && $row->status !== 'published' ? (float) $row->ca : null,
                     'ca_max' => (float) $caMax, 'exam_max' => (float) $examMax,
                     'retake_of' => $prev ? ['grade' => $prev['grade'], 'points' => $prev['points'], 'units' => $prev['units']] : null,
+                    'carryover' => $prev !== null && $outstandingIds->has($c->id),
                 ];
             })->values()->all(),
         ];

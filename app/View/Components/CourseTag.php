@@ -15,7 +15,7 @@ class CourseTag extends Component
 {
     public string $typeCode;
 
-    public function __construct(public Course $course, ?string $type = null, public bool $department = true, public bool $full = false)
+    public function __construct(public Course $course, ?string $type = null, public bool $department = true, public bool $full = false, public bool $faculty = false)
     {
         $this->typeCode = $type ?: ($course->course_type ?: CourseType::COMPULSORY);
     }
@@ -25,6 +25,7 @@ class CourseTag extends Component
         return view('components.course-tag', [
             'short' => CourseType::short($this->typeCode), 'label' => CourseType::label($this->typeCode), 'badge' => CourseType::BADGES[$this->typeCode] ?? 'bg-light text-body',
             'dept' => $this->department ? $this->course->department : null,
+            'fac' => $this->department && $this->faculty ? $this->course->department?->faculty : null,
         ]);
     }
 }

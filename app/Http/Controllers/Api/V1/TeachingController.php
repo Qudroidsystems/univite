@@ -67,7 +67,7 @@ class TeachingController extends ApiController
         $this->staff($request);
         $user = $request->user();
         $ctx = $this->registration->context();
-        $mine = $ctx ? $user->scoringAssignments()->with('course')->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
+        $mine = $ctx ? $user->scoringAssignments()->with('course.department.faculty')->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->get() : collect();
         $sheets = ResultSheet::with('course', 'session', 'semesterType', 'stage', 'scheme.items')->withCount('results')
             ->whereIn('course_id', $user->scoringAssignments()->pluck('course_id'))->latest('updated_at')->limit(30)->get()
             ->filter(fn ($s) => $this->results->canEnter($user, $s));
@@ -76,7 +76,7 @@ class TeachingController extends ApiController
         return $this->ok([
             'term' => $ctx?->label(),
             'courses' => $mine->map(fn ($a) => [
-                'course' => ['id' => $a->course->id, 'code' => $a->course->code, 'title' => $a->course->title, 'units' => (int) $a->course->credit_units],
+                'course' => \App\Data\Api\ApiCourse::from($a->course)->toArray(),
                 'sheet' => ($s = $current->get($a->course_id)) ? $this->sheetData($request, $s, false) : null,
             ] + $this->assessmentsFor($a->course, $s, $ctx?->session->id))->sortBy('course.code')->values()->all(),
             'sheets' => $sheets->map(fn ($s) => $this->sheetData($request, $s, false))->values()->all(),

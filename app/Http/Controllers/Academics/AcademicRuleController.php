@@ -115,6 +115,16 @@ class AcademicRuleController extends Controller
                 'int' => ['nullable', 'integer', 'min:0', 'max:1000'],
                 'decimal' => ['nullable', 'numeric', 'min:0', 'max:10'],
                 'bool' => ['nullable', 'in:0,1'],
+                'levels' => ['nullable', 'string', 'max:60', function ($attr, $value, $fail) {
+                    if (! preg_match('/^[\d\s,;]*$/', (string) $value)) {
+                        return $fail('Enter levels as numbers separated by commas, for example 200, 300.');
+                    }
+                    foreach (AcademicRules::levelList($value) as $l) {
+                        if ($l < 100 || $l > 1000 || $l % 100) {
+                            return $fail("{$l} is not a level. Use 100, 200, 300 ...");
+                        }
+                    }
+                }],
                 default => ['nullable', Rule::in(array_keys($d[6] ?? []))],
             };
         }
@@ -130,6 +140,14 @@ class AcademicRuleController extends Controller
         }
         if ($after['min_units'] !== null && $after['max_units'] !== null && $after['max_units'] < $after['min_units']) {
             return back()->withErrors(['rules.max_units' => 'The maximum units cannot be below the minimum (' . $after['min_units'] . ').'])->withInput();
+        }
+        $programme = $type === 'programme' ? Programme::find($id) : null;
+        $top = $after['graduating_level'] ?? ($programme ? (int) $programme->duration_years * 100 : null);
+        if ($top && $after['admission_level'] !== null && $after['admission_level'] > $top) {
+            return back()->withErrors(['rules.admission_level' => "Students cannot be admitted above the graduating level ({$top})."])->withInput();
+        }
+        if ($programme && $after['graduating_level'] !== null && $after['graduating_level'] > (int) $programme->duration_years * 100) {
+            return back()->withErrors(['rules.graduating_level' => "{$programme->name} runs to " . ((int) $programme->duration_years * 100) . ' level. Change its duration first.'])->withInput();
         }
         if ($after['probation_cgpa'] !== null && $after['withdrawal_cgpa'] !== null && $after['withdrawal_cgpa'] > $after['probation_cgpa']) {
             return back()->withErrors(['rules.withdrawal_cgpa' => 'The withdrawal CGPA should be below the probation CGPA.'])->withInput();

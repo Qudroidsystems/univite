@@ -29,15 +29,16 @@ class GraduationService
     {
     }
 
-    public static function finalLevel(Programme $programme): int
+    /** The graduating level set under Academic Rules (Levels), or the programme's last level. */
+    public function finalLevel(Programme $programme): int
     {
-        return max(1, (int) $programme->duration_years) * 100;
+        return $this->rules->graduatingLevel($programme);
     }
 
     /** Students of the programme in (or past) its final level who are still enrolled. */
     public function candidates(Programme $programme): Collection
     {
-        return Student::where('programme_id', $programme->id)->where('current_level', '>=', self::finalLevel($programme))
+        return Student::where('programme_id', $programme->id)->where('current_level', '>=', $this->finalLevel($programme))
             ->whereIn('status', StudentStatus::codesWhere('is_enrolled'))->whereNull('graduated_at')
             ->orderBy('last_name')->orderBy('first_name')->get();
     }
@@ -46,17 +47,23 @@ class GraduationService
      * Check one student. Returns CGPA, units passed, class and the reasons they cannot graduate yet (empty = eligible).
      *
      */
-    public function check(Student $student): GraduationCheck
+    public function check(Student $student, bool $provisional = false): GraduationCheck
     {
         $programme = $student->programme;
         $rules = $this->rules->forProgramme($programme);
-        $t = $this->results->transcript($student);
-        $problems = [];
+        // Senate reads results still going through approval; the graduation list counts only published ones.
+        $statuses = $provisional ? ['submitted', 'approved', 'published'] : ['published'];
+        $published = CourseResult::with('course', 'session', 'semesterType')->where('student_id', $student->id)->whereIn('status', $statuses)->get();
+        $t = $provisional ? $this->results->transcriptFrom($student, $published) : $this->results->transcript($student);
+        $problems = $codes = [];
+        $add = function (string $code, string $text) use (&$problems, &$codes) {
+            $problems[] = $text;
+            $codes[] = $code;
+        };
 
-        $published = CourseResult::where('student_id', $student->id)->where('status', 'published')->get();
         $latest = $published->sortBy('id')->groupBy('course_id')->map->last();
         if ($latest->isEmpty()) {
-            $problems[] = 'No published results.';
+            $add('no_results', $provisional ? 'No results yet.' : 'No published results.');
         }
 
         // Registered courses (approved forms) still without a published result.
@@ -65,7 +72,7 @@ class GraduationService
             ->whereHas('form', fn ($q) => $q->where('status', 'approved'))->get()
             ->reject(fn ($c) => $done->has("{$c->course_id}-{$c->form->academic_session_id}-{$c->form->semester_type_id}"));
         if ($pending->isNotEmpty()) {
-            $problems[] = 'Results not yet published for: ' . $pending->pluck('course.code')->unique()->sort()->implode(', ') . '.';
+            $add('missing', ($provisional ? 'No result yet for: ' : 'Results not yet published for: ') . $pending->pluck('course.code')->unique()->sort()->implode(', ') . '.');
         }
 
         $curriculum = ProgrammeCourse::with('course')->where('programme_id', $programme->id)->get()->keyBy('course_id');
@@ -78,7 +85,7 @@ class GraduationService
         $waived = \App\Models\CarryoverWaiver::courseIdsFor($student->id)->flip();
         $failed = $latest->filter(fn ($r) => ! $r->is_pass && ! $waived->has($r->course_id) && $mustRetake($r->course_id));
         if ($failed->isNotEmpty()) {
-            $problems[] = 'Failed and not yet passed: ' . $failed->map(fn ($r) => $r->course->code)->sort()->implode(', ') . '.';
+            $add('outstanding', 'Failed and not yet passed: ' . $failed->map(fn ($r) => $r->course->code)->sort()->implode(', ') . '.');
         }
 
         if ($rules['require_core']) {
@@ -87,33 +94,33 @@ class GraduationService
             $missing = $curriculum->filter(fn ($pc) => $pc->status === CourseType::COMPULSORY && $pc->level >= (int) ($student->entry_level ?: 100)
                 && ! $passed->has($pc->course_id) && ! $attempted->has($pc->course_id) && ! $pending->contains('course_id', $pc->course_id));
             if ($missing->isNotEmpty()) {
-                $problems[] = 'Compulsory courses never taken: ' . $missing->map(fn ($pc) => $pc->course->code)->sort()->implode(', ') . '.';
+                $add('compulsory', 'Compulsory courses never taken: ' . $missing->map(fn ($pc) => $pc->course->code)->sort()->implode(', ') . '.');
             }
         }
 
         if ($rules['graduation_units'] && $t->earned < $rules['graduation_units']) {
-            $problems[] = "Passed {$t->earned} of the {$rules['graduation_units']} units needed.";
+            $add('units', "Passed {$t->earned} of the {$rules['graduation_units']} units needed.");
         }
         if ($rules['min_compulsory_elective_units_total']) {
             $ceUnits = (int) $latest->filter(fn ($r) => $r->is_pass && $compulsoryElectives->has($r->course_id))->sum('credit_units');
             if ($ceUnits < $rules['min_compulsory_elective_units_total']) {
-                $problems[] = "Passed {$ceUnits} of the {$rules['min_compulsory_elective_units_total']} compulsory elective units needed.";
+                $add('electives', "Passed {$ceUnits} of the {$rules['min_compulsory_elective_units_total']} compulsory elective units needed.");
             }
         }
         if ($rules['min_elective_units']) {
             $electiveUnits = (int) $latest->filter(fn ($r) => $r->is_pass && $electives->has($r->course_id))->sum('credit_units');
             if ($electiveUnits < $rules['min_elective_units']) {
-                $problems[] = "Passed {$electiveUnits} of the {$rules['min_elective_units']} elective units needed.";
+                $add('electives', "Passed {$electiveUnits} of the {$rules['min_elective_units']} elective units needed.");
             }
         }
         if ($rules['min_graduation_cgpa'] !== null && $latest->isNotEmpty() && $t->cgpa < $rules['min_graduation_cgpa']) {
-            $problems[] = 'CGPA ' . number_format($t->cgpa, 2) . ' is below the ' . number_format($rules['min_graduation_cgpa'], 2) . ' needed to graduate.';
+            $add('cgpa_min', 'CGPA ' . number_format($t->cgpa, 2) . ' is below the ' . number_format($rules['min_graduation_cgpa'], 2) . ' needed to graduate.');
         }
         if ($rules['max_years'] && ($years = self::yearsUsed($student)) > $rules['max_years']) {
-            $problems[] = "Has spent {$years} sessions on the programme; the limit is {$rules['max_years']}. Needs approval to continue.";
+            $add('max_years', "Has spent {$years} sessions on the programme; the limit is {$rules['max_years']}. Needs approval to continue.");
         }
 
-        return new GraduationCheck($t->cgpa, $t->earned, $t->class, $problems);
+        return new GraduationCheck($t->cgpa, $t->earned, $t->class, $problems, $codes);
     }
 
     /** Sessions in which the student registered for courses. */
@@ -191,8 +198,8 @@ class GraduationService
         return $graduating->count();
     }
 
-    public static function levelLabel(Programme $programme): string
+    public function levelLabel(Programme $programme): string
     {
-        return Levels::label(self::finalLevel($programme), $programme->studyCategory);
+        return Levels::label($this->finalLevel($programme), $programme->studyCategory);
     }
 }

@@ -11,6 +11,8 @@ class FinancePermissionSeeder extends ModulePermissionSeeder
             'Bill items',
             'School bills',
             'Invoices & payments',
+            'Fee access rules',
+            'School loans',
         ];
     }
 }

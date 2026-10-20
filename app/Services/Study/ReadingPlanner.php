@@ -10,13 +10,14 @@ namespace App\Services\Study;
  *  - priority: the student's own ranking of each course (1 low .. 5 high);
  *  - difficulty: how hard the student finds each course (1 easy .. 5 hard);
  *  - exams: courses whose exam is coming soon get more time, and their sessions turn into revision;
- *  - target: courses where the GPA planner needs a high grade get more time.
+ *  - target: courses where the GPA planner needs a high grade get more time;
+ *  - carryover: outstanding (carry-over) courses, failed before and to be passed now, get more time.
  * Every course gets at least one session when there is room, a course is not studied twice in a row, and the
  * same course is spread over different days where possible. Pure: no database, so it is easy to test.
  */
 class ReadingPlanner
 {
-    public const CRITERIA = ['units', 'timetable', 'priority', 'difficulty', 'exams', 'target'];
+    public const CRITERIA = ['units', 'timetable', 'priority', 'difficulty', 'exams', 'target', 'carryover'];
 
     /**
      * @param  array  $courses  [{id, code, title, units, lectures (per week), exam_date (Y-m-d|null), priority 1-5, difficulty 1-5, target_points|null}]
@@ -29,7 +30,7 @@ class ReadingPlanner
         $len = max(20, min(240, (int) ($prefs['session_minutes'] ?? 60)));
         $gap = max(0, min(120, (int) ($prefs['break_minutes'] ?? 15)));
         $perDay = max(1, min(12, (int) ($prefs['max_per_day'] ?? 3)));
-        $criteria = array_values(array_intersect(self::CRITERIA, (array) ($prefs['criteria'] ?? ['units', 'timetable', 'priority', 'exams'])));
+        $criteria = array_values(array_intersect(self::CRITERIA, (array) ($prefs['criteria'] ?? ['units', 'timetable', 'priority', 'exams', 'carryover'])));
         $today = $today ? strtotime($today) : strtotime('today');
 
         $slots = $this->slots((array) ($prefs['free_time'] ?? []), ($prefs['avoid_lectures'] ?? true) ? $lectures : [], $len, $gap, $perDay);
@@ -57,6 +58,7 @@ class ReadingPlanner
                     'difficulty' => (max(1, min(5, (int) ($c['difficulty'] ?? 3))) - 1) / 4,
                     'exams' => $days !== null && $days >= 0 && $days <= 42 ? (42 - $days) / 42 : 0,
                     'target' => isset($c['target_points']) && $maxPoints > 0 ? (float) $c['target_points'] / $maxPoints : 0,
+                    'carryover' => ! empty($c['carryover']) ? 1 : 0,
                 };
                 $w += $f;
                 if ($f >= 0.75) {
@@ -67,6 +69,7 @@ class ReadingPlanner
                         'difficulty' => 'you find it hard',
                         'exams' => 'exam in ' . $days . ' day' . ($days === 1 ? '' : 's'),
                         'target' => 'you need a high grade',
+                        'carryover' => 'carry-over you must pass',
                     };
                 }
             }

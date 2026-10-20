@@ -12,7 +12,7 @@ use Illuminate\View\View;
 /** What a student or member of staff sees of the published timetables: classes, papers and seats, teaching and duties. */
 class MyScheduleController extends Controller
 {
-    public function __construct(private MySchedule $schedule)
+    public function __construct(private MySchedule $schedule, private \App\Services\Fees\FeeAccess $fees)
     {
     }
 
@@ -33,13 +33,16 @@ class MyScheduleController extends Controller
         $term = $this->schedule->term();
         $exams = $this->schedule->exams($student, $term);
 
-        return view('my.exams', ['pagetitle' => 'My examinations', 'papers' => $exams->papers, 'seats' => $exams->seats, 'semester' => $term->semester, 'clash' => $exams->clash, 'student' => $student, 'timetables' => $this->schedule->published('exam', $term)]);
+        return view('my.exams', ['pagetitle' => 'My examinations', 'papers' => $exams->papers, 'seats' => $exams->seats, 'semester' => $term->semester, 'clash' => $exams->clash, 'student' => $student, 'timetables' => $this->schedule->published('exam', $term), 'feeBlock' => $this->fees->blocker($student, 'exams')]);
     }
 
     public function slip(Request $request): View
     {
         $student = $request->user()->student;
         abort_unless($student, 403);
+        if ($reason = $this->fees->blocker($student, 'exams')) {
+            return view('fees.blocked', ['pagetitle' => 'Examination slip', 'title' => 'You cannot print your examination slip yet', 'reason' => $reason, 'standing' => $this->fees->standing($student)]);
+        }
 
         return view('my.exam-slip', ['seats' => SeatingService::seatsFor($student), 'student' => $student->load('programme')]);
     }
@@ -60,7 +63,8 @@ class MyScheduleController extends Controller
         abort_unless($request->user()->canAny(['View exam seating', 'Record exam attendance']), 403);
         $seat = ExamSeat::with('student.programme', 'course', 'venue', 'plan')->where('code', strtoupper($code))->firstOrFail();
 
-        return view('seating.verify', ['pagetitle' => 'Seat check', 'seat' => $seat, 'current' => $seat->plan->status === 'published']);
+        return view('seating.verify', ['pagetitle' => 'Seat check', 'seat' => $seat, 'current' => $seat->plan->status === 'published',
+            'feeBlock' => $seat->student ? $this->fees->blocker($seat->student, 'exams') : null]);
     }
 
     public function checkIn(Request $request, string $code, SeatingService $svc): RedirectResponse

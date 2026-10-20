@@ -164,3 +164,30 @@ Switched on and off with the features `gpa_planner`, `reading_planner`, `campus_
 
 Teaching: `GET /teaching/sheets/{id}/file?format=xlsx|csv` downloads the sheet to fill in offline (Excel by default: a column per assessment with its maximum, marks already entered, Excel refuses out-of-range marks); `POST /teaching/sheets/{id}/upload` (multipart `file`, .xlsx or .csv) reads it back → the sheet, `meta.read`, `meta.problems`. Each course in `GET /teaching/courses` now has `scheme` and `assessments` (the items it will be marked on) even before its sheet is opened.
 Medication and appointment reminders never reach the portal: they are kept and scheduled on the phone.
+
+## Courses, outstanding courses, O Level, fees access and loans
+
+Every course the app receives (registration, course forms, a lecturer's courses and score sheets) now carries the same
+details as the portal: `type` / `type_label` (C, CE, E), `department`, `faculty`, and an `owner` block with the
+department and faculty and the **head of department and dean who approve its scores** (`owner.hod`, `owner.dean`:
+title, name, staff number, designation, email, photo). `approval` lists the result approval steps in order. A score
+sheet also has `approval_steps`: each step with `state` done / waiting / to_come and who signed it.
+
+| Method | Path | What |
+|---|---|---|
+| GET | `/outstanding` | Failed courses still to pass: last grade and session, attempts, semester it is offered in, `offered_now`, `registered_now`. `meta.must_register_first` |
+| GET | `/registration` | Now also `outstanding`, `carryovers_first` (lock this semester's courses until every `must_register_first` course is ticked) |
+| GET | `/olevel` | The student's O Level sittings: typed grade, grade read from the upload, confirmed grade, and whether the department's requirement is met |
+| GET | `/loans` | School loans with plan, balance and overdue amount; `meta.can_apply`, `meta.max_amount`, `meta.terms` |
+| POST | `/loans` | Apply: `amount`, `guarantor_name`, `guarantor_phone`, `guarantor_relationship?`, `guarantor_address?`, `reason?`, `accept: true` |
+
+`GET /dashboard` adds `outstanding` and `fee_access`; `GET /fees` adds `meta.standing`. `fee_access.access` has one
+entry per area (`registration`, `exams`, `results`, `portal`): `allowed`, `reason`, `percent_needed`.
+
+When the school locks the whole portal and app for unpaid fees, every other call answers **403** with
+`{"message": "...", "code": "fees_access", "data": {standing}}`; fees, payments, loans, notifications, `/me` and
+`/dashboard` stay open. `GET /results` answers the same 403 when only results are locked, and
+`GET /timetable/exams` carries `meta.may_write` and `meta.fees_message`.
+
+The planners now know about carry-overs: `GET /planner/gpa` has `outstanding` and a `carryover` flag per course, and the
+reading planner has a `carryover` criterion (on by default) that gives outstanding courses more time.

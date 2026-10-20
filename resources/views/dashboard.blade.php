@@ -54,7 +54,9 @@
                 @endforeach
             </div>
 
-            <div class="card">
+            @include('dashboard.menu-cards', ['sections' => $cardSections ?? []])
+
+            <div class="card mt-3">
                 <div class="card-header"><h6 class="card-title mb-0">Setup checklist</h6></div>
                 <div class="card-body">
                     @php

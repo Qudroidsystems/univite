@@ -194,6 +194,29 @@ Route::middleware('auth')->group(function () {
     Route::get('payment-settings', [\App\Http\Controllers\Payments\PaymentSettingsController::class, 'edit'])->name('payments.settings');
     Route::put('payment-settings', [\App\Http\Controllers\Payments\PaymentSettingsController::class, 'update'])->name('payments.settings.update');
 
+    // ---- Fee access rules (share of fees needed to register, write exams, see results, use the portal) and the school loan scheme ----
+    Route::controller(\App\Http\Controllers\Fees\FeeAccessController::class)->prefix('fee-access')->name('fee-access.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('excel', 'excel')->name('excel');
+        Route::get('print', 'print')->name('print');
+        Route::put('/', 'update')->name('update');
+        Route::post('students/{student}', 'setException')->name('override');
+    });
+    Route::controller(\App\Http\Controllers\Fees\LoanAdminController::class)->prefix('loans')->name('loans.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::put('settings', 'settings')->name('settings');
+        Route::get('{loan}', 'show')->whereNumber('loan')->name('show');
+        Route::post('{loan}/approve', 'approve')->name('approve');
+        Route::post('{loan}/decline', 'decline')->name('decline');
+        Route::post('{loan}/disburse', 'disburse')->name('disburse');
+        Route::post('{loan}/repay', 'repay')->name('repay');
+        Route::post('{loan}/close', 'close')->name('close');
+    });
+    Route::get('my/loans', [\App\Http\Controllers\Fees\MyLoanController::class, 'index'])->name('my.loans');
+    Route::post('my/loans', [\App\Http\Controllers\Fees\MyLoanController::class, 'apply'])->name('my.loans.apply');
+    Route::post('my/loans/{loan}/cancel', [\App\Http\Controllers\Fees\MyLoanController::class, 'cancel'])->name('my.loans.cancel');
+    Route::get('my/access-locked', [\App\Http\Controllers\Fees\MyLoanController::class, 'locked'])->name('my.access-locked');
+
     // ---- New student verification (staff) ----
     Route::get('verification', [VerificationController::class, 'index'])->name('verification.index');
     Route::get('verification/documents/{document}', [VerificationController::class, 'document'])->name('verification.documents.show');
@@ -296,6 +319,15 @@ Route::middleware('auth')->group(function () {
     Route::post('results/complaints/{complaint}', [\App\Http\Controllers\ResultComplaintController::class, 'respond'])->name('results.complaints.respond');
     Route::post('my/results/{result}/query', [\App\Http\Controllers\ResultComplaintController::class, 'store'])->name('my.results.query');
 
+    // ---- Senate result approval ----
+    Route::controller(\App\Http\Controllers\Senate\SenateController::class)->prefix('senate')->name('senate.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('export/{format}', 'export')->whereIn('format', ['print', 'pdf', 'excel'])->name('export');
+        Route::post('decide', 'decide')->name('decide');
+        Route::post('approve-eligible', 'approveEligible')->name('approve-eligible');
+        Route::put('settings', 'settings')->name('settings');
+    });
+
     // ---- Graduation ----
     $gr = \App\Http\Controllers\GraduationController::class;
     Route::get('graduation', [$gr, 'index'])->name('graduation.index');
@@ -325,6 +357,29 @@ Route::middleware('auth')->group(function () {
     Route::get('my/registration', [\App\Http\Controllers\StudentRegistrationController::class, 'index'])->name('my.registration');
     Route::post('my/registration', [\App\Http\Controllers\StudentRegistrationController::class, 'save'])->name('my.registration.save');
     Route::get('my/registration/{form}/print', [\App\Http\Controllers\StudentRegistrationController::class, 'print'])->name('my.registration.print');
+
+    // ---- O Level results: students submit, the AI reads the upload, staff confirm ----
+    Route::controller(\App\Http\Controllers\Olevel\MyOlevelController::class)->prefix('my/olevel')->name('my.olevel')->group(function () {
+        Route::get('/', 'index');
+        Route::post('/', 'store')->name('.store');
+        Route::put('{sitting}', 'update')->name('.update');
+        Route::post('{sitting}/submit', 'submit')->name('.submit');
+        Route::post('{sitting}/read', 'read')->middleware('throttle:10,1')->name('.read');
+        Route::delete('{sitting}', 'destroy')->name('.destroy');
+        Route::get('{sitting}/document', 'document')->name('.document');
+    });
+    Route::get('olevel/requirements', [\App\Http\Controllers\Olevel\OlevelRequirementController::class, 'index'])->name('olevel.requirements');
+    Route::put('olevel/requirements', [\App\Http\Controllers\Olevel\OlevelRequirementController::class, 'save'])->name('olevel.requirements.save');
+    Route::put('olevel/settings', [\App\Http\Controllers\Olevel\OlevelRequirementController::class, 'settings'])->name('olevel.settings');
+    Route::controller(\App\Http\Controllers\Olevel\OlevelVerificationController::class)->prefix('olevel')->name('olevel.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('{sitting}', 'show')->whereNumber('sitting')->name('show');
+        Route::post('{sitting}/confirm', 'confirm')->name('confirm');
+        Route::post('{sitting}/reject', 'reject')->name('reject');
+        Route::post('{sitting}/read', 'read')->middleware('throttle:20,1')->name('read');
+        Route::get('{sitting}/document', 'document')->name('document');
+        Route::post('students/{student}/override', 'allowRegistration')->name('override');
+    });
 
     // ---- A student's own clearance ----
     Route::get('my/clearance', [StudentClearanceController::class, 'index'])->name('my.clearance');

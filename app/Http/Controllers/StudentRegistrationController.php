@@ -40,6 +40,9 @@ class StudentRegistrationController extends Controller
             'ceRule'    => $this->registration->compulsoryElectiveRule($student, $ctx, $form?->level),
             'problems'  => $form && $form->isEditable() && $form->courses->isNotEmpty() ? $this->registration->problems($form, $ctx) : [],
             'history'   => $student->registrationForms()->with('session', 'semesterType')->latest('id')->get(),
+            'outstanding' => $this->registration->outstanding($student, true, $ctx),
+            'rules'     => $rules = $this->registration->rules($student, $ctx),
+            'forceCarry' => (bool) $rules['force_carryovers'],
         ]);
     }
 

@@ -15,6 +15,7 @@ class AdmissionPermissionSeeder extends ModulePermissionSeeder
             'Clearance items',
             'Matric numbers',
             'Matric number format',
+            'O Level results',
         ];
     }
 }

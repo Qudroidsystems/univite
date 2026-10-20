@@ -170,9 +170,9 @@ class InvoiceService
     }
 
     /** Record money received outside the portal (bank teller, transfer, POS, cash). */
-    public function recordOfflinePayment(Invoice $invoice, float $amount, string $channel, ?string $reference, ?string $paidOn, ?string $note, ?int $userId): Payment
+    public function recordOfflinePayment(Invoice $invoice, float $amount, string $channel, ?string $reference, ?string $paidOn, ?string $note, ?int $userId, string $gateway = 'manual'): Payment
     {
-        return DB::transaction(function () use ($invoice, $amount, $channel, $reference, $paidOn, $note, $userId) {
+        return DB::transaction(function () use ($invoice, $amount, $channel, $reference, $paidOn, $note, $userId, $gateway) {
             $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
             $amount = round($amount, 2);
 
@@ -189,7 +189,7 @@ class InvoiceService
             $payment = Payment::create([
                 'invoice_id'        => $invoice->id,
                 'reference'         => 'PAY-' . strtoupper(Str::random(12)),
-                'gateway'           => 'manual',
+                'gateway'           => $gateway,
                 'gateway_reference' => $reference ?: null,
                 'amount'            => $amount,
                 'status'            => 'successful',

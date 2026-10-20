@@ -27,7 +27,8 @@ final readonly class ApiScoreSheet
 
         $data = [
             'id' => $sheet->id,
-            'course' => ['id' => $sheet->course->id, 'code' => $sheet->course->code, 'title' => $sheet->course->title, 'units' => (int) $sheet->course->credit_units],
+            'course' => ApiCourse::from($sheet->course)->toArray(),
+            'approval_steps' => self::steps($sheet),
             'session' => $sheet->session?->name,
             'semester' => $sheet->semesterType?->name,
             'status' => $sheet->status,
@@ -74,5 +75,31 @@ final readonly class ApiScoreSheet
     public function toArray(): array
     {
         return $this->data;
+    }
+
+    /**
+     * Where the sheet is in the approval chain: each step with done / waiting / to come, and who signed it since the
+     * sheet was last submitted.
+     */
+    public static function steps(ResultSheet $sheet): array
+    {
+        $chain = \App\Models\ResultStage::chain()->values();
+        $since = \App\Models\ResultSheetEvent::where('result_sheet_id', $sheet->id)->where('action', 'submitted')->max('id');
+        $signed = \App\Models\ResultSheetEvent::with('user')->where('result_sheet_id', $sheet->id)->where('action', 'approved')
+            ->when($since, fn ($q) => $q->where('id', '>', $since))->get()->groupBy('stage');
+        $at = $chain->search(fn ($s) => $s->id === $sheet->stage_id);
+
+        return $chain->map(function ($s, $i) use ($sheet, $at, $signed) {
+            $state = match (true) {
+                in_array($sheet->status, ['approved', 'published'], true) => 'done',
+                $sheet->status === 'submitted' && $at !== false && $i < $at => 'done',
+                $sheet->status === 'submitted' && $i === $at => 'waiting',
+                default => 'to_come',
+            };
+            $by = $signed->get($s->name)?->last();
+
+            return ['step' => $i + 1, 'name' => $s->name, 'role' => $s->office_role, 'state' => $state,
+                'signed_by' => $state === 'done' && $by ? $by->user?->name : null, 'signed_at' => $state === 'done' && $by ? $by->created_at?->toIso8601String() : null];
+        })->all();
     }
 }

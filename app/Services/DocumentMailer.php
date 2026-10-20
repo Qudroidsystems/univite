@@ -52,7 +52,11 @@ class DocumentMailer
         $payment->loadMissing('invoice.payable', 'invoice.session', 'recorder');
         $invoice = $payment->invoice;
         $payer = $invoice->payable;
-        $method = $payment->gateway === 'manual' ? (Payment::CHANNELS[$payment->channel] ?? 'Offline') : ucfirst($payment->gateway);
+        $method = match ($payment->gateway) {
+            'manual' => Payment::CHANNELS[$payment->channel] ?? 'Offline',
+            'loan' => 'School loan',
+            default => ucfirst($payment->gateway),
+        };
 
         return $this->send('receipt', $payment, $this->recipients($payer), "Payment receipt {$payment->reference}", [
             'title'    => 'Official payment receipt',

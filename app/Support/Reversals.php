@@ -76,6 +76,17 @@ class Reversals
         'staff_pay_details'     => ['Staff pay or bank details changed', null],
         'staff_pay_item'        => ['Personal earning or deduction changed', null],
         'scoped_role'           => ['Scoped role given or removed', null],
+        'olevel_confirm'        => ['O Level result confirmed', null],
+        'olevel_return'         => ['O Level result returned to the student', null],
+        'olevel_override'       => ['Student allowed to register before O Level is confirmed', null],
+        'olevel_requirement'    => ['O Level requirement changed', null],
+        'fee_access_rules'      => ['Fee and access rules changed', null],
+        'fee_access_override'   => ['Student allowed or barred despite fees', null],
+        'loan_decide'           => ['School loan approved or declined', null],
+        'loan_disburse'         => ['School loan paid against fees', null],
+        'loan_repayment'        => ['Loan repayment recorded', null],
+        'loan_writeoff'         => ['School loan closed or written off', null],
+        'senate_decision'       => ['Senate decision recorded', null],
     ];
 
     public static function typeLabel(string $type): string

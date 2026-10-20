@@ -36,6 +36,16 @@
                 </form>
                 @endif
             </div></div>
+            @if (! empty($ctx['outstanding']))
+                <div class="card border-danger-subtle"><div class="card-header bg-danger-subtle"><h6 class="card-title mb-0 text-danger"><i class="ri-error-warning-line me-1"></i>Outstanding courses to clear</h6>
+                    <div class="fs-12 text-muted">Passing these lifts your CGPA twice over: the fail stops counting{{ ($ctx['method'] ?? 'latest') === 'all' ? ' alongside the new grade' : '' }} and the units count as earned.</div></div>
+                    <ul class="list-group list-group-flush">
+                        @foreach ($ctx['outstanding'] as $o)
+                            <li class="list-group-item d-flex justify-content-between align-items-center"><span><strong>{{ $o['code'] }}</strong> <span class="fs-13">{{ $o['title'] }}</span><div class="fs-12 text-muted">Last grade {{ $o['last_grade'] ?? '—' }} · {{ $o['units'] }} units{{ $o['offered_in'] ? ' · offered in ' . $o['offered_in'] : '' }}</div></span>
+                                @if ($o['registered_now'])<span class="badge bg-success-subtle text-success">Registered</span>@else<span class="badge bg-warning-subtle text-warning">Not registered</span>@endif</li>
+                        @endforeach
+                    </ul></div>
+            @endif
             <div class="card"><div class="card-header"><h6 class="card-title mb-0">Grading scale</h6></div><table class="table table-sm mb-0"><tbody>
                 @foreach ($ctx['scale'] as $g)<tr><td class="fw-semibold">{{ $g['letter'] }}</td><td>{{ $fmt($g['min']) }}–{{ $fmt($g['max']) }}</td><td>{{ $fmt($g['points']) }} points</td></tr>@endforeach
             </tbody></table></div>

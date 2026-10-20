@@ -16,12 +16,11 @@ final readonly class ApiRegistrationForm
 
     public static function from(RegistrationForm $f): self
     {
-        $f->loadMissing('session', 'semesterType', 'courses.course');
+        $f->loadMissing('session', 'semesterType', 'courses.course.department.faculty');
 
         return new self($f->id, $f->session?->name, $f->semesterType?->name, $f->level, $f->status, (int) $f->total_units, $f->note,
-            $f->decided_at?->toIso8601String(), $f->courses->map(fn ($c) => [
-                'id' => $c->course_id, 'code' => $c->course?->code, 'title' => $c->course?->title, 'units' => (int) $c->credit_units,
-                'status' => $c->course_status, 'carryover' => (bool) $c->is_carryover,
+            $f->decided_at?->toIso8601String(), $f->courses->filter(fn ($c) => $c->course)->map(fn ($c) => ApiCourse::from($c->course, $c->course_status)->toArray() + [
+                'id' => $c->course_id, 'units' => (int) $c->credit_units, 'carryover' => (bool) $c->is_carryover,
             ])->values()->all());
     }
 

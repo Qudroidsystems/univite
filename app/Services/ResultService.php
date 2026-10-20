@@ -567,7 +567,7 @@ class ResultService
      */
     public function transcript(Student $student): Transcript
     {
-        $all = CourseResult::with('course', 'session', 'semesterType', 'assessmentScores.item')->where('student_id', $student->id)->where('status', 'published')->get();
+        $all = CourseResult::with('course.department.faculty', 'session', 'semesterType', 'assessmentScores.item')->where('student_id', $student->id)->where('status', 'published')->get();
 
         return $this->transcriptFrom($student, $all);
     }

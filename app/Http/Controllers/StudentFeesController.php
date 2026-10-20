@@ -15,7 +15,7 @@ class StudentFeesController extends Controller
         return auth()->user()->student ?? abort(403, 'This page is for students.');
     }
 
-    public function index(): View
+    public function index(\App\Services\Fees\FeeAccess $access): View
     {
         $student = $this->student();
         $invoices = $student->invoices()->with('session')->where('status', '!=', 'cancelled')->latest('id')->get();
@@ -25,6 +25,8 @@ class StudentFeesController extends Controller
             'student'    => $student,
             'invoices'   => $invoices,
             'owing'      => $invoices->sum(fn ($i) => $i->outstanding),
+            'standing'   => \App\Services\Fees\FeeAccess::anyOn() ? $access->standing($student) : null,
+            'loans'      => \App\Services\Fees\LoanService::enabled(),
         ]);
     }
 

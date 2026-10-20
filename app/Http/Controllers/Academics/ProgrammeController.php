@@ -17,8 +17,13 @@ class ProgrammeController extends CrudController
     protected string $singular = 'Programme';
     protected string $icon = 'ri-graduation-cap-line';
     protected string $routeBase = 'academics.programmes';
-    protected string $intro = 'A programme is a degree or diploma a department awards, e.g. B.Sc. Computer Science. Its duration decides the levels it runs (100 to 400, 500 ...). The credit load limits are used later for course registration.';
+    protected string $intro = 'A programme is a degree or diploma a department awards, e.g. B.Sc. Computer Science. Its duration decides the levels it runs (100 to 400, 500 ...). Its admission, graduating and Senate levels and its credit load are set under Academic Rules (Levels).';
     protected array $searchable = ['name', 'code'];
+
+    public function __construct(private \App\Support\AcademicRules $academicRules)
+    {
+        parent::__construct();
+    }
 
     protected function model(): string
     {
@@ -88,7 +93,14 @@ class ProgrammeController extends CrudController
             ['Programme', fn ($r) => new HtmlString('<span class="fw-semibold">' . e($r->name) . '</span><div class="text-muted fs-12">' . e($r->department->name) . ' · ' . e($r->department->faculty->name) . '</div>')],
             ['Category', fn ($r) => new HtmlString(e($r->studyCategory?->name ?? '—') . '<div class="text-muted fs-12">' . e($r->degree_type) . '</div>')],
             ['Duration', fn ($r) => $r->duration_years . ' yr' . ($r->duration_years > 1 ? 's' : '')],
-            ['Rules', fn ($r) => new HtmlString('<a href="' . route('academics.rules.index', ['scope' => 'programme', 'id' => $r->id]) . '" class="fs-13">Credit load &amp; graduation</a>')],
+            ['Levels', function ($r) {
+                $rules = $this->academicRules;
+
+                return new HtmlString('<div class="fs-12 lh-sm"><span class="text-muted">Admits:</span> ' . e(implode(', ', $rules->admissionLevels($r)))
+                    . '<br><span class="text-muted">Graduates:</span> ' . $rules->graduatingLevel($r)
+                    . '<br><span class="text-muted">Senate:</span> ' . e(implode(', ', $rules->senateLevels($r))) . '</div>');
+            }],
+            ['Rules', fn ($r) => new HtmlString('<a href="' . route('academics.rules.index', ['scope' => 'programme', 'id' => $r->id]) . '" class="fs-13">Credit load, levels &amp; graduation</a>')],
             ['Status', fn ($r) => new HtmlString($r->is_active ? '<span class="badge bg-success-subtle text-success">Active</span>' : '<span class="badge bg-secondary-subtle text-secondary">Inactive</span>')],
         ];
     }

@@ -9,13 +9,16 @@ use Illuminate\View\View;
 /** Published results, GPA and CGPA: a student's own, or any student's for staff with permission. */
 class StudentResultController extends Controller
 {
-    public function __construct(private ResultService $results, private \App\Services\ResultComplaintService $complaints, private \App\Services\Access\ScopedAccess $access)
+    public function __construct(private ResultService $results, private \App\Services\ResultComplaintService $complaints, private \App\Services\Access\ScopedAccess $access, private \App\Services\Fees\FeeAccess $fees)
     {
     }
 
     public function mine(): View
     {
         $student = auth()->user()->student ?? abort(403, 'This page is for students.');
+        if ($reason = $this->fees->blocker($student, 'results')) {
+            return view('fees.blocked', ['pagetitle' => 'My results', 'title' => 'Your results are held', 'reason' => $reason, 'standing' => $this->fees->standing($student)]);
+        }
 
         return $this->render($student, 'My results', true);
     }

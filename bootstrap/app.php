@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'scoped' => \App\Http\Middleware\ScopedPermission::class,
         ]);
 
-        $middleware->web(append: [\App\Http\Middleware\AjaxResponses::class]);
+        $middleware->web(append: [\App\Http\Middleware\AjaxResponses::class, \App\Http\Middleware\FeeAccessGate::class]);
 
         $middleware->validateCsrfTokens(except: [
             'webhook/*',

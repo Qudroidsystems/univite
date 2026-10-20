@@ -33,7 +33,7 @@ class ApplicantController extends CrudController
     protected array $searchable = ['first_name', 'last_name', 'email', 'application_no', 'phone_number', 'jamb_reg_no'];
     protected ?string $extraView = 'applicants.partials.batch-admit';
 
-    public function __construct(private \App\Services\ApplicationService $applications)
+    public function __construct(private \App\Services\ApplicationService $applications, private \App\Support\AcademicRules $academicRules)
     {
         parent::__construct();
         $this->middleware('permission:View applicants')->only(['show', 'document']);
@@ -81,8 +81,11 @@ class ApplicantController extends CrudController
             'entry_level' => [
                 'required', 'integer',
                 function ($attribute, $value, $fail) use ($programme, $mode) {
+                    $rules = $this->academicRules;
                     if ($programme && ! in_array((int) $value, $programme->levels(), true)) {
                         $fail("{$programme->name} runs levels " . implode(', ', $programme->levels()) . '.');
+                    } elseif ($programme && $rules->admissionLevelsSet($programme) && ! in_array((int) $value, $rules->admissionLevels($programme), true)) {
+                        $fail("{$programme->name} admits students into " . implode(', ', $rules->admissionLevels($programme)) . ' level only.');
                     } elseif ($mode && $mode->fixed_level && (int) $value !== (int) $mode->entry_level) {
                         $fail("{$mode->name} candidates enter at {$mode->entry_level} level.");
                     } elseif ($mode && ! $mode->fixed_level && (int) $value < (int) $mode->entry_level) {

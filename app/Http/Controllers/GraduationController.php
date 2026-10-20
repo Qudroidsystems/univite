@@ -55,7 +55,7 @@ class GraduationController extends Controller
         return view('graduation.show', [
             'pagetitle' => 'Graduation list', 'list' => $list,
             'entries' => $list->entries->sortBy([fn ($a, $b) => $b->graduates() <=> $a->graduates(), fn ($a, $b) => $b->cgpa <=> $a->cgpa]),
-            'finalLevel' => GraduationService::levelLabel($list->programme),
+            'finalLevel' => $this->graduation->levelLabel($list->programme),
         ]);
     }
 

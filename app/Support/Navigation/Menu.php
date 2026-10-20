@@ -25,7 +25,7 @@ use Illuminate\Routing\Router;
  */
 class Menu
 {
-    public function __construct(private ScopedAccess $scoped, private PollService $polls, private Router $router, private \App\Support\MobileAppSettings $mobile)
+    public function __construct(private ScopedAccess $scoped, private PollService $polls, private Router $router, private \App\Support\MobileAppSettings $mobile, private \App\Services\RegistrationService $registration)
     {
     }
 
@@ -85,6 +85,12 @@ class Menu
         return new MenuLink($label, route($route), $icon, $this->router->is(...($patterns ?: [$route])), $badge, $keywords);
     }
 
+    /** Failed courses the student still has to pass (shown as a badge on Course Registration). */
+    private function outstandingCount(\App\Models\Student $student): int
+    {
+        return $this->registration->outstanding($student)->count();
+    }
+
     /** Pages about the person themselves: their courses, fees, leave, library and so on. */
     private function personal(User $u): array
     {
@@ -98,13 +104,15 @@ class Menu
         };
 
         $add((bool) $student?->needs_onboarding, 'Getting Started', 'my.onboarding', 'ph-flag', ['my.onboarding*'], ['admission', 'clearance', 'acceptance']);
-        $add($settled, 'Course Registration', 'my.registration', 'ph-note-pencil', ['my.registration*'], ['courses', 'register']);
+        $add((bool) $student, 'My O Level Results', 'my.olevel', 'ph-file-text', ['my.olevel*'], ['waec', 'neco', 'nabteb', 'ssce', 'o level', 'olevel']);
+        $add($settled, 'Course Registration', 'my.registration', 'ph-note-pencil', ['my.registration*'], ['courses', 'register', 'carry over', 'outstanding'], $student ? ($this->outstandingCount($student) ?: null) : null);
         $add($this->scoped->scope($u, 'View course registrations')->isEmpty() && CourseAdviser::where('user_id', $u->id)->exists(), 'My Advisees', 'registrations.index', 'ph-users-three', ['registrations.*'], ['course adviser']);
         $add($u->scoringAssignments()->exists() && ! $u->can('View result sheets'), 'My Courses & Scores', 'results.sheets.index', 'ph-list-checks', ['results.sheets.*', 'results.open'], ['score sheet', 'results']);
         $add($u->scoringAssignments()->exists() && ! $u->can('Enter results for any course'), 'Enter Scores', 'results.entry', 'ph-pencil-simple-line', ['results.entry'], ['post scores', 'by student', 'by subject', 'ca', 'exam']);
         $add($settled, 'My Results', 'my.results', 'ph-medal', ['my.results*'], ['grades', 'gpa', 'cgpa', 'transcript']);
         $add($settled && $this->mobile->feature('gpa_planner'), 'GPA Planner', 'my.gpa-planner', 'ph-target', ['my.gpa-planner'], ['target', 'gpa', 'cgpa', 'grades needed']);
         $add((bool) $student, 'My Fees', 'my.fees', 'ph-wallet', ['my.fees*', 'my.receipt'], ['pay', 'invoice', 'receipt', 'school fees']);
+        $add($student && (\App\Services\Fees\LoanService::enabled() || \App\Models\StudentLoan::where('student_id', $student->id)->exists()), 'My School Loans', 'my.loans', 'ph-coins', ['my.loans*'], ['loan', 'borrow', 'repay']);
         $add($settled, 'My Timetable', 'my.timetable', 'ph-calendar', ['my.timetable'], ['lectures', 'classes']);
         $add($settled, 'My Examinations', 'my.exams', 'ph-exam', ['my.exams*'], ['exam', 'seat number']);
         if (! $student) {
@@ -170,6 +178,8 @@ class Menu
                     ['Students', 'students.index', 'View students', 'students.index', 'students.show'],
                     ['Course Registrations', 'registrations.index', 'View course registrations', 'registrations.index', 'registrations.show'],
                     ['Registration Settings', 'registrations.settings', 'View registration settings', 'registrations.settings*'],
+                    ['O Level Verification', 'olevel.index', ['View O Level results', 'Verify O Level results'], 'olevel.index', 'olevel.show'],
+                    ['O Level Requirements', 'olevel.requirements', ['Set O Level requirements', 'View O Level results', 'Edit department academic rules'], 'olevel.requirements*'],
                     ['Matric Numbers', 'matric.index', 'View matric numbers', 'matric.*'],
                     ['Matric Number Format', 'students.settings', 'View matric number format', 'students.settings*'],
                 ]],
@@ -182,6 +192,7 @@ class Menu
                     ['Result Summary', 'results.summary', ['View student results', 'Edit academic rules', 'Edit department academic rules'], 'results.summary*'],
                     ['Result Queries', 'results.complaints', 'View result complaints', 'results.complaints*'],
                     ['Legacy Results', 'legacy.index', 'Import legacy results', 'legacy.*'],
+                    ['Senate Approval', 'senate.index', ['View senate review', 'Record senate decisions'], 'senate.*'],
                     ['Graduation Lists', 'graduation.index', 'View graduation lists', 'graduation.*'],
                     ['Result Settings', 'results.settings', 'View result settings', 'results.settings*'],
                     ['Key to Grade', 'academics.grade-bands.index', 'View grade bands', 'academics.grade-bands.*'],
@@ -203,6 +214,8 @@ class Menu
                 ['sidebarFees', 'Fees & Payments', 'ph-wallet', [
                     ['Invoices & Payments', 'invoices.index', 'View invoices', 'invoices.*'],
                     ['Payment Settings', 'payments.settings', 'Edit payment settings', 'payments.settings*'],
+                    ['Fee Access & Eligibility', 'fee-access.index', ['View fee access', 'Set fee access rules', 'Manage fee access exceptions'], 'fee-access.*'],
+                    ['School Loans', 'loans.index', ['View school loans', 'Approve school loans', 'Record loan repayments', 'Set loan policy', 'Manage school loans'], 'loans.*'],
                 ]],
             ],
             'Staff' => [

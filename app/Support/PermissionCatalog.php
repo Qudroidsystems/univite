@@ -319,6 +319,14 @@ class PermissionCatalog
                 ],
             ],
 
+            'Senate result approval' => [
+                'about' => 'Senate\'s review of results at the levels it sits on (usually the graduating level): every student and course checked against the graduation rules, result-integrity checks and clearance, with Senate\'s approve, defer or refer decision on each.',
+                'permissions' => [
+                    ['View senate review', 'View', 'Open the Senate review: for each faculty, department, programme and course at the Senate levels, who is eligible, who is not and why, result anomalies (missing or amended scores, unusual grade spreads, late sheets), clearance (fees, loans, library, hostel) and the summaries; print or download any view as PDF or Excel with the letterhead. Held through a role for a faculty or department, it shows only that faculty or department.'],
+                    ['Record senate decisions', 'Approve', 'Approve, defer or refer a student or a course at the Senate review, with a note. Decisions are kept with who made them and when, and a later decision replaces an earlier one.'],
+                ],
+            ],
+
             'Student statuses' => [
                 'about' => 'The states a student can be in (Active, Deferred, Suspended ...). Each status controls whether the student can sign in, register for courses, pay fees and counts as enrolled.',
                 'permissions' => [
@@ -445,6 +453,15 @@ class PermissionCatalog
                     ['Create clearance items', 'Create', 'Add an item to the checklist, such as a library or hostel clearance, and say which office signs it.'],
                     ['Edit clearance items', 'Edit', 'Rename an item, change its office, make it required or optional, or switch it on or off. Switching an item off stops it blocking students.'],
                     ['Delete clearance items', 'Delete', 'Delete a clearance item. Students\' past decisions on it are removed too. Switching it off instead keeps the history.'],
+                ],
+            ],
+
+            'O Level results' => [
+                'about' => 'WAEC, NECO and NABTEB results students submit after admission: each department\'s required subjects and grades, the uploaded result read by the AI service beside what the student typed, and the school\'s confirmation before course registration.',
+                'permissions' => [
+                    ['View O Level results', 'View', 'See students\' O Level sittings, their uploaded results, the grades read from them and whether they meet their department\'s requirement.'],
+                    ['Verify O Level results', 'Approve', 'Compare a student\'s typed grades with the uploaded result (and what the AI read from it), choose the grades to keep and confirm the sitting, or return it for correction; let a student register while their O Level is still being sorted out. Held through a role for a department or faculty, it covers only those students.'],
+                    ['Set O Level requirements', 'Edit', 'Set the O Level subjects and minimum grades a department or programme needs before its students may register courses, how many sittings may be combined, and whether automatic reading of uploads is used.'],
                 ],
             ],
 
@@ -643,6 +660,26 @@ class PermissionCatalog
                     ['Reverse payments', 'Manage', 'Formally reverse a posted payment after a preview. The original payment and receipt stay on record marked reversed, a reversal entry is added, the balance goes back on the invoice and the payer is emailed. A reason is required.'],
                     ['Cancel invoices', 'Manage', 'Cancel an invoice that has no payments, for example one raised by mistake. The student no longer owes it.'],
                     ['Edit payment settings', 'Edit', 'Switch online payment with Paystack, Flutterwave or Remita on or off and enter their keys (stored encrypted). This decides where students\' and applicants\' money goes, so only give it to the bursar or ICT.'],
+                ],
+            ],
+
+            'Fee access rules' => [
+                'about' => 'How much of the session\'s fees a student must have paid before they may register courses, write examinations, see their results or use the portal and app at all, and the students the school allows or bars by hand.',
+                'permissions' => [
+                    ['View fee access', 'View', 'See the fee access rules and the eligibility list: each student\'s fees, what share is paid (school loans included), and whether they may register, write examinations, see results and use the portal.'],
+                    ['Set fee access rules', 'Edit', 'Choose, for course registration, examinations, results and the whole portal and app, the share of fees that must be paid first, whether school loans count, and what happens when a loan repayment is overdue.'],
+                    ['Manage fee access exceptions', 'Manage', 'Allow a student to register, write examinations, see results or use the portal although they have not paid enough (or bar one), for the session, with a reason.'],
+                ],
+            ],
+
+            'School loans' => [
+                'about' => 'The school\'s fee loan scheme: students apply for a loan against their fees, the bursary approves and pays it against the invoice, and repayments are recorded until it is settled.',
+                'permissions' => [
+                    ['View school loans', 'View', 'See every loan application and loan: amounts, guarantor, repayment plan, repayments and what is still owed.'],
+                    ['Approve school loans', 'Approve', 'Approve a loan application (setting the amount and repayment plan) or decline it, and pay an approved loan against the student\'s fees invoice, which counts as fees paid.'],
+                    ['Record loan repayments', 'Record', 'Record money a student repays on a school loan. The loan balance goes down and the student gets a receipt notice.'],
+                    ['Set loan policy', 'Set', 'Switch the loan scheme on or off and set its rules: the most that may be borrowed (share of the invoice), interest, the number of instalments, guarantor and when applications open.'],
+                    ['Manage school loans', 'Manage', 'Close a settled loan, write off what is left of a loan, or cancel a loan that has not been paid out. A reason is required and kept.'],
                 ],
             ],
         ];

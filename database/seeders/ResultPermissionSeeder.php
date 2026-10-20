@@ -17,6 +17,7 @@ class ResultPermissionSeeder extends ModulePermissionSeeder
             'Result settings',
             'Result complaints',
             'Graduation lists',
+            'Senate result approval',
         ];
     }
 }

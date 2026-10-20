@@ -30,6 +30,8 @@ class RegistrationService
         private OperationAudit $audit,
         private DocumentMailer $mailer,
         private Messenger $messenger,
+        private \App\Services\Olevel\OlevelService $olevel,
+        private \App\Services\Fees\FeeAccess $feeAccess,
     ) {
     }
 
@@ -72,7 +74,12 @@ class RegistrationService
         if (RegistrationSettings::on('require_clearance', $ctx) && $student->needs_onboarding && ! $student->cleared_at) {
             $why[] = 'Finish your clearance first.';
         }
+        if ($reason = $this->olevel->registrationBlocker($student)) {
+            $why[] = $reason;
+        }
         if ($reason = $this->feeBlocker($student, $ctx)) {
+            $why[] = $reason;
+        } elseif ($reason = $this->feeAccess->blocker($student, 'registration', $ctx->session)) {
             $why[] = $reason;
         }
 
@@ -152,6 +159,49 @@ class RegistrationService
     }
 
     /**
+     * The student's outstanding courses: failed, not passed since, not waived, and (under the rules for their type) still
+     * to be passed. Each row: course (with department and faculty), type, curriculum level and semester, attempts, the last
+     * grade and when it was, and whether it is offered (and already chosen) this semester. Students only see published
+     * results, so by default only those count.
+     *
+     * @return Collection<int, array{course: Course, type: string, level: ?int, semester_order: ?int, semester: ?string, attempts: int, last_grade: ?string, last_total: mixed, last_term: string, offered_now: bool, chosen_now: bool}>
+     */
+    public function outstanding(Student $student, bool $publishedOnly = true, ?RegistrationContext $ctx = null): Collection
+    {
+        $results = CourseResult::with('course.department.faculty', 'session', 'semesterType')->where('student_id', $student->id)
+            ->whereIn('status', $publishedOnly ? ['published'] : ['approved', 'published'])->get();
+        if ($results->isEmpty()) {
+            return collect();
+        }
+        $passed = $results->where('is_pass', true)->pluck('course_id')->flip();
+        $waived = \App\Models\CarryoverWaiver::courseIdsFor($student->id)->flip();
+        $curriculum = ProgrammeCourse::where('programme_id', $student->programme_id)->get()->keyBy('course_id');
+        $rules = $this->rules->forStudent($student);
+        $ctx ??= $this->context();
+        $types = SemesterType::orderBy('sort_order')->pluck('name', 'sort_order');
+        $chosen = $ctx ? CourseRegistration::whereHas('form', fn ($q) => $q->where('student_id', $student->id)->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id))->pluck('course_id')->flip() : collect();
+
+        return $results->where('is_pass', false)->reject(fn ($r) => $passed->has($r->course_id) || $waived->has($r->course_id))
+            ->groupBy('course_id')->map(function ($attempts) use ($curriculum, $rules, $ctx, $types, $chosen) {
+                $last = $attempts->sortBy(fn ($r) => [$r->session?->name, $r->semesterType?->sort_order, $r->id])->last();
+                $pc = $curriculum->get($last->course_id);
+                $type = $pc?->status ?? ($last->course?->course_type ?: CourseType::COMPULSORY);
+                if (! $last->course || ! CourseType::mustRetake($type, $rules)) {
+                    return null;
+                }
+
+                return [
+                    'course' => $last->course, 'type' => $type, 'level' => $pc?->level ?? $last->course->level,
+                    'semester_order' => $pc?->semester_order, 'semester' => $pc ? ($types[$pc->semester_order] ?? null) : null,
+                    'attempts' => $attempts->count(), 'last_grade' => $last->grade, 'last_total' => $last->total,
+                    'last_term' => trim(($last->session?->name ?? '') . ' ' . ($last->semesterType?->name ?? '')),
+                    'offered_now' => $ctx && $pc && (int) $pc->semester_order === (int) $ctx->type->sort_order,
+                    'chosen_now' => $chosen->has($last->course_id),
+                ];
+            })->filter()->sortBy(fn ($r) => $r['course']->code)->values();
+    }
+
+    /**
      * Courses open to this student this semester: the curriculum for their level and semester, plus carry-overs.
      * Each row: course, status (compulsory|compulsory_elective|elective, as the curriculum gives it), carryover, blocked (prerequisite reason or null).
      *
@@ -163,9 +213,9 @@ class RegistrationService
         $passed = $this->passed($student);
         $failed = $this->failed($student);
 
-        $current = ProgrammeCourse::with('course.prerequisites', 'course.department')->where('programme_id', $student->programme_id)
+        $current = ProgrammeCourse::with('course.prerequisites', 'course.department.faculty')->where('programme_id', $student->programme_id)
             ->where('level', $student->current_level)->where('semester_order', $order)->get();
-        $carry = ProgrammeCourse::with('course.prerequisites', 'course.department')->where('programme_id', $student->programme_id)
+        $carry = ProgrammeCourse::with('course.prerequisites', 'course.department.faculty')->where('programme_id', $student->programme_id)
             ->where('semester_order', $order)->whereIn('course_id', $failed)->get();
 
         $checkPrereqs = (bool) $this->rules($student, $ctx)['check_prerequisites'];
@@ -247,6 +297,9 @@ class RegistrationService
                 throw new RuntimeException($row['course']->code . ': ' . $row['blocked']);
             }
         }
+        if (($missing = $this->carryoversFirst($student, $ctx, $offered, $chosen))->isNotEmpty()) {
+            throw new RuntimeException('Carry-over courses must be registered: ' . $missing->implode(', ') . '. Register your outstanding courses first, then this semester\'s courses.');
+        }
 
         DB::transaction(function () use ($form, $chosen, $offered, $student) {
             $form->courses()->delete();
@@ -261,6 +314,26 @@ class RegistrationService
         });
 
         return $form->fresh('courses.course');
+    }
+
+    /**
+     * Outstanding courses that must be on the form before any of this semester's own courses can be: carry-overs on
+     * offer this semester that the rules say must be retaken. Empty when the student chose only carry-overs, or chose
+     * them all. @return Collection<int, string> course codes still missing
+     */
+    public function carryoversFirst(Student $student, RegistrationContext $ctx, Collection $offered, Collection $chosen): Collection
+    {
+        $rules = $this->rules($student, $ctx);
+        if (! $rules['force_carryovers']) {
+            return collect();
+        }
+        $required = $offered->filter(fn ($r) => $r['carryover'] && ! $r['blocked'] && CourseType::mustRetake($r['status'], $rules));
+        $current = $chosen->filter(fn ($id) => ! ($offered->get($id)['carryover'] ?? false));
+        if ($current->isEmpty()) {
+            return collect();
+        }
+
+        return $required->reject(fn ($r) => $chosen->contains($r['course']->id))->map(fn ($r) => $r['course']->code)->values();
     }
 
     /** Problems that stop this form being submitted (unit limits, missing carry-overs/required courses). @return string[] */

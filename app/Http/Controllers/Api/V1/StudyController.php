@@ -91,7 +91,7 @@ class StudyController extends ApiController
 
         return [
             collect($ctx['courses'])->map(fn ($c) => ['id' => $c['id'], 'code' => $c['code'], 'title' => $c['title'], 'units' => $c['units'],
-                'lectures' => (int) ($perWeek[$c['id']] ?? 0), 'exam_date' => $examDates[$c['id']] ?? null])->values()->all(),
+                'lectures' => (int) ($perWeek[$c['id']] ?? 0), 'exam_date' => $examDates[$c['id']] ?? null, 'carryover' => (bool) ($c['carryover'] ?? false)])->values()->all(),
             $lectures->map(fn ($e) => ['day' => (int) $e->day, 'starts_at' => substr((string) $e->starts_at, 0, 5), 'ends_at' => substr((string) $e->ends_at, 0, 5), 'code' => $e->course?->code])->values()->all(),
             $term,
             $ctx,
@@ -129,6 +129,7 @@ class StudyController extends ApiController
                 ['key' => 'difficulty', 'label' => 'How hard I find it', 'help' => 'Harder courses get more time.'],
                 ['key' => 'exams', 'label' => 'Upcoming exams', 'help' => 'Courses whose exam is close get more time and turn into revision.'],
                 ['key' => 'target', 'label' => 'My target grades', 'help' => 'Courses where you need a high grade get more time.'],
+                ['key' => 'carryover', 'label' => 'Carry-over courses', 'help' => 'Outstanding courses you failed before and must pass now get more time.'],
             ],
         ]);
     }

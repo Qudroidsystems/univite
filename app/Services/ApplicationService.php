@@ -15,7 +15,7 @@ use RuntimeException;
 class ApplicationService
 {
     /** Create the application (not yet submitted) and the screening-fee invoice. */
-    public function __construct(private DocumentMailer $mailer)
+    public function __construct(private DocumentMailer $mailer, private \App\Support\AcademicRules $rules)
     {
     }
 
@@ -26,7 +26,7 @@ class ApplicationService
         return DB::transaction(function () use ($data, $session) {
             $applicant = Applicant::create($data + [
                 'academic_session_id' => $session->id,
-                'entry_level'         => \App\Models\EntryMode::byCode($data['entry_mode'])?->entry_level ?? 100,
+                'entry_level'         => $this->entryLevel($data),
                 'status'              => 'draft',
             ]);
             $applicant->update(['application_no' => sprintf('APP/%s/%04d', substr($session->name, 0, 4), $applicant->id)]);
@@ -44,6 +44,21 @@ class ApplicationService
 
             return $applicant;
         });
+    }
+
+    /**
+     * The level an online applicant enters at: the entry mode's level, but never below the programme's normal
+     * admission level (a programme that admits at 200 level starts every new student there).
+     */
+    public function entryLevel(array $data): int
+    {
+        $level = (int) (\App\Models\EntryMode::byCode($data['entry_mode'] ?? null)?->entry_level ?? 100);
+        $programme = isset($data['programme_id']) ? \App\Models\Programme::find($data['programme_id']) : null;
+        if ($programme) {
+            $level = max($level, $this->rules->admissionLevel($programme));
+        }
+
+        return $level;
     }
 
     public function screeningInvoice(Applicant $applicant): ?Invoice

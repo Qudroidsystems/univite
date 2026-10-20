@@ -54,6 +54,8 @@ class ActionsController extends ApiController
         $limits = $registration->limits($student, $ctx);
         $selected = $form ? $form->courses->pluck('course_id')->all() : [];
         $offered = ($ctx && ! $blockers) || ($form && ! $form->isEditable()) ? $registration->offered($student, $ctx) : collect();
+        $rules = $registration->rules($student, $ctx);
+        $outstanding = $registration->outstanding($student, true, $ctx);
 
         return $this->ok([
             'term' => $ctx?->label(),
@@ -63,10 +65,12 @@ class ActionsController extends ApiController
             'form' => $form ? ['id' => $form->id, 'status' => $form->status, 'total_units' => (int) $form->total_units, 'note' => $form->note,
                 'submitted_at' => $form->submitted_at?->toIso8601String(), 'decided_at' => $form->decided_at?->toIso8601String()] : null,
             'limits' => ['min' => $limits->min, 'max' => $limits->max, 'carryovers_exempt' => $limits->carryoversExempt, 'probation' => $limits->probation],
-            'offered' => $offered->map(fn ($r) => [
-                'id' => $r['course']->id, 'code' => $r['course']->code, 'title' => $r['course']->title, 'units' => (int) $r['course']->credit_units,
-                'status' => $r['status'], 'type' => \App\Support\CourseType::short($r['status']), 'type_label' => \App\Support\CourseType::label($r['status']),
-                'department' => $r['course']->department?->name, 'carryover' => $r['carryover'], 'blocked' => $r['blocked'], 'selected' => in_array($r['course']->id, $selected, true),
+            // Outstanding courses must be ticked before any of this semester's own courses (the app should lock those until then).
+            'carryovers_first' => (bool) $rules['force_carryovers'],
+            'outstanding' => $outstanding->map(fn ($o) => \App\Data\Api\ApiCourse::outstanding($o))->values()->all(),
+            'offered' => $offered->map(fn ($r) => \App\Data\Api\ApiCourse::from($r['course'], $r['status'])->toArray() + [
+                'carryover' => $r['carryover'], 'blocked' => $r['blocked'], 'selected' => in_array($r['course']->id, $selected, true),
+                'must_register_first' => $r['carryover'] && ! $r['blocked'] && $rules['force_carryovers'] && \App\Support\CourseType::mustRetake($r['status'], $rules),
             ])->values()->all(),
             'problems' => $form && $form->isEditable() && $form->courses->isNotEmpty() ? $registration->problems($form, $ctx) : [],
         ]);

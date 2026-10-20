@@ -12,11 +12,11 @@ class Student extends Model
         'user_id', 'applicant_id', 'matric_number', 'provisional_matric', 'provisional_batch', 'admission_batch',
         'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note', 'cleared_at',
         'programme_id', 'academic_session_id', 'entry_mode', 'entry_level', 'current_level', 'status', 'photo',
-        'graduated_at', 'degree_class', 'final_cgpa',
+        'graduated_at', 'degree_class', 'final_cgpa', 'olevel_override_at', 'olevel_override_by', 'olevel_override_note',
         ...Applicant::PROFILE_FIELDS,
     ];
 
-    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime', 'cleared_at' => 'datetime', 'graduated_at' => 'datetime', 'final_cgpa' => 'float'];
+    protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime', 'cleared_at' => 'datetime', 'graduated_at' => 'datetime', 'final_cgpa' => 'float', 'olevel_override_at' => 'datetime'];
 
     public function user(): BelongsTo
     {
@@ -79,6 +79,11 @@ class Student extends Model
     public function registrationForms(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(RegistrationForm::class);
+    }
+
+    public function olevelSittings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StudentOlevelSitting::class)->orderBy('exam_year')->orderBy('id');
     }
 
     public function clearances(): \Illuminate\Database\Eloquent\Relations\HasMany

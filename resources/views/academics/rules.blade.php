@@ -51,6 +51,7 @@
                                 $has = array_key_exists($key, $own);
                                 $cur = $has ? $own[$key] : null;
                                 $val = old("rules.$key", $isUniBase ? (is_bool($cur) ? (int) $cur : $cur) : ($has ? (is_bool($cur) ? (int) $cur : $cur) : ''));
+                                $val = is_array($val) ? implode(', ', $val) : $val;
                                 $inh = $inherited[$key];
                             @endphp
                             <div class="row g-2 align-items-center py-2 border-bottom">
@@ -69,6 +70,10 @@
                                             @unless ($isUniBase)<option value="">Inherit</option>@endunless
                                             @foreach ($d[6] as $v => $l)<option value="{{ $v }}" @selected((string) $val === $v)>{{ $l }}</option>@endforeach
                                         </select>
+                                    @elseif ($d[2] === 'levels')
+                                        <input type="text" name="rules[{{ $key }}]" value="{{ $val }}" inputmode="numeric" class="form-control form-control-sm @error("rules.$key") is-invalid @enderror"
+                                               placeholder="{{ $isUniBase ? 'e.g. 200, 300' : 'Inherit' }}" @disabled(! $canEdit)>
+                                        @error("rules.$key")<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     @else
                                         <input type="number" name="rules[{{ $key }}]" value="{{ $val }}" step="{{ $d[2] === 'decimal' ? '0.01' : '1' }}" min="0" class="form-control form-control-sm @error("rules.$key") is-invalid @enderror"
                                                placeholder="{{ $isUniBase ? 'Not set' : 'Inherit' }}" @disabled(! $canEdit)>

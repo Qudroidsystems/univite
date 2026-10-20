@@ -15,6 +15,11 @@ class StandingWaiver extends Model
         return $this->belongsTo(Student::class);
     }
 
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(AcademicSession::class, 'academic_session_id');
+    }
+
     public function granter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'granted_by');

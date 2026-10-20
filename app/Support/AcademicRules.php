@@ -47,6 +47,11 @@ class AcademicRules
         'min_graduation_cgpa' => ['Graduation', 'Minimum CGPA to graduate', 'decimal', 'Blank = any CGPA that earns a class of degree.', 'rules.min_graduation_cgpa', ''],
         'require_core' => ['Graduation', 'Every compulsory course must be taken', 'bool', 'Counted from the student\'s entry level, so direct-entry students are not asked for lower-level courses.', 'graduation.require_core', '1'],
         'max_years' => ['Graduation', 'Maximum years of study', 'int', 'Sessions a student may spend on the programme, including spill-over years. Students past it cannot graduate and are flagged. Blank = no limit.', 'rules.max_years', ''],
+
+        'admission_level' => ['Levels', 'Normal admission level', 'int', 'The level new students (for example UTME candidates) start at. Blank = 100 level.', 'levels.admission_level', ''],
+        'direct_entry_levels' => ['Levels', 'Other admission levels', 'levels', 'Levels direct-entry or transfer students may be admitted into, separated by commas (for example 200, 300). Blank = only the normal admission level, unless the entry mode says otherwise.', 'levels.direct_entry_levels', ''],
+        'graduating_level' => ['Levels', 'Graduating (final) level', 'int', 'The level students graduate from. Blank = the programme\'s duration (4 years = 400 level).', 'levels.graduating_level', ''],
+        'senate_levels' => ['Levels', 'Levels whose results Senate approves', 'levels', 'Senate sits on the results of these levels (separated by commas). Blank = the graduating level only.', 'levels.senate_levels', ''],
     ];
 
     public const SCOPES = ['university' => 'University', 'faculty' => 'Faculty', 'department' => 'Department', 'programme' => 'Programme'];
@@ -85,7 +90,29 @@ class AcademicRules
             'int' => (int) $value,
             'decimal' => round((float) $value, 2),
             'bool' => in_array($value, [true, 1, '1', 'true', 'on'], true),
+            'levels' => self::levelList($value) ?: null,
             default => (string) $value,
+        };
+    }
+
+    /** "200, 300" / [200, 300] -> [200, 300] (sorted, no repeats). */
+    public static function levelList($value): array
+    {
+        $parts = is_array($value) ? $value : preg_split('/[\s,;]+/', (string) $value, -1, PREG_SPLIT_NO_EMPTY);
+        $out = array_values(array_unique(array_filter(array_map('intval', $parts), fn ($l) => $l > 0)));
+        sort($out);
+
+        return $out;
+    }
+
+    /** How a cast value is written back to a setting. */
+    private static function store($v): string
+    {
+        return match (true) {
+            $v === null => '',
+            is_bool($v) => $v ? '1' : '0',
+            is_array($v) => implode(',', $v),
+            default => (string) $v,
         };
     }
 
@@ -104,8 +131,7 @@ class AcademicRules
     {
         foreach ($values as $key => $v) {
             if (isset(self::DEFS[$key])) {
-                $v = self::cast($key, $v);
-                Setting::put(self::DEFS[$key][4], $v === null ? '' : (is_bool($v) ? ($v ? '1' : '0') : (string) $v));
+                Setting::put(self::DEFS[$key][4], self::store(self::cast($key, $v)));
             }
         }
         $this->flush();
@@ -231,6 +257,44 @@ class AcademicRules
         $this->flush();
     }
 
+    // ---- Levels of a programme -----------------------------------------------------------------------
+
+    /** The level a programme's students graduate from. */
+    public function graduatingLevel(Programme $programme): int
+    {
+        $set = $this->forProgramme($programme)['graduating_level'];
+
+        return $set ?: max(1, (int) $programme->duration_years) * 100;
+    }
+
+    /** The programme's normal admission level. */
+    public function admissionLevel(Programme $programme): int
+    {
+        return $this->forProgramme($programme)['admission_level'] ?: 100;
+    }
+
+    /** Every level a student may be admitted into: the normal one first, then the other admission levels. @return int[] */
+    public function admissionLevels(Programme $programme): array
+    {
+        $r = $this->forProgramme($programme);
+
+        return array_values(array_unique(array_merge([$r['admission_level'] ?: 100], $r['direct_entry_levels'] ?? [])));
+    }
+
+    /** Whether the admission levels were set anywhere (otherwise the entry modes alone decide). */
+    public function admissionLevelsSet(Programme $programme): bool
+    {
+        $r = $this->forProgramme($programme);
+
+        return $r['admission_level'] !== null || ! empty($r['direct_entry_levels']);
+    }
+
+    /** Levels whose results go before Senate. @return int[] */
+    public function senateLevels(Programme $programme): array
+    {
+        return $this->forProgramme($programme)['senate_levels'] ?: [$this->graduatingLevel($programme)];
+    }
+
     /** "On probation" / "Advised to withdraw" / null for a CGPA under a programme's rules. */
     public static function standing(array $rules, float $cgpa, bool $hasResults = true): ?string
     {
@@ -255,6 +319,7 @@ class AcademicRules
 
         return match (self::DEFS[$key][2]) {
             'bool' => $value ? 'Yes' : 'No',
+            'levels' => implode(', ', (array) $value),
             'choice' => self::DEFS[$key][6][$value] ?? (string) $value,
             'decimal' => number_format($value, 2),
             default => (string) $value,

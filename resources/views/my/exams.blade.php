@@ -3,11 +3,12 @@
 @section('content')
 <div class="main-content"><div class="page-content"><div class="container-fluid">
     @include('partials.page-title', ['title' => 'My examinations', 'icon' => 'ri-file-edit-line', 'subtitle' => $semester ? $semester->session?->name . ' · ' . $semester->name : null])
+    @if ($feeBlock ?? null)<div class="alert alert-danger d-flex justify-content-between align-items-center gap-2"><span><i class="ri-lock-line me-1"></i>{{ $feeBlock }}</span><a href="{{ route('my.fees') }}" class="btn btn-sm btn-danger text-nowrap">Pay fees</a></div>@endif
     @if ($timetables->isEmpty())
         <div class="card"><div class="card-body text-muted">The examination timetable has not been published yet. You will be notified when it is.</div></div>
     @else
         @if ($clash->isNotEmpty())<div class="alert alert-danger">Two of your papers are at the same time. Report this to your department or the examinations office at once.</div>@endif
-        <div class="d-flex justify-content-end mb-2">@if ($seats->isNotEmpty())<a href="{{ route('my.exams.slip') }}" target="_blank" class="btn btn-sm btn-primary"><i class="ri-printer-line me-1"></i>Print my seating slip</a>@endif</div>
+        <div class="d-flex justify-content-end mb-2">@if ($seats->isNotEmpty() && ! ($feeBlock ?? null))<a href="{{ route('my.exams.slip') }}" target="_blank" class="btn btn-sm btn-primary"><i class="ri-printer-line me-1"></i>Print my seating slip</a>@endif</div>
         <div class="card"><div class="table-responsive"><table class="table align-middle mb-0">
             <thead class="table-light"><tr><th>Date and time</th><th>Paper</th><th>Hall</th><th>Seat number</th></tr></thead>
             <tbody>

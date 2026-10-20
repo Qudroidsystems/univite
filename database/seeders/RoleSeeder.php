@@ -29,15 +29,17 @@ class RoleSeeder extends Seeder
         'Head of Department' => ['badge bg-secondary', [], [
             'View students', 'View student results', 'View course registrations', 'Approve course registrations', 'View leave applications', 'View staff records',
             'Approve results', 'Edit scores while approving', 'Waive carryover courses', 'Define courses for lecturers', 'Compute results', 'Edit department academic rules', 'Enter results for assigned courses',
+            'Verify O Level results',
         ]],
         'Dean' => ['badge bg-secondary', [], [
             'View students', 'View student results', 'View course registrations', 'View leave applications', 'View staff records', 'Approve results', 'Edit scores while approving', 'Edit department academic rules',
+            'View senate review',
         ]],
         'Head of Unit' => ['badge bg-secondary', [], ['View leave applications', 'View staff records']],
         'Lecturer' => ['badge bg-info', [], ['Enter results for assigned courses']],
-        'Senate' => ['badge bg-dark', [], ['View result sheets', 'View student results', 'Approve results', 'Edit scores while approving', 'Publish results']],
-        'Registrar' => ['badge bg-primary', ['Applicants', 'Application settings', 'Students', 'Clearance', 'Matric numbers', 'Course registrations', 'Student results', 'Graduation lists', 'Academic sessions', 'Staff leave'], ['!Approve leave for any staff']],
-        'Bursar' => ['badge bg-primary', ['Bill items', 'School bills', 'Invoices & payments'], []],
+        'Senate' => ['badge bg-dark', ['Senate result approval'], ['View result sheets', 'View student results', 'Approve results', 'Edit scores while approving', 'Publish results']],
+        'Registrar' => ['badge bg-primary', ['Applicants', 'Application settings', 'Students', 'Clearance', 'Matric numbers', 'Course registrations', 'Student results', 'Graduation lists', 'Academic sessions', 'Staff leave', 'O Level results'], ['!Approve leave for any staff', 'View senate review', 'View fee access']],
+        'Bursar' => ['badge bg-primary', ['Bill items', 'School bills', 'Invoices & payments', 'Fee access rules', 'School loans'], []],
         // Leave goes through its approval route; acting on any step out of turn is left for an administrator to give.
         'HR Officer' => ['badge bg-primary', ['Staff records', 'Staff leave', 'Units', 'Payroll'], ['!Approve leave for any staff']],
         'Exams Officer' => ['badge bg-primary', ['Timetables', 'Examination seating', 'Venues'], ['View result sheets', 'Enter results for any course']],

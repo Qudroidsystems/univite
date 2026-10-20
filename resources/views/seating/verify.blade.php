@@ -5,6 +5,7 @@
     @include('partials.page-title', ['title' => 'Seat check', 'icon' => 'ri-qr-scan-2-line'])
     @include('academics.partials.alerts')
     <div class="card {{ $current ? 'border-success' : 'border-danger' }}"><div class="card-body">
+        @if ($feeBlock ?? null)<div class="alert alert-danger fw-semibold"><i class="ri-forbid-line me-1"></i>Not cleared to write by the bursary. {{ $feeBlock }}</div>@endif
         @unless ($current)<div class="alert alert-danger">This slip is from a seating plan that is no longer published. The candidate may have a different seat now.</div>@endunless
         <div class="d-flex gap-3 align-items-center mb-3">@if ($seat->student?->photo_url ?? null)<img src="{{ $seat->student->photo_url }}" alt="" style="width:72px;height:72px;object-fit:cover" class="rounded">@endif
             <div><div class="fs-5 fw-semibold">{{ $seat->student?->full_name }}</div><div>{{ $seat->student?->matric_number }} · {{ $seat->student?->programme?->name }}</div></div></div>

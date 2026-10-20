@@ -44,10 +44,15 @@ class AiClient
     /**
      * @param  array<int, array{role: 'user'|'assistant', content: string}>  $messages
      * @param  array{mime: string, data: string}|null  $file  raw bytes of a PDF or image to read along with the first message
+     * @param  bool  $limit  false for school work done on someone's behalf (reading an uploaded result): not counted against their daily allowance
      */
-    public function chat(User $user, string $system, array $messages, int $maxTokens = 2000, ?array $file = null): string
+    public function chat(User $user, string $system, array $messages, int $maxTokens = 2000, ?array $file = null, bool $limit = true): string
     {
-        $this->checkAllowance($user);
+        if ($limit) {
+            $this->checkAllowance($user);
+        } elseif (! $this->ready()) {
+            throw new RuntimeException('No AI service is set up for the school yet.');
+        }
         $provider = $this->settings->aiProvider();
         $model = $this->settings->aiModel();
         $key = (string) $this->settings->get('ai_api_key');
@@ -59,7 +64,7 @@ class AiClient
         };
 
         $usage = AiUsage::firstOrCreate(['user_id' => $user->id, 'day' => today()->toDateString()]);
-        $usage->increment('requests', 1, ['input_tokens' => $usage->input_tokens + $in, 'output_tokens' => $usage->output_tokens + $out]);
+        $usage->increment('requests', $limit ? 1 : 0, ['input_tokens' => $usage->input_tokens + $in, 'output_tokens' => $usage->output_tokens + $out]);
 
         if (trim($text) === '') {
             throw new RuntimeException('The study companion gave an empty answer. Please try again.');
@@ -69,9 +74,9 @@ class AiClient
     }
 
     /** chat() that expects a JSON object back (tolerates ```json fences and words around it). */
-    public function json(User $user, string $system, array $messages, int $maxTokens = 4000, ?array $file = null): array
+    public function json(User $user, string $system, array $messages, int $maxTokens = 4000, ?array $file = null, bool $limit = true): array
     {
-        $text = $this->chat($user, $system . "\n\nReply with one JSON object only, no other text.", $messages, $maxTokens, $file);
+        $text = $this->chat($user, $system . "\n\nReply with one JSON object only, no other text.", $messages, $maxTokens, $file, $limit);
 
         return self::decode($text) ?? throw new RuntimeException('The study companion\'s answer could not be read. Please try again.');
     }

@@ -14,8 +14,14 @@ use App\Models\User;
 
 class DashboardController extends Controller
 {
-    public function __construct(private \App\Services\OnboardingService $onboarding)
-    {
+    public function __construct(
+        private \App\Services\OnboardingService $onboarding,
+        private \App\Support\Navigation\Menu $menu,
+        private \App\Services\RegistrationService $registration,
+        private \App\Services\Fees\FeeAccess $fees,
+        private \App\Services\Olevel\OlevelService $olevel,
+        private \App\Services\ResultService $results,
+    ) {
         $this->middleware('auth');
     }
 
@@ -24,12 +30,26 @@ class DashboardController extends Controller
         $user = auth()->user();
 
         // Students have no staff permissions; they get their own landing page.
-        if (! $user->can('View dashboard') && ($student = $user->student()->with('programme')->first())) {
-            return view('student-home', ['pagetitle' => 'Welcome', 'student' => $student, 'checklist' => $student->needs_onboarding ? $this->onboarding->checklist($student) : null]);
+        $sections = $this->menu->for($user);
+        if (! $user->can('View dashboard') && ($student = $user->student()->with('programme.department')->first())) {
+            $ctx = $this->registration->context();
+            $form = $ctx ? $student->registrationForms()->where('academic_session_id', $ctx->session->id)->where('semester_type_id', $ctx->type->id)->first() : null;
+            $olevel = $this->olevel->evaluate($student);
+
+            return view('student-home', [
+                'pagetitle' => 'Welcome', 'student' => $student, 'checklist' => $student->needs_onboarding ? $this->onboarding->checklist($student) : null,
+                'tiles' => collect($sections)->firstWhere('title', 'My Portal')?->items ?? [],
+                'outstanding' => $this->registration->outstanding($student, true, $ctx),
+                'standing' => \App\Services\Fees\FeeAccess::anyOn() ? $this->fees->standing($student) : null,
+                'olevel' => $olevel->requirement && $olevel->applies ? $olevel : null,
+                'ctx' => $ctx, 'form' => $form, 'transcript' => $this->results->transcript($student),
+            ]);
         }
 
         return view('dashboard', [
             'pagetitle'       => 'Dashboard',
+            // the menu, as cards: every group of pages this person may open
+            'cardSections'    => collect($sections)->reject(fn ($s) => $s->title === 'Menu')->values()->all(),
             'currentSession'  => AcademicSession::current(),
             'currentSemester' => Semester::current(),
             'stats' => [

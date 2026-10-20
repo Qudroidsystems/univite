@@ -14,8 +14,12 @@
                     @else
                         <h5 class="mb-0"><i class="ri-checkbox-circle-line me-1"></i>You have nothing outstanding.</h5>
                     @endif
+                    @if ($loans ?? false)<a href="{{ route('my.loans') }}" class="btn btn-sm btn-soft-primary mt-2"><i class="ri-hand-coin-line me-1"></i>School loans</a>@endif
                 </div>
             </div>
+            @if (($standing ?? null) && $standing->billed)
+                <div class="card"><div class="card-header"><h6 class="card-title mb-0">What your payments open</h6></div><div class="card-body">@include('fees.partials.standing', ['standing' => $standing])</div></div>
+            @endif
 
             <div class="card">
                 <div class="table-responsive">

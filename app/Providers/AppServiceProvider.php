@@ -12,6 +12,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // One rules cache per request (or per test), cleared when rules are saved.
         $this->app->scoped(\App\Support\AcademicRules::class);
+        $this->app->scoped(\App\Services\Api\CourseOwners::class);
         // Scoped-role lookups are cached for the request.
         $this->app->scoped(\App\Services\Access\ScopedAccess::class);
         // "Last changed by" lookups are batched per page.

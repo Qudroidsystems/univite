@@ -63,7 +63,8 @@ class TimetableService
                     $config[$k] = $data[$k];
                 }
             }
-            $config['scope'] = ['departments' => array_map('intval', $data['departments'] ?? []), 'levels' => array_map('intval', $data['levels'] ?? [])];
+            $config['scope'] = ['departments' => array_map('intval', $data['departments'] ?? []), 'levels' => array_map('intval', $data['levels'] ?? []),
+                'programmes' => array_map('intval', $data['programmes'] ?? [])];
             $t = Timetable::create([
                 'kind' => $data['kind'], 'name' => $data['name'], 'academic_session_id' => $data['academic_session_id'], 'semester_type_id' => $data['semester_type_id'],
                 'config' => $config, 'committee' => array_map('intval', $data['committee'] ?? []) ?: null, 'created_by' => $by->id,
@@ -103,6 +104,14 @@ class TimetableService
             ->distinct()->pluck('course_registrations.course_id')->all();
         $curriculum = ProgrammeCourse::where('semester_order', $order)->distinct()->pluck('course_id')->all();
 
+        if (! empty($scope['programmes'])) {
+            // only what these programmes' students take: their curriculum this semester and what they registered
+            $curriculum = ProgrammeCourse::where('semester_order', $order)->whereIn('programme_id', $scope['programmes'])->distinct()->pluck('course_id')->all();
+            $registered = CourseRegistration::query()->join('registration_forms as f', 'f.id', '=', 'course_registrations.registration_form_id')
+                ->join('students as s', 's.id', '=', 'f.student_id')->whereIn('s.programme_id', $scope['programmes'])
+                ->where('f.academic_session_id', $t->academic_session_id)->where('f.semester_type_id', $t->semester_type_id)->where('f.status', '!=', 'rejected')
+                ->distinct()->pluck('course_registrations.course_id')->all();
+        }
         $courses = Course::whereIn('id', array_unique(array_merge($registered, $curriculum)))->where('is_active', true)
             ->when($scope['departments'] ?? [], fn ($q, $d) => $q->whereIn('department_id', $d))
             ->when($scope['levels'] ?? [], fn ($q, $l) => $q->whereIn('level', $l))->get();
@@ -153,26 +162,35 @@ class TimetableService
     }
 
     /** @return array{problem: Problem, solver: Solver} */
-    public function run(Timetable $t, array $whatIf = []): array
+    public function run(Timetable $t, array $whatIf = [], string $algorithm = 'quick'): array
     {
         $problem = $this->builder->build($t, $whatIf);
         $solver = new Solver($problem);
-        $solver->solve();
+        $solver->run($algorithm);
 
         return ['problem' => $problem, 'solver' => $solver];
     }
 
-    public function generate(Timetable $t, User $by): array
+    public function generate(Timetable $t, User $by, string $algorithm = 'quick'): array
     {
         $this->editable($t, $by);
-        @set_time_limit(300);
-        ['problem' => $p, 'solver' => $s] = $this->run($t);
+        @set_time_limit(600);
+        ['problem' => $p, 'solver' => $s] = $this->run($t, [], $algorithm);
 
-        return DB::transaction(function () use ($t, $by, $p, $s) {
+        return $this->saveAssignment($t, $p, $s, $by);
+    }
+
+    /**
+     * Replace the timetable's unlocked entries with the solver's placement, note why anything could not be placed,
+     * and keep the summary and analytics. Used by generating, by applying a saved candidate and by partial regeneration.
+     */
+    public function saveAssignment(Timetable $t, Problem $p, Solver $s, User $by, string $action = 'generated', array $note = []): array
+    {
+        return DB::transaction(function () use ($t, $by, $p, $s, $action, $note) {
             $t->entries()->where('locked', false)->delete();
             $locked = $t->entries()->where('locked', true)->pluck('unit_key')->unique()->all();
             foreach ($s->assign as $unit => $a) {
-                if (! in_array($unit, $locked, true)) {
+                if (! in_array($unit, $locked, true) && isset($p->units[$unit])) {
                     $this->saveUnit($t, $p, $unit, $a, false);
                 }
             }
@@ -184,18 +202,32 @@ class TimetableService
                 $item->update(['issues' => $byItem[$item->id] ?? null]);
             }
 
-            $summary = $this->summarise($t->fresh(), $p, $s);
+            $summary = $this->summarise($t->fresh(), $p, $s) + $note;
             if ($t->isExam()) {
                 $summary['invigilation'] = (new InvigilatorPlanner)->plan($t, $p, $s->assign);
+            } else {
+                $summary['analytics'] = \App\Timetabling\Analytics::of($p, $s);
             }
             $t->update(['summary' => $summary, 'generated_at' => now(), 'generated_by' => $by->id]);
 
-            $op = $this->audit->begin('timetable_generate', 'timetables', $by, $t->academic_session_id, null, ['timetable' => $t->id, 'version' => $t->version]);
-            $this->audit->record($op, 'generated', $t, null, ['placed' => $summary['placed'], 'unplaced' => $summary['unplaced'], 'violations' => $summary['violations']], null, null, $t->title);
+            $op = $this->audit->begin('timetable_generate', 'timetables', $by, $t->academic_session_id, null, ['timetable' => $t->id, 'version' => $t->version] + $note);
+            $this->audit->record($op, $action, $t, null, ['placed' => $summary['placed'], 'unplaced' => $summary['unplaced'], 'violations' => $summary['violations']], null, null, $t->title);
             $this->audit->finish($op, $summary['placed'], 0, $summary['unplaced']);
 
             return $summary;
         });
+    }
+
+    /** Throws unless this person may change the timetable now. */
+    public function assertEditable(Timetable $t, User $by): void
+    {
+        $this->editable($t, $by);
+    }
+
+    /** The solver's model of the timetable (for runs and analytics). */
+    public function problem(Timetable $t, array $whatIf = []): Problem
+    {
+        return $this->builder->build($t, $whatIf);
     }
 
     private function summarise(Timetable $t, Problem $p, Solver $s): array
@@ -206,6 +238,7 @@ class TimetableService
             'units' => count($p->units), 'placed' => count($s->assign), 'unplaced' => count($p->units) - count($s->assign),
             'violations' => count($violations), 'problems' => array_slice(array_column($violations, 'message'), 0, 50),
             'score' => $s->score(), 'slots' => count($p->slots), 'venues' => count($p->venues), 'checked_at' => now()->toDateTimeString(),
+            'algorithm' => $s->algorithm, 'seconds' => $s->seconds,
         ];
     }
 
@@ -241,7 +274,15 @@ class TimetableService
     public function refreshSummary(Timetable $t): array
     {
         ['problem' => $p, 'solver' => $s, 'violations' => $v] = $this->check($t);
-        $summary = array_merge($t->summary ?? [], $this->summarise($t, $p, $s));
+        $before = $t->summary ?? [];
+        $s->algorithm = $before['algorithm'] ?? 'quick';
+        $s->seconds = (float) ($before['seconds'] ?? 0);
+        $summary = array_merge($before, $this->summarise($t, $p, $s));
+        if (! $t->isExam()) {
+            // statistics follow every change to the draft
+            $summary['analytics'] = \App\Timetabling\Analytics::of($p, $s, ['manual_changes' => \App\Models\OperationEvent::whereHas('batch', fn ($q) => $q->where('type', 'timetable_move'))
+                ->where('subject_type', class_basename(Timetable::class))->where('subject_id', $t->id)->count()]);
+        }
         $t->update(['summary' => $summary]);
 
         return $summary;

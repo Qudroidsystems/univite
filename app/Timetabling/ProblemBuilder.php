@@ -32,6 +32,9 @@ class ProblemBuilder
         $p->maxConsecutive = (int) ($c['max_consecutive'] ?? 3);
         $p->maxSplit = max(1, (int) ($c['max_split'] ?? 4));
         $p->seed = (int) ($c['seed'] ?? 1);
+        $p->maxPerDay = max(0, (int) ($c['max_per_day'] ?? 0));
+        $p->applyPriorities = (bool) ($c['apply_priorities'] ?? true);
+        $p->strictRooms = (bool) ($c['strict_rooms'] ?? false);
 
         $t->isExam() ? $this->examSlots($p, $c, $whatIf) : $this->lectureSlots($p, $c, $whatIf);
         $p->finalise();
@@ -109,7 +112,7 @@ class ProblemBuilder
                 'size' => (int) $item->students, 'length' => $t->isExam() ? 1 : max(1, (int) $item->duration),
                 'minutes' => $t->isExam() ? (int) $item->duration : 0, 'venueType' => $item->venue_type, 'facilities' => $item->facilities ?? [],
                 'staff' => array_map('intval', $item->staff ?? []), 'preferred' => $item->preferred_venue_id, 'dept' => $item->course?->department_id,
-                'cohorts' => [], 'use' => $use, 'group' => $item->group_label,
+                'cohorts' => [], 'use' => $use, 'group' => $item->group_label, 'priority' => max(1, min(5, (int) ($item->priority ?? 3))),
             ];
             $n = $t->isExam() ? 1 : max(1, (int) $item->meetings);
             for ($m = 1; $m <= $n; $m++) {

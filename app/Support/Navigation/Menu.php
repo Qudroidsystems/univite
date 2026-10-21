@@ -203,6 +203,7 @@ class Menu
                     ['Venue Availability', 'venues.availability', 'View venues', 'venues.availability'],
                     ['Venue Usage', 'venues.usage', 'View venues', 'venues.usage'],
                     ['Timetables', 'timetables.index', 'View timetables', 'timetables.*', 'seating.*'],
+                    ['Timetable Wizard', 'timetables.wizard', 'Create timetables', 'timetables.wizard*'],
                     ['Staff Availability', 'staff-availability.index', 'Set staff availability', 'staff-availability.*'],
                 ]],
             ],

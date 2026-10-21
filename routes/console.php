@@ -49,3 +49,8 @@ Artisan::command('market:expire', function (\App\Services\Campus\MarketService $
     $this->info($market->expire() . ' marketplace listing(s) closed.');
 })->purpose('Close marketplace listings older than the days set in Mobile App settings');
 \Illuminate\Support\Facades\Schedule::command('market:expire')->dailyAt('03:10')->withoutOverlapping();
+
+Artisan::command('timetables:run-pending', function (\App\Services\Timetable\TimetableRuns $runs) {
+    $this->info($runs->pending() . ' timetable candidate(s) generated.');
+})->purpose('Generate queued timetable candidates (when no queue worker is running)');
+\Illuminate\Support\Facades\Schedule::command('timetables:run-pending')->everyMinute()->withoutOverlapping();

@@ -10,9 +10,30 @@ namespace App\Timetabling;
  * 3. A few rounds of local search move units to cheaper places. A move is only made if it is still feasible.
  * Hard rules are checked on every placement, so the result never trades a hard rule for a better score. Anything that
  * cannot be placed is left out with an explanation and suggestions (see diagnose()).
+ *
+ * The committee chooses how hard it searches (ALGORITHMS): constraint satisfaction with repair (quick), the same with
+ * more rounds of local search (thorough), or a hybrid that adds simulated annealing, which also accepts some worse moves
+ * early on so the search can leave a local optimum. softIssues() explains, placement by placement, which preferences a
+ * timetable does not meet and what that costs.
  */
 class Solver
 {
+    /** key => [label, description] */
+    public const ALGORITHMS = [
+        'quick' => ['Constraint satisfaction (quick)', 'Places the hardest classes first at their best feasible time, repairs blockages by moving one or two classes, then makes two rounds of improvements. Seconds even for a whole university.'],
+        'thorough' => ['Constraint satisfaction with local search', 'The same, followed by up to eight rounds of moving each class to a cheaper feasible place. Slower; usually fewer gaps and early or late periods.'],
+        'hybrid' => ['Hybrid: constraints + simulated annealing', 'Builds a feasible timetable, then explores thousands of feasible moves, sometimes accepting a worse one early on, and keeps the best timetable found. Slowest; best for hard timetables.'],
+    ];
+
+    /** Soft preference codes softIssues() reports => label. */
+    public const SOFT = [
+        'early_late' => 'Very early or very late period', 'spread' => 'Two meetings of a course on one day', 'gaps' => 'Idle gaps in a class\'s day',
+        'consecutive' => 'Long run of back-to-back periods', 'daily_load' => 'More periods in a day than the cap', 'breaks' => 'Next to a break',
+        'preferences' => 'Not the preferred or departmental venue', 'priority' => 'High-priority course late in the day',
+    ];
+
+    public float $seconds = 0.0;
+    public string $algorithm = 'quick';
     /** @var array<string, array{slots: array<int, string>, venues: array<int, int>}> */
     public array $assign = [];
     /** @var array<string, array> unitId => diagnosis */
@@ -41,6 +62,75 @@ class Solver
         foreach ($assign as $id => $a) {
             if (isset($this->p->units[$id])) {
                 $this->place($id, $a);
+            }
+        }
+    }
+
+    /** Solve with one of ALGORITHMS. */
+    public function run(string $algorithm = 'quick', int $iterations = 4000): void
+    {
+        $started = microtime(true);
+        $this->algorithm = isset(self::ALGORITHMS[$algorithm]) ? $algorithm : 'quick';
+        if ($this->algorithm === 'hybrid') {
+            $this->solve(3);
+            $this->anneal($iterations);
+        } else {
+            $this->solve($this->algorithm === 'thorough' ? 8 : 2);
+        }
+        $this->seconds = round(microtime(true) - $started, 2);
+    }
+
+    /**
+     * Simulated annealing over feasible moves: take a random placed class, try one of its cheapest feasible places, and
+     * keep the move when it lowers the score, or (with a chance that shrinks as the search cools) even when it does
+     * not. The best timetable seen is kept. Every move is feasible, so hard rules always hold.
+     */
+    public function anneal(int $iterations = 4000, float $temperature = 25.0): void
+    {
+        $ids = array_values(array_diff(array_keys($this->assign), array_keys($this->p->fixed)));
+        if (count($ids) < 2) {
+            return;
+        }
+        $current = $this->score();
+        $best = $current;
+        $bestAssign = $this->assign;
+        $cool = pow(0.05 / $temperature, 1 / max(1, $iterations));
+        for ($i = 0; $i < $iterations; $i++) {
+            $id = $ids[mt_rand(0, count($ids) - 1)];
+            $was = $this->assign[$id];
+            $before = $this->timeCost($id, $was['slots']) + $this->venueCost($id, $was['slots'], $was['venues']);
+            $this->remove($id);
+            $options = [];
+            $this->best($id, 6, $options);
+            if (! $options) {
+                $this->place($id, $was);
+                continue;
+            }
+            $pick = $options[mt_rand(0, count($options) - 1)];
+            $delta = $pick['cost'] - $before;
+            if ($delta < 0 || mt_rand() / mt_getrandmax() < exp(-$delta / max(0.01, $temperature))) {
+                $this->place($id, ['slots' => $pick['slots'], 'venues' => $pick['venues']]);
+                $current += $delta;
+                // The local delta leaves out effects on whole classes (gaps, daily load), so a promising move is
+                // confirmed with the full score before it is kept as the best, and the running figure is corrected.
+                if ($current < $best - 0.01) {
+                    $current = $this->score();
+                    if ($current < $best - 0.01) {
+                        $best = $current;
+                        $bestAssign = $this->assign;
+                    }
+                }
+            } else {
+                $this->place($id, $was);
+            }
+            $temperature *= $cool;
+        }
+        if ($this->score() > $best + 0.01) {
+            foreach (array_keys($this->assign) as $id) {
+                isset($this->p->fixed[$id]) || $this->remove($id);
+            }
+            foreach ($bestAssign as $id => $a) {
+                isset($this->assign[$id]) || $this->place($id, $a);
             }
         }
     }
@@ -86,7 +176,9 @@ class Solver
         $special = ($u['venueType'] ? 3 : 0) + count($u['facilities']) * 2;
         $suitable = max(1, count($this->suit[$id]));
 
-        return $clashes * 2 + $u['size'] / $this->p->maxSize * 10 + $special + $u['length'] * 2 + 10 / $suitable + count($u['staff']);
+        $priority = $this->p->applyPriorities ? (($u['priority'] ?? 3) - 3) * 12 : 0;
+
+        return $clashes * 2 + $u['size'] / $this->p->maxSize * 10 + $special + $u['length'] * 2 + 10 / $suitable + count($u['staff']) + $priority;
     }
 
     /** Cheapest feasible placement, or null. */
@@ -456,6 +548,13 @@ class Solver
         if ($first['pos'] === 0 && $groupSize > 2) {
             $cost += $p->w('early_late') * 6;
         }
+        // High-priority courses get the earlier, fresher periods; low-priority ones take what is left.
+        if ($p->applyPriorities && ($u['priority'] ?? 3) !== 3 && $groupSize > 1) {
+            $cost += (($u['priority'] ?? 3) - 3) * 4 * ($first['pos'] / ($groupSize - 1));
+        }
+        if ($p->w('breaks') && (! empty($first['nearBreak']) || ! empty($last['nearBreak']))) {
+            $cost += $p->w('breaks') * 4;
+        }
         if ($last['pos'] === $groupSize - 1 && $groupSize > 2) {
             $cost += $p->w('early_late') * 6;
         }
@@ -468,8 +567,19 @@ class Solver
             }
         }
 
-        // Cohort (programme-level) days: idle gaps, long runs and building changes.
+        // Cohort (programme-level) days: the daily cap, idle gaps, long runs and building changes.
         foreach ($u['cohorts'] as $cohort) {
+            if ($p->maxPerDay > 0) {
+                $load = count($slots);
+                foreach ($this->groupUnits[$group] ?? [] as $other => $_) {
+                    if ($other !== $id && in_array($cohort, $p->units[$other]['cohorts'], true)) {
+                        $load += count($this->assign[$other]['slots']);
+                    }
+                }
+                if ($load > $p->maxPerDay) {
+                    $cost += 60 * ($load - $p->maxPerDay);
+                }
+            }
             $blocks = [];
             foreach ($this->groupUnits[$group] ?? [] as $other => $_) {
                 if (in_array($cohort, $p->units[$other]['cohorts'], true)) {
@@ -514,6 +624,89 @@ class Solver
         }
 
         return $cost;
+    }
+
+    /**
+     * The preferences one placed class does not meet, each with what it adds to the score: what a committee reads to
+     * judge whether to accept the timetable or move the class.
+     *
+     * @return array<int, array{code: string, label: string, text: string, cost: float}>
+     */
+    public function softIssues(string $id): array
+    {
+        $p = $this->p;
+        $a = $this->assign[$id] ?? null;
+        if (! $a || $p->isExam()) {
+            return [];
+        }
+        $u = $p->units[$id];
+        $first = $p->slots[$a['slots'][0]];
+        $last = $p->slots[end($a['slots'])];
+        $group = $first['group'];
+        $size = count($p->groups[$group]);
+        $out = [];
+        $add = function (string $code, string $text, float $cost) use (&$out) {
+            $cost > 0 && $out[] = ['code' => $code, 'label' => self::SOFT[$code], 'text' => $text, 'cost' => round($cost, 1)];
+        };
+        if ($size > 2 && $first['pos'] === 0) {
+            $add('early_late', "Starts in the first period of the day ({$first['start']}).", $p->w('early_late') * 6);
+        }
+        if ($size > 2 && $last['pos'] === $size - 1) {
+            $add('early_late', "Ends in the last period of the day ({$last['end']}).", $p->w('early_late') * 6);
+        }
+        foreach ($this->groupUnits[$group] ?? [] as $other => $_) {
+            if ($other !== $id && $p->units[$other]['item'] === $u['item']) {
+                $add('spread', 'Another meeting of ' . $u['code'] . ' is on the same day.', $p->w('spread') * 30);
+                break;
+            }
+        }
+        if ($p->w('breaks') && (! empty($first['nearBreak']) || ! empty($last['nearBreak']))) {
+            $add('breaks', 'Is right next to a break.', $p->w('breaks') * 4);
+        }
+        if ($p->applyPriorities && ($u['priority'] ?? 3) >= 4 && $size > 1 && $first['pos'] / ($size - 1) > 0.6) {
+            $add('priority', "A priority {$u['priority']} course placed late in the day ({$first['start']}).", (($u['priority'] ?? 3) - 3) * 4 * ($first['pos'] / ($size - 1)));
+        }
+        foreach ($u['cohorts'] as $cohort) {
+            $name = $p->cohortNames[$cohort] ?? 'a class';
+            $load = 0;
+            $pos = [];
+            foreach ($this->groupUnits[$group] ?? [] as $other => $_) {
+                if (in_array($cohort, $p->units[$other]['cohorts'], true)) {
+                    foreach ($this->assign[$other]['slots'] as $k) {
+                        $pos[$p->slots[$k]['pos']] = true;
+                        $load++;
+                    }
+                }
+            }
+            if ($p->maxPerDay > 0 && $load > $p->maxPerDay) {
+                $add('daily_load', "{$name} has {$load} periods on " . (\App\Models\Timetable::DAYS[$first['day']] ?? 'this day') . "; the cap is {$p->maxPerDay}.", 60 * ($load - $p->maxPerDay));
+            }
+            ksort($pos);
+            $keys = array_keys($pos);
+            $gaps = $keys ? (end($keys) - $keys[0] + 1 - count($keys)) : 0;
+            if ($gaps >= 2) {
+                $add('gaps', "{$name} has {$gaps} idle periods that day.", $p->w('gaps') * 3 * $gaps);
+            }
+            $run = 1;
+            $longest = 1;
+            for ($k = 1; $k < count($keys); $k++) {
+                $run = $keys[$k] === $keys[$k - 1] + 1 ? $run + 1 : 1;
+                $longest = max($longest, $run);
+            }
+            if ($longest > $p->maxConsecutive) {
+                $add('consecutive', "{$name} has {$longest} periods in a row (most allowed {$p->maxConsecutive}).", $p->w('consecutive') * 10 * ($longest - $p->maxConsecutive));
+            }
+        }
+        foreach ($a['venues'] as $vid => $_) {
+            $v = $p->venues[$vid] ?? null;
+            if ($u['preferred'] && $u['preferred'] !== $vid) {
+                $add('preferences', 'Not in its preferred venue.', $p->w('preferences') * 8);
+            } elseif ($v && $v['dept'] && $u['dept'] && $v['dept'] !== $u['dept']) {
+                $add('preferences', "In {$v['name']}, which belongs to another department.", $p->w('preferences') * 3);
+            }
+        }
+
+        return array_values(array_unique($out, SORT_REGULAR));
     }
 
     // ---- bookkeeping ----------------------------------------------------------------------------------

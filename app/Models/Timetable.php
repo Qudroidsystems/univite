@@ -28,6 +28,7 @@ class Timetable extends Model
         'consecutive' => ['Avoid long runs of back-to-back periods', 'lecture', 2],
         'room_changes'=> ['Avoid moving a class between buildings for back-to-back periods', 'lecture', 1],
         'large_first' => ['Hold the largest papers early in the examination period', 'exam', 1],
+        'breaks'      => ['Keep classes off the periods right next to a break', 'lecture', 0],
     ];
 
     protected $fillable = [
@@ -60,6 +61,11 @@ class Timetable extends Model
     public function items(): HasMany
     {
         return $this->hasMany(TimetableItem::class);
+    }
+
+    public function runs(): HasMany
+    {
+        return $this->hasMany(TimetableRun::class)->latest('id');
     }
 
     public function entries(): HasMany

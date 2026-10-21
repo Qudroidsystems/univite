@@ -11,7 +11,7 @@ class TimetableItem extends Model
 {
     public const ACTIVITIES = ['lecture' => 'Lecture', 'tutorial' => 'Tutorial', 'practical' => 'Practical', 'exam' => 'Examination'];
 
-    protected $fillable = ['timetable_id', 'course_id', 'activity', 'group_label', 'students', 'meetings', 'duration', 'venue_type', 'facilities', 'staff', 'preferred_venue_id', 'issues', 'is_active'];
+    protected $fillable = ['timetable_id', 'course_id', 'activity', 'group_label', 'students', 'meetings', 'duration', 'venue_type', 'facilities', 'staff', 'preferred_venue_id', 'priority', 'issues', 'is_active'];
 
     protected $casts = ['facilities' => 'array', 'staff' => 'array', 'issues' => 'array', 'is_active' => 'boolean'];
 

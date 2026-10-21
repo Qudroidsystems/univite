@@ -32,6 +32,11 @@
             @endif
             @if ($t->isExam())<a href="{{ route('timetables.invigilators', $t) }}" class="btn btn-sm btn-soft-secondary"><i class="ri-team-line me-1"></i>Invigilators</a>
                 @canany(['View exam seating', 'Generate exam seating'])<a href="{{ route('seating.show', $t) }}" class="btn btn-sm btn-soft-secondary"><i class="ri-layout-grid-line me-1"></i>Seating</a>@endcanany @endif
+            @if (! $t->isExam())
+                <a href="{{ route('timetables.runs', $t) }}" class="btn btn-sm btn-soft-primary"><i class="ri-stack-line me-1"></i>Candidates</a>
+                <a href="{{ route('timetables.analytics', $t) }}" class="btn btn-sm btn-soft-secondary"><i class="ri-bar-chart-2-line me-1"></i>Analytics</a>
+            @endif
+            <a href="{{ route('timetables.versions', $t) }}" class="btn btn-sm btn-soft-secondary"><i class="ri-git-commit-line me-1"></i>Versions</a>
             <a href="{{ route('timetables.print', $t) }}" target="_blank" class="btn btn-sm btn-light"><i class="ri-printer-line me-1"></i>Print</a>
             @if ($t->status === 'published')@can('Publish timetables')<form method="POST" action="{{ route('timetables.revise', $t) }}">@csrf<button class="btn btn-sm btn-soft-warning"><i class="ri-git-branch-line me-1"></i>Start a revision</button></form>@endcan @endif
             @if ($t->status === 'draft' && ! $t->published_at && $canPrepare)<form method="POST" action="{{ route('timetables.destroy', $t) }}" onsubmit="return confirm('Delete this draft timetable?')">@csrf @method('DELETE')<button class="btn btn-sm btn-soft-danger">Delete draft</button></form>@endif

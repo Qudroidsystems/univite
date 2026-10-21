@@ -13,6 +13,9 @@ namespace App\Timetabling;
  * staffBusy: userId => [slotKey => reason]
  * protected: slotKey => label
  * fixed: unitId => [slots => [...], venues => [venueId => seats]] (placed by hand; never moved)
+ * A unit's priority (1 low .. 5 high) is placed first and given the better times when $applyPriorities is on.
+ * $maxPerDay caps the periods one cohort (programme and level) has on a day (0 = no cap); $strictRooms keeps a class
+ * to its own department's venues and the shared ones.
  */
 class Problem
 {
@@ -32,6 +35,9 @@ class Problem
     public int $maxSplit = 4;
     public int $seed = 1;
     public int $maxSize = 1;
+    public int $maxPerDay = 0;
+    public bool $applyPriorities = true;
+    public bool $strictRooms = false;
 
     public function isExam(): bool
     {
@@ -61,6 +67,11 @@ class Problem
         foreach ($this->groups as $g => $keys) {
             foreach ($keys as $i => $k) {
                 $this->slots[$k]['pos'] = $i;
+                // a break (or lunch) sits between this period and its neighbour when their times do not meet
+                $prev = $keys[$i - 1] ?? null;
+                $next = $keys[$i + 1] ?? null;
+                $this->slots[$k]['nearBreak'] = ($prev && $this->slots[$prev]['end'] !== $this->slots[$k]['start'])
+                    || ($next && $this->slots[$k]['end'] !== $this->slots[$next]['start']);
             }
         }
         $this->maxSize = max(1, ...array_map(fn ($u) => $u['size'], $this->units ?: [['size' => 1]]));
@@ -109,6 +120,7 @@ class Problem
     {
         return array_filter($this->venues, fn ($v) => in_array($unit['use'], $v['uses'], true)
             && (! $unit['venueType'] || $v['type'] === $unit['venueType'])
-            && ! array_diff($unit['facilities'], $v['facilities']));
+            && ! array_diff($unit['facilities'], $v['facilities'])
+            && (! $this->strictRooms || $this->isExam() || ! $v['dept'] || ! $unit['dept'] || (int) $v['dept'] === (int) $unit['dept']));
     }
 }

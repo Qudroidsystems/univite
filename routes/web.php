@@ -422,6 +422,30 @@ Route::middleware('auth')->group(function () {
     Route::get('timetables/staff-availability', [\App\Http\Controllers\StaffAvailabilityController::class, 'index'])->name('staff-availability.index');
     Route::post('timetables/staff-availability', [\App\Http\Controllers\StaffAvailabilityController::class, 'store'])->name('staff-availability.store');
     Route::delete('timetables/staff-availability/{row}', [\App\Http\Controllers\StaffAvailabilityController::class, 'destroy'])->name('staff-availability.destroy');
+    // ---- The generation wizard (the whole school at once), candidates, analytics and versions ----
+    Route::prefix('timetables')->name('timetables.')->group(function () {
+        Route::controller(\App\Http\Controllers\Timetable\TimetableWizardController::class)->group(function () {
+            Route::get('wizard', 'show')->name('wizard');
+            Route::post('wizard/courses', 'courses')->name('wizard.courses');
+            Route::post('wizard/preview', 'preview')->name('wizard.preview');
+            Route::post('wizard', 'store')->name('wizard.store');
+            Route::post('wizard/templates', 'saveTemplate')->name('wizard.templates.store');
+            Route::delete('wizard/templates/{template}', 'deleteTemplate')->name('wizard.templates.destroy');
+        });
+        Route::controller(\App\Http\Controllers\Timetable\TimetableRunController::class)->group(function () {
+            Route::get('{timetable}/candidates', 'index')->name('runs');
+            Route::get('{timetable}/candidates/status', 'status')->name('runs.status');
+            Route::post('{timetable}/candidates', 'store')->name('runs.store');
+            Route::post('{timetable}/candidates/run-now', 'runNow')->name('runs.now');
+            Route::get('{timetable}/candidates/compare', 'compare')->name('runs.compare');
+            Route::get('{timetable}/candidates/{run}', 'show')->name('runs.show');
+            Route::post('{timetable}/candidates/{run}/apply', 'apply')->name('runs.apply');
+            Route::get('{timetable}/analytics', 'analytics')->name('analytics');
+            Route::post('{timetable}/analytics/refresh', 'refresh')->name('analytics.refresh');
+            Route::get('{timetable}/versions', 'versions')->name('versions');
+            Route::post('{timetable}/versions/{from}/restore', 'restore')->name('versions.restore');
+        });
+    });
     Route::prefix('timetables')->name('timetables.')->controller(\App\Http\Controllers\TimetableController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');

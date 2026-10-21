@@ -13,6 +13,7 @@
             </form>
             <div class="d-flex gap-2">
                 @can('Set staff availability')<a href="{{ route('staff-availability.index') }}" class="btn btn-sm btn-soft-secondary"><i class="ri-user-unfollow-line me-1"></i>Staff availability</a>@endcan
+                @can('Create timetables')<a href="{{ route('timetables.wizard') }}" class="btn btn-sm btn-success"><i class="ri-magic-line me-1"></i>Generation wizard</a>@endcan
                 @can('Create timetables')<a href="{{ route('timetables.create') }}" class="btn btn-sm btn-primary"><i class="ri-add-line me-1"></i>New timetable</a>@endcan
             </div>
         </div>

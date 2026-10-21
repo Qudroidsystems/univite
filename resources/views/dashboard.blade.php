@@ -34,57 +34,14 @@
                 </div>
             </div>
 
-            <div class="row">
-                @foreach ($stats as $s)
-                    @can($s['can'])
-                        <div class="col-xl col-md-4 col-6">
-                            <a href="{{ route($s['route']) }}" class="card card-animate text-decoration-none">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <p class="text-uppercase fw-medium text-muted fs-12 mb-2">{{ $s['label'] }}</p>
-                                            <h3 class="mb-0 text-body">{{ number_format($s['value']) }}</h3>
-                                        </div>
-                                        <span class="avatar-sm"><span class="avatar-title bg-primary-subtle text-primary rounded fs-3"><i class="{{ $s['icon'] }}"></i></span></span>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    @endcan
-                @endforeach
-            </div>
+            {{-- Figures and the setup checklist count whole tables: they load once the page is showing. --}}
+            <div data-uv-lazy="{{ route('dashboard.summary') }}" data-uv-select="#uv-dash-stats"><div class="row">@for ($i = 0; $i < 6; $i++)<div class="col-xl col-md-4 col-6"><div class="card"><div class="uv-skeleton"><span></span><span></span></div></div></div>@endfor</div></div>
 
             @include('dashboard.menu-cards', ['sections' => $cardSections ?? []])
 
             <div class="card mt-3">
                 <div class="card-header"><h6 class="card-title mb-0">Setup checklist</h6></div>
-                <div class="card-body">
-                    @php
-                        $steps = [
-                            ['Create an academic session and its semesters', \App\Models\AcademicSession::count() > 0, 'academics.sessions.index', 'View academic sessions'],
-                            ['Add faculties', \App\Models\Faculty::count() > 0, 'academics.faculties.index', 'View faculties'],
-                            ['Add departments', \App\Models\Department::count() > 0, 'academics.departments.index', 'View departments'],
-                            ['Add programmes', \App\Models\Programme::count() > 0, 'academics.programmes.index', 'View programmes'],
-                            ['Add courses with credit units', \App\Models\Course::count() > 0, 'academics.courses.index', 'View courses'],
-                            ['Build each programme\'s curriculum', \App\Models\ProgrammeCourse::count() > 0, 'academics.curriculum.index', 'View programme curriculum'],
-                            ['Record applicants and admit them as students', \App\Models\Student::count() > 0, 'applicants.index', 'View applicants'],
-                            ['Create bill items (tuition, hostel …)', \App\Models\BillItem::count() > 0, 'bills.items.index', 'View bill items'],
-                            ['Set school bills per programme and level', \App\Models\Bill::count() > 0, 'bills.structure.index', 'View school bills'],
-                        ];
-                    @endphp
-                    <ul class="list-unstyled mb-0">
-                        @foreach ($steps as [$label, $done, $route, $perm])
-                            <li class="d-flex align-items-center gap-2 py-1">
-                                <i class="{{ $done ? 'ri-checkbox-circle-fill text-success' : 'ri-checkbox-blank-circle-line text-muted' }} fs-5"></i>
-                                @can($perm)
-                                    <a href="{{ route($route) }}" class="{{ $done ? 'text-muted' : 'fw-medium' }}">{{ $label }}</a>
-                                @else
-                                    <span class="{{ $done ? 'text-muted' : '' }}">{{ $label }}</span>
-                                @endcan
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
+                <div class="card-body p-0" data-uv-lazy="{{ route('dashboard.summary') }}" data-uv-select="#uv-dash-setup"></div>
             </div>
         </div>
     </div>

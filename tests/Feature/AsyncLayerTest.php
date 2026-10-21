@@ -41,3 +41,18 @@ it('ignores a repeated submission carrying the same idempotency key', function (
     $second->assertOk();
     expect(Faculty::count())->toBe(1);
 });
+
+it('loads pages in place: the layout carries the navigation layer and the page style markers', function () {
+    $this->actingAs($this->admin)->get(route('timetables.wizard'))->assertOk()
+        ->assertSee('js/univite-nav.js', false)
+        ->assertSeeInOrder(['<meta name="uv-styles-begin">', '.uv-steps', '<meta name="uv-styles-end">'], false);
+});
+
+it('shows the dashboard at once and fills its figures and checklist afterwards', function () {
+    $this->actingAs($this->admin);
+    Faculty::create(['name' => 'Faculty of Arts', 'code' => 'ART']);
+    $this->get(route('dashboard'))->assertOk()->assertSee('data-uv-lazy="' . route('dashboard.summary') . '"', false)->assertDontSee('Pending applicants');
+    $this->get(route('dashboard.summary'))->assertOk()->assertDontSee('<html', false)
+        ->assertSee('id="uv-dash-stats"', false)->assertSee('Pending applicants')->assertSee('id="uv-dash-setup"', false)
+        ->assertSee('Add faculties');
+});

@@ -6,6 +6,15 @@
 (function () {
     'use strict';
 
+    // Open a page in place when the navigation layer is there; the search box closes itself.
+    function goTo(url) {
+        if (window.Uv && Uv.nav && Uv.ajaxOn && Uv.ajaxOn()) {
+            var esc = document.getElementById('spotlight-esc');
+            if (esc) { esc.click(); }
+            Uv.visit(url);
+        } else { window.location.href = url; }
+    }
+
     function qs(sel, ctx) { return (ctx || document).querySelector(sel); }
     function qsa(sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -106,7 +115,7 @@
             h.unshift({ query: query.trim(), url: r.url, title: r.title, icon: r.icon, category: r.category });
             saveHistory(h);
         }
-        function go(r) { remember(input.value, r); window.location.href = r.url; }
+        function go(r) { remember(input.value, r); goTo(r.url); }
 
         function score(p, q) {
             var lq = q.toLowerCase().trim(), lt = p.title.toLowerCase(), lc = p.category.toLowerCase(), lk = (p.keywords || []).join(' ').toLowerCase(), s = 0;
@@ -162,7 +171,7 @@
                     + '<span class="sl-text"><span class="sl-title">' + esc(item.title) + '</span><span class="sl-sub">' + esc(item.category) + '</span></span>'
                     + '<button type="button" class="sl-x" aria-label="Remove">✕</button>';
                 div.querySelector('.sl-x').addEventListener('click', function (e) { e.stopPropagation(); var x = history(); x.splice(idx, 1); saveHistory(x); empty(); });
-                div.addEventListener('click', function () { window.location.href = item.url; });
+                div.addEventListener('click', function () { goTo(item.url); });
                 histList.appendChild(div);
             });
         }

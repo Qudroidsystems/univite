@@ -35,7 +35,9 @@
     <link href="{{ asset('css/univite-forms.css') }}?v={{ @filemtime(public_path('css/univite-forms.css')) }}" rel="stylesheet">
     {{-- Apply the saved light/dark choice before the page paints. --}}
     <script>(function(){try{var m=localStorage.getItem('uv-theme')||'light';var d=m==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m;document.documentElement.setAttribute('data-bs-theme',d);document.documentElement.setAttribute('data-topbar',d==='dark'?'dark':'light');}catch(e){}})();</script>
+    <meta name="uv-styles-begin">
     @stack('styles')
+    <meta name="uv-styles-end">
 </head>
 
 <body class="cb-ui">
@@ -173,6 +175,7 @@
 @if (Route::is('permissions.*')) @include('layouts.pages-assets.js.permissions-list-js') @endif
 <script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
 <script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
+<script src="{{ asset('js/univite-nav.js') }}?v={{ @filemtime(public_path('js/univite-nav.js')) }}"></script>
 <script src="{{ asset('js/univite-shell.js') }}?v={{ @filemtime(public_path('js/univite-shell.js')) }}"></script>
 <script src="{{ asset('js/univite-lookups.js') }}?v={{ @filemtime(public_path('js/univite-lookups.js')) }}"></script>
 <script src="{{ asset('js/univite-select.js') }}?v={{ @filemtime(public_path('js/univite-select.js')) }}"></script>

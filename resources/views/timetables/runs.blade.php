@@ -74,10 +74,11 @@
     boxes.forEach(b => b.addEventListener('change', sync));
     @if ($pending)
     const poll = setInterval(async () => {
+        if (!document.getElementById('compareForm')) { clearInterval(poll); return; }   // the page was left
         try {
             const r = await fetch(@json(route('timetables.runs.status', $t)), {headers: {Accept: 'application/json'}});
             const j = await r.json();
-            if (!j.runs.some(x => x.status === 'queued' || x.status === 'running')) { clearInterval(poll); location.reload(); return; }
+            if (!j.runs.some(x => x.status === 'queued' || x.status === 'running')) { clearInterval(poll); Uv.visit(location.href, {keepScroll: true}); return; }
             j.runs.forEach(x => { const b = document.querySelector(`[data-status="${x.id}"]`); if (b) b.textContent = x.label; });
         } catch (e) {}
     }, 4000);

@@ -50,6 +50,7 @@
 <script src="{{ asset('theme/layouts/assets/libs/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
 <script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
+<script src="{{ asset('js/univite-nav.js') }}?v={{ @filemtime(public_path('js/univite-nav.js')) }}"></script>
 <script src="{{ asset('js/univite-select.js') }}?v={{ @filemtime(public_path('js/univite-select.js')) }}"></script>
 <div id="uv-page-scripts">
 @stack('scripts')

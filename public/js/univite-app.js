@@ -424,9 +424,11 @@
     function submitForm(form, submitter, key) {
         var method = (form.getAttribute('method') || 'GET').toUpperCase();
         if (method === 'GET') {
-            var params = new URLSearchParams(new FormData(form)).toString();
+            var fd = new FormData(form), clean = new URLSearchParams();
+            fd.forEach(function (v, k) { if (typeof v === 'string' && v !== '') { clean.append(k, v); } });
+            var params = clean.toString();
             var base = new URL(formAction(form), location.href);
-            return Uv.visit(base.pathname + (params ? '?' + params : ''));
+            return Uv.visit(base.pathname + (params ? '?' + params : ''), { form: form, replace: !!form.dataset.uvTyping });
         }
         if (Net.state === 'offline') {
             return networkProblem({ network: true }, 'saving this form').then(function (again) { if (again) { return submitForm(form, submitter, key); } });
@@ -479,95 +481,12 @@
 
     /* ------------------------------------------------------------- navigation */
 
-    var navToken = 0;
-
-    function closeModals() {
-        document.querySelectorAll('.modal.show').forEach(function (m) { if (window.bootstrap) { var i = bootstrap.Modal.getInstance(m); if (i) { i.hide(); } } });
-        document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('padding-right');
-    }
-
-    function runScripts(container) {
-        container.querySelectorAll('script').forEach(function (old) {
-            if (old.src) {
-                if (!document.querySelector('script[src="' + old.getAttribute('src') + '"]')) {
-                    var s = document.createElement('script'); s.src = old.src; document.body.appendChild(s);
-                }
-                return;
-            }
-            try { (new Function(old.textContent))(); } catch (e) { window.console && console.error('Page script failed', e); }
-        });
-    }
-
-    function swap(doc, root, finalUrl, opts) {
-        closeModals();
-        var cur = document.getElementById('ajax-root'), y = window.scrollY;
-        cur.innerHTML = root.innerHTML;
-        document.title = doc.title;
-        var token = doc.querySelector('meta[name="csrf-token"]');
-        if (token) { var mine = document.querySelector('meta[name="csrf-token"]'); if (mine) { mine.setAttribute('content', token.getAttribute('content')); } }
-
-        var holder = document.getElementById('uv-page-scripts'), fresh = doc.getElementById('uv-page-scripts');
-        if (holder) { holder.innerHTML = ''; }
-        runScripts(cur);
-        if (fresh) { runScripts(fresh); }
-
-        if (opts.push !== false && finalUrl !== location.href) { history.pushState({ uv: 1 }, '', finalUrl); }
-        else if (opts.replace) { history.replaceState({ uv: 1 }, '', finalUrl); }
-        window.scrollTo(0, opts.keepScroll ? y : 0);
-        upgrade(cur);
-        document.dispatchEvent(new CustomEvent('uv:page', { detail: { url: finalUrl } }));
-    }
-
-    /** Load a page and swap it in without a full reload. */
-    Uv.visit = function (url, opts) {
-        opts = opts || {};
-        var token = ++navToken;
-        progress(true);
-        return Uv.request(url, { html: true })
-            .then(function (out) {
-                if (token !== navToken) { return; }
-                var res = out.res, finalUrl = res.url || url, ct = res.headers.get('content-type') || '';
-                if (res.redirected && /\/(login|logout)(\?|$|\/)/.test(new URL(finalUrl).pathname + '/')) { location.href = finalUrl; return; }
-                if (res.status === 403) { return Uv.alert('error', 'Not allowed', 'You do not have permission to open that page.'); }
-                if (res.status === 404) { return Uv.alert('error', 'Not found', 'That page does not exist or was removed.'); }
-                if (res.status === 419 || res.status === 401) { location.href = '/login'; return; }
-                if (!res.ok || ct.indexOf('text/html') === -1) { location.href = url; return; }
-                return res.text().then(function (html) {
-                    var doc = new DOMParser().parseFromString(html, 'text/html'), root = doc.getElementById('ajax-root');
-                    var layout = doc.querySelector('meta[name="uv-layout"]'), off = doc.querySelector('meta[name="uv-ajax"]');
-                    if (!root || !layout || layout.getAttribute('content') !== meta('uv-layout') || (off && off.getAttribute('content') === 'off')) { location.href = finalUrl; return; }
-                    swap(doc, root, finalUrl, opts);
-                });
-            })
-            .catch(function (err) {
-                if (err && err.aborted) { return; }
-                if (err && (err.timeout || err.network)) {
-                    return networkProblem(err, 'opening that page').then(function (again) { if (again) { return Uv.visit(url, opts); } });
-                }
-                window.console && console.error(err);
-                location.href = url;
-            })
-            .finally(function () { if (token === navToken) { progress(false); } });
-    };
-
-    document.addEventListener('click', function (e) {
-        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !ajaxOn()) { return; }
-        var a = e.target.closest && e.target.closest('a[href]');
-        if (!a || !a.closest('#ajax-root') || a.closest('[data-no-ajax]')) { return; }
-        var href = a.getAttribute('href');
-        if (!href || href.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(href)) { return; }
-        if ((a.target && a.target !== '_self') || a.hasAttribute('download') || a.hasAttribute('data-no-ajax') || a.hasAttribute('data-bs-toggle')) { return; }
-        var url = new URL(a.href, location.href);
-        if (url.origin !== location.origin) { return; }
-        if (url.pathname === location.pathname && url.search === location.search && url.hash) { return; }
-        e.preventDefault();
-        Uv.visit(url.href);
-    });
-
-    window.addEventListener('popstate', function () { if (ajaxOn()) { Uv.visit(location.href, { push: false, keepScroll: false }); } });
+    // Page loading without reloads (Uv.visit, partial updates, prefetch, back/forward) lives in univite-nav.js.
+    Uv.progress = progress;
+    Uv.networkProblem = networkProblem;
+    Uv.ajaxOn = ajaxOn;
+    Uv.formEligible = formEligible;
+    Uv.visit = Uv.visit || function (url) { location.href = url; };
 
     /* ------------------------------------------------- tidy up old inline code */
 
@@ -583,6 +502,7 @@
         });
         (root || document).querySelectorAll('[onchange*="this.form.submit()"]').forEach(function (el) {
             el.removeAttribute('onchange');
+            el.setAttribute('data-uv-auto', '1');
             el.addEventListener('change', function () { if (el.form.requestSubmit) { el.form.requestSubmit(); } else { el.form.submit(); } });
         });
     }
@@ -603,6 +523,7 @@
         });
     }
     Uv.animateTables = animateTables;
+    Uv.upgrade = upgrade;
     document.addEventListener('uv:page', function () { animateTables(document); });
 
     /* ------------------------------------------------------- list search */

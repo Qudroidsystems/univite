@@ -52,6 +52,16 @@ class DashboardController extends Controller
             'cardSections'    => collect($sections)->reject(fn ($s) => $s->title === 'Menu')->values()->all(),
             'currentSession'  => AcademicSession::current(),
             'currentSemester' => Semester::current(),
+        ]);
+    }
+
+    /**
+     * The dashboard's figures and setup checklist. They count whole tables, so the dashboard shows at once and these
+     * load into it afterwards (data-uv-lazy).
+     */
+    public function summary()
+    {
+        return view('dashboard.summary', [
             'stats' => [
                 ['label' => 'Faculties',   'value' => Faculty::count(),    'icon' => 'ri-building-2-line',  'route' => 'academics.faculties.index',   'can' => 'View faculties'],
                 ['label' => 'Departments', 'value' => Department::count(), 'icon' => 'ri-organization-chart', 'route' => 'academics.departments.index', 'can' => 'View departments'],

@@ -28,7 +28,7 @@
                                 <a class="nav-link menu-link {{ $open ? 'nav-active-parent' : 'collapsed' }}" href="#{{ $item->id }}" data-bs-toggle="collapse" role="button" aria-expanded="{{ $open ? 'true' : 'false' }}" aria-controls="{{ $item->id }}">
                                     <i class="{{ $item->icon }}"></i> <span>{{ $item->label }}</span>
                                 </a>
-                                <div class="collapse menu-dropdown {{ $open ? 'show' : '' }}" id="{{ $item->id }}">
+                                <div class="collapse menu-dropdown {{ $open ? 'show' : '' }} {{ count($item->links) > 10 ? 'uv-cols' : '' }}" id="{{ $item->id }}">
                                     <ul class="nav nav-sm flex-column">
                                         @foreach ($item->links as $link)
                                             <li class="nav-item"><a href="{{ $link->url }}" class="nav-link {{ $link->active ? 'active nav-active-child' : '' }}">{{ $link->label }}</a></li>

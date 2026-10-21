@@ -57,6 +57,23 @@
         if (media && media.addEventListener) { media.addEventListener('change', function () { if (store('uv-theme') === 'auto') { apply('auto'); } }); }
     }
 
+    /* ── menu down the side or across the top ── */
+    function initMenuLayout() {
+        var current = store('uv-menu') === 'top' ? 'top' : 'side';
+        qsa('.uv-menu-item').forEach(function (a) {
+            a.classList.toggle('is-current', a.getAttribute('data-menu') === current);
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                var choice = a.getAttribute('data-menu');
+                if (choice === current) { document.getElementById('theme-dropdown').style.display = 'none'; return; }
+                store('uv-menu', choice === 'top' ? 'top' : null);
+                try { sessionStorage.setItem('data-layout', choice === 'top' ? 'horizontal' : 'vertical'); } catch (err) { /* the head script sets it again */ }
+                // The theme builds the menu for its layout when the page loads.
+                location.reload();
+            });
+        });
+    }
+
     /* ── sidebar: bring the current page into view, ripple on click ── */
     function initSidebar() {
         var current = qs('#navbar-nav .nav-active-child') || qs('#navbar-nav .nav-link.active');
@@ -275,6 +292,7 @@
 
     function start() {
         initTheme();
+        initMenuLayout();
         dropdown('theme-toggle-btn', 'theme-dropdown');
         dropdown('pn-btn', 'pn-dropdown');
         dropdown('user-menu-btn', 'user-dropdown');

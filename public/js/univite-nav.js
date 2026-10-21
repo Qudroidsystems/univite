@@ -306,11 +306,18 @@
     }
 
     var dimTimer = null;
-    function busy(on) {
+    var ownHud = false;
+    function busy(on, quietly) {
         Uv.progress(on);
         clearTimeout(dimTimer);
-        if (on) { dimTimer = setTimeout(function () { root().classList.add('uv-loading'); }, 180); }
-        else { root().classList.remove('uv-loading'); }
+        if (on) {
+            dimTimer = setTimeout(function () { root().classList.add('uv-loading'); }, 180);
+            // A page that is slow to come: the spinner in the middle too (not while typing in a search box, nor over a form's own HUD).
+            if (!quietly && Uv.hud && !Uv.hud.active && !document.querySelector('#uv-hud.on')) { ownHud = true; Uv.hud.busy(null, { quiet: true, delay: 650 }); }
+        } else {
+            root().classList.remove('uv-loading');
+            if (ownHud) { ownHud = false; Uv.hud.hide(); }
+        }
     }
 
     /** Open a page without reloading. opts: push (false for back/forward), replace, keepScroll, full, scrollY. */
@@ -325,7 +332,7 @@
             render(hit.html, hit.url, opts);
             return Promise.resolve();
         }
-        busy(true);
+        busy(true, !!opts.replace);
         return load(url)
             .then(function (r) {
                 if (token !== navToken) { return; }

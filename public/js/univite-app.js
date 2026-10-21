@@ -282,12 +282,85 @@
             if (busy) {
                 b.dataset.uvWasDisabled = b.disabled ? '1' : '';
                 b.disabled = true;
-                if (b === submitter && b.tagName === 'BUTTON') { b.dataset.uvHtml = b.innerHTML; b.innerHTML = '<span class="uv-spin"></span>' + (b.dataset.busyText || 'Working…'); }
+                if (b === submitter && b.tagName === 'BUTTON') { b.dataset.uvHtml = b.innerHTML; b.innerHTML = Uv.spinner('sm') + (b.dataset.busyText || 'Working…'); }
             } else {
                 b.disabled = b.dataset.uvWasDisabled === '1';
                 if (b.dataset.uvHtml !== undefined) { b.innerHTML = b.dataset.uvHtml; delete b.dataset.uvHtml; }
             }
         });
+    }
+
+
+    /* -------------------------------------------------------- activity HUD */
+
+    /**
+     * An Apple-style activity HUD: a frosted rounded square in the middle of the screen with the spinning activity
+     * indicator and a short label, shown while an action runs (after a short delay, so quick actions do not flash it),
+     * and a drawn tick when it succeeds. Pages can use it too: Uv.hud.busy('Generating…'), Uv.hud.done('Saved'), Uv.hud.hide().
+     */
+    Uv.spinner = function (size) { return '<span class="uv-ios-spinner' + (size ? ' ' + size : '') + '" role="progressbar" aria-label="Working"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>'; };
+    var Hud = Uv.hud = { active: false };
+    var hudEl = null, hudTimer = null, hudShownAt = 0, hudHide = null;
+    function hudNode() {
+        if (!hudEl) {
+            hudEl = document.createElement('div');
+            hudEl.id = 'uv-hud';
+            hudEl.setAttribute('role', 'status');
+            hudEl.setAttribute('aria-live', 'polite');
+            hudEl.innerHTML = '<div class="uv-hud-box"><div class="uv-hud-icon"></div><div class="uv-hud-label"></div></div>';
+            document.body.appendChild(hudEl);
+        }
+        return hudEl;
+    }
+    /** Show the spinner with [label] after [opts.delay] ms (default 220). opts.quiet: no label, no dimming, clicks pass through. */
+    Hud.busy = function (label, opts) {
+        opts = opts || {};
+        clearTimeout(hudTimer); clearTimeout(hudHide);
+        Hud.active = true;
+        hudTimer = setTimeout(function () {
+            if (!Hud.active) { return; }
+            var el = hudNode();
+            if (opts.quiet && el.classList.contains('on')) { return; }   // a tick is still showing
+            el.classList.toggle('quiet', !!opts.quiet);
+            el.querySelector('.uv-hud-icon').innerHTML = Uv.spinner('lg');
+            el.querySelector('.uv-hud-label').textContent = opts.quiet ? '' : (label || 'Working…');
+            void el.offsetWidth;
+            el.classList.add('on');
+            hudShownAt = Date.now();
+        }, opts.delay === undefined ? 220 : opts.delay);
+    };
+    /** Hide it, keeping it up long enough not to blink. */
+    Hud.hide = function () {
+        clearTimeout(hudTimer);
+        Hud.active = false;
+        if (!hudEl || !hudEl.classList.contains('on')) { return; }
+        var wait = Math.max(0, 350 - (Date.now() - hudShownAt));
+        clearTimeout(hudHide);
+        hudHide = setTimeout(function () { hudEl.classList.remove('on'); }, wait);
+    };
+    /** The action worked: a tick and [label] for a moment. */
+    Hud.done = function (label, ms) {
+        clearTimeout(hudTimer); clearTimeout(hudHide);
+        Hud.active = false;
+        var el = hudNode();
+        el.classList.remove('quiet');
+        el.querySelector('.uv-hud-icon').innerHTML = '<svg class="uv-hud-check" viewBox="0 0 52 52" aria-hidden="true"><path d="M14 27 l8 8 l16 -18"/></svg>';
+        el.querySelector('.uv-hud-label').textContent = label || 'Done';
+        void el.offsetWidth;
+        el.classList.add('on');
+        el.style.pointerEvents = 'none';
+        hudHide = setTimeout(function () { el.classList.remove('on'); el.style.pointerEvents = ''; }, ms || Math.min(2600, 1000 + (label || '').length * 25));
+    };
+    // What the HUD says while a form is sent, from the button pressed.
+    function busyLabel(form, submitter) {
+        var custom = (submitter && submitter.getAttribute('data-busy-text')) || form.getAttribute('data-busy-text');
+        if (custom) { return custom; }
+        var t = ((submitter && (submitter.textContent || submitter.value)) || '').toLowerCase();
+        var words = [[/delet|remov/, 'Deleting…'], [/upload|import/, 'Uploading…'], [/approv/, 'Approving…'], [/reject|return|declin/, 'Sending back…'],
+            [/publish/, 'Publishing…'], [/generat|comput|calculat/, 'Working it out…'], [/submit|send/, 'Sending…'], [/pay/, 'Processing payment…'],
+            [/regist/, 'Registering…'], [/sav|updat|creat|add|record/, 'Saving…']];
+        for (var i = 0; i < words.length; i++) { if (words[i][0].test(t)) { return words[i][1]; } }
+        return 'Working…';
     }
 
     var bar = null, barTimer = null;
@@ -380,6 +453,7 @@
         };
 
         if (data && data.flash && data.flash.generated_password && hasSwal()) {
+            Hud.hide();
             if (data.message) { Uv.toast('success', data.message); }
             return Swal.fire({
                 icon: 'success', title: 'Temporary password', html: credentialsBox(data.flash.generated_password),
@@ -387,12 +461,15 @@
                 preConfirm: function () { try { navigator.clipboard.writeText(data.flash.generated_password.password); } catch (e) { /* the box is selectable */ } }
             }).then(go);
         }
-        if (data && data.message) { Uv.toast('success', data.message); }
+        // The HUD that spun while saving turns into a tick with the message; without it, a toast.
+        if (Hud.active || (hudEl && hudEl.classList.contains('on'))) { Hud.done(data && data.message ? data.message : 'Done'); }
+        else if (data && data.message) { Uv.toast('success', data.message); }
         return go();
     }
 
     function handleResponse(form, out) {
         var res = out.res, data = out.data || {};
+        if (res.status >= 400 || data.ok === false) { Hud.hide(); }
         if (res.status === 422) {
             showErrors(form, data.errors || {});
             Uv.toast('error', data.errors ? 'Please check the highlighted fields.' : (data.message || 'Please check the form.'));
@@ -438,11 +515,13 @@
         clearErrors(form);
         var fd = buildFormData(form, submitter);
         setBusy(form, submitter, true);
+        if (!form.hasAttribute('data-no-hud')) { Hud.busy(busyLabel(form, submitter)); }
 
         return Uv.request(formAction(form), { method: 'POST', body: fd, key: key })
             .then(function (out) { setBusy(form, submitter, false); return handleResponse(form, out); })
             .catch(function (err) {
                 setBusy(form, submitter, false);
+                Hud.hide();
                 if (err && (err.timeout || err.network || err.aborted)) {
                     return networkProblem(err, 'saving this form').then(function (again) { if (again) { return submitForm(form, submitter, key); } });
                 }
@@ -632,7 +711,7 @@
             document.body.appendChild(modal);
         }
         var body = modal.querySelector('.modal-body');
-        body.innerHTML = '<div class="text-center text-muted py-4"><span class="uv-spin"></span>Loading…</div>';
+        body.innerHTML = '<div class="text-center text-muted py-4">' + Uv.spinner('sm') + 'Loading…</div>';
         if (window.bootstrap) { bootstrap.Modal.getOrCreateInstance(modal).show(); }
         fetch(btn.dataset.url, { headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' }, credentials: 'same-origin' })
             .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })

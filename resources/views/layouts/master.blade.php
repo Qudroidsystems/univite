@@ -35,6 +35,8 @@
     <link href="{{ asset('css/univite-forms.css') }}?v={{ @filemtime(public_path('css/univite-forms.css')) }}" rel="stylesheet">
     {{-- Apply the saved light/dark choice before the page paints. --}}
     <script>(function(){try{var m=localStorage.getItem('uv-theme')||'light';var d=m==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m;document.documentElement.setAttribute('data-bs-theme',d);document.documentElement.setAttribute('data-topbar',d==='dark'?'dark':'light');}catch(e){}})();</script>
+    {{-- The menu down the side (default) or across the top, as the person chose, on wide screens; phones keep the slide-in menu. The theme script reads data-layout from sessionStorage. --}}
+    <script>(function(){try{var top=localStorage.getItem('uv-menu')==='top'&&window.innerWidth>=1025;document.documentElement.setAttribute('data-layout',top?'horizontal':'vertical');sessionStorage.setItem('data-layout',top?'horizontal':'vertical');}catch(e){}})();</script>
     <meta name="uv-styles-begin">
     @stack('styles')
     <meta name="uv-styles-end">
@@ -56,6 +58,12 @@
         <div class="layout-width">
             <div class="navbar-header">
                 <div class="d-flex align-items-center">
+                    {{-- Shown only when the menu runs across the top (the sidebar, which normally carries the logo, is then hidden). --}}
+                    @php $hLogo = \App\Support\Institution::image('logo'); @endphp
+                    <a href="{{ route('dashboard') }}" class="uv-hlogo text-decoration-none me-3" aria-label="Dashboard">
+                        @if ($hLogo)<img src="{{ $hLogo }}" alt="" style="height:34px">@else<span class="uv-hlogo-mark">{{ \App\Support\Institution::initials() }}</span>@endif
+                        <span class="uv-hlogo-name d-none d-xl-inline">{{ \App\Support\Institution::get('short_name') ?: \App\Support\Institution::get('name') }}</span>
+                    </a>
                     <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger shadow-none" id="topnav-hamburger-icon" aria-label="Menu">
                         <span class="hamburger-icon"><span></span><span></span><span></span></span>
                     </button>
@@ -86,6 +94,10 @@
                             <a href="#" class="theme-mode-item uv-pop-item" data-mode="light"><i class="ri-sun-line"></i> Light</a>
                             <a href="#" class="theme-mode-item uv-pop-item" data-mode="dark"><i class="ri-moon-line"></i> Dark</a>
                             <a href="#" class="theme-mode-item uv-pop-item" data-mode="auto"><i class="ri-contrast-2-line"></i> Same as device</a>
+                            <div class="border-top my-1 d-none d-lg-block"></div>
+                            <div class="px-3 pt-1 text-muted text-uppercase d-none d-lg-block" style="font-size:10px;">Menu</div>
+                            <a href="#" class="uv-menu-item uv-pop-item d-none d-lg-flex" data-menu="side"><i class="ri-layout-left-line"></i> Down the side</a>
+                            <a href="#" class="uv-menu-item uv-pop-item d-none d-lg-flex" data-menu="top"><i class="ri-layout-top-line"></i> Across the top</a>
                         </div>
                     </div>
 

@@ -26,6 +26,15 @@
                     <div class="col-md-6"><label class="form-label">Continuous assessment (CA) out of</label><input type="number" step="0.01" name="ca_max" value="{{ old('ca_max', $ca) }}" class="form-control @error('ca_max') is-invalid @enderror" required></div>
                     <div class="col-md-6"><label class="form-label">Exam out of</label><input type="number" step="0.01" name="exam_max" value="{{ old('exam_max', $exam) }}" class="form-control @error('exam_max') is-invalid @enderror" required>@error('exam_max')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
                     <hr class="my-1">
+                    <div class="col-12">
+                        <label class="form-label d-block">A student marked <strong>Absent</strong> (did not sit)</label>
+                        <div class="form-text mt-0 mb-2">Lecturers tick Absent for a student who did not sit, so it is not confused with a student who sat and scored 0.</div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="absent_policy" value="incomplete" id="ap1" @checked(old('absent_policy', $absentPolicy) === 'incomplete')>
+                            <label class="form-check-label" for="ap1">Show <strong>ABS</strong>: no grade and left out of the GPA; the course stays outstanding until the student sits it</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="absent_policy" value="zero" id="ap2" @checked(old('absent_policy', $absentPolicy) === 'zero')>
+                            <label class="form-check-label" for="ap2">Grade the marks the student has, counting the missing ones as 0 (it still shows that they were absent)</label></div>
+                    </div>
+                    <hr class="my-1">
                     <div class="col-md-6"><label class="form-label">Students may query a result for (days)</label><input type="number" name="complaint_days" min="0" value="{{ old('complaint_days', $complaintDays) }}" class="form-control @error('complaint_days') is-invalid @enderror" required><div class="form-text">Counted from when the result is published. 0 means no time limit.</div></div>
                     <p class="text-muted mb-0 fs-13">Credit load, carry-overs, CGPA method, probation and graduation rules are under <a href="{{ route('academics.rules.index') }}">Academic Rules</a>, where each faculty, department and programme can have its own.</p>
                 </div>

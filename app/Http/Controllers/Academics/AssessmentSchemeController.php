@@ -48,6 +48,8 @@ class AssessmentSchemeController extends Controller
             'schemes' => $schemes,
             'assignments' => $assignments,
             'check' => $check,
+            // sheets not on the scheme their course now uses (could not move, or already submitted)
+            'outdated' => $this->assessments->outdated(),
             'sessions' => AcademicSession::orderByDesc('name')->pluck('name', 'id'),
             'currentSession' => AcademicSession::where('is_current', true)->value('id'),
             'faculties' => Faculty::orderBy('name')->pluck('name', 'id'),
@@ -153,13 +155,35 @@ class AssessmentSchemeController extends Controller
             return back()->with('error', $e->getMessage())->withInput();
         }
 
-        return back()->with('success', "{$a->scheme->name} now applies to: {$a->scopeLabel()}" . ($a->session ? " ({$a->session->name})" : ' (every session)') . '. Sheets that already have marks keep their scheme.');
+        return $this->report(back(), "{$a->scheme->name} now applies to: {$a->scopeLabel()}" . ($a->session ? " ({$a->session->name})" : ' (every session)') . '.');
     }
 
-    public function unassign(AssessmentAssignment $assignment): RedirectResponse
+    public function unassign(Request $request, AssessmentAssignment $assignment): RedirectResponse
     {
-        $this->assessments->unassign($assignment);
+        $this->assessments->unassign($assignment, $request->user());
 
-        return back()->with('success', 'Assignment removed. Open sheets without marks now follow the next scheme that applies.');
+        return $this->report(back(), 'Assignment removed; courses now follow the next scheme that applies.');
+    }
+
+    /** Say what the change did to the score sheets. */
+    private function report(RedirectResponse $to, string $first): RedirectResponse
+    {
+        $r = $this->assessments->lastRefresh ?? ['switched' => 0, 'moved' => 0, 'kept' => [], 'locked' => 0];
+        $parts = [];
+        if ($r['switched']) {
+            $parts[] = "{$r['switched']} score sheet(s) without marks now use it";
+        }
+        if ($r['moved']) {
+            $parts[] = "{$r['moved']} sheet(s) being filled in moved to it with their marks (an assessment with the same code keeps its mark; the rest of a CA or exam is spread over the new assessments; lecturers should check them)";
+        }
+        $msg = $first . ($parts ? ' ' . ucfirst(implode('; ', $parts)) . '.' : '');
+        if ($r['kept'] || $r['locked']) {
+            $why = collect($r['kept'])->map(fn ($k) => $k['sheet']->course?->code . ': ' . $k['reason'])->implode(' ');
+            $to = $to->with('warning', trim(($r['kept'] ? count($r['kept']) . ' sheet(s) could not move. ' . $why . ' ' : '')
+                . ($r['locked'] ? "{$r['locked']} sheet(s) already submitted or approved keep their assessments until they are returned to the lecturer. " : '')
+                . 'They are listed under "Sheets on another scheme" below.'));
+        }
+
+        return $to->with('success', $msg);
     }
 }

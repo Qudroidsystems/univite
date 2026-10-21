@@ -133,10 +133,36 @@
                                     @else
                                         no scheme applies, so it uses the CA / exam split from Result Settings.
                                     @endif
+                                    @php $its = $outdated->filter(fn ($o) => $o['sheet']->course_id === $check['course']->id); @endphp
+                                    @if ($its->isNotEmpty())
+                                        <div class="text-warning mt-1"><i class="ri-error-warning-line me-1"></i>Its score sheet for {{ $its->map(fn ($o) => $o['sheet']->session?->name . ' ' . $o['sheet']->semesterType?->name)->implode(', ') }} still uses {{ $its->first()['sheet']->scheme?->name ?? 'plain CA and exam' }}: see below.</div>
+                                    @endif
                                 </div>
                             @endif
                         </div>
                     </form>
+
+                    @if ($outdated->isNotEmpty())
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning-subtle"><h6 class="card-title mb-0">Sheets on another scheme ({{ $outdated->count() }})</h6>
+                                <div class="fs-12">Score sheets whose course now uses a different scheme. Sheets being filled in move on their own when an assignment changes; these could not (their marks do not fit) or are already submitted or approved (return them to the lecturer first).</div></div>
+                            <ul class="list-group list-group-flush" style="max-height:340px;overflow:auto">
+                                @foreach ($outdated as $o)
+                                    @php $sh = $o['sheet']; @endphp
+                                    <li class="list-group-item fs-13 d-flex justify-content-between align-items-center gap-2">
+                                        <span><a href="{{ route('results.sheets.show', $sh->id) }}" class="fw-semibold">{{ $sh->course?->code }}</a> {{ $sh->session?->name }} {{ $sh->semesterType?->name }}
+                                            <span class="d-block text-muted">Uses {{ $sh->scheme?->name ?? 'plain CA and exam' }}; the course now uses {{ $o['now']?->name ?? 'plain CA and exam' }} · {{ \App\Models\ResultSheet::STATUSES[$sh->status] ?? $sh->status }}</span></span>
+                                        @if ($sh->isEditable())
+                                            @can('Assign assessment schemes')
+                                                <form method="POST" action="{{ route('results.sheets.scheme', $sh->id) }}" data-confirm="Move {{ $sh->course?->code }} to {{ $o['now']?->name ?? 'plain CA and exam' }}? Marks already entered are kept.">@csrf
+                                                    <input type="hidden" name="assessment_scheme_id" value="{{ $o['now']?->id }}"><button class="btn btn-sm btn-soft-warning text-nowrap">Move it</button></form>
+                                            @endcan
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

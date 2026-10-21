@@ -41,6 +41,8 @@ final readonly class ApiScoreSheet
             'scheme_note' => $scheme ? null : 'No assessment scheme applies to this course, so marks are entered as one CA and one exam. Ask the exams office to assign a scheme (Academic Setup, Assessment Schemes) or to change the assessments on this sheet.',
             'ca_max' => $caMax,
             'exam_max' => $examMax,
+            // how a student marked absent is graded: "incomplete" (ABS, outside the GPA) or "zero" (missing marks count 0)
+            'absent_policy' => \App\Services\ResultService::absentPolicy(),
             'assessments' => $columns,
             'students' => $sheet->results_count ?? $sheet->results()->count(),
             'missing' => $missing,
@@ -62,6 +64,8 @@ final readonly class ApiScoreSheet
                         : ['CA' => $r->ca, 'EXAM' => $r->exam],
                     'ca' => $r->ca, 'exam' => $r->exam, 'total' => $r->total, 'grade' => $r->grade,
                     'passed' => $r->is_pass,
+                    // did not sit (told apart from a 0)
+                    'absent' => (bool) $r->absent,
                 ];
             })->values()->all();
             $data['history'] = $sheet->events->take(20)->map(fn ($e) => [

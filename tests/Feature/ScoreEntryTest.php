@@ -165,7 +165,7 @@ it('downloads a totals-only score sheet and reads its totals back', function () 
     $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
     file_put_contents($path, $res->getContent());
     $rows = Xlsx::read($path);
-    expect($rows[0])->toBe(['Matric Number', 'Name', 'CA total (40)', 'Exam total (60)', 'Total (100)', 'Grade'])->and(count($rows))->toBe(4);
+    expect($rows[0])->toBe(['Matric Number', 'Name', 'CA total (40)', 'Exam total (60)', 'Absent', 'Total (100)', 'Grade'])->and(count($rows))->toBe(4);
 
     foreach ([1, 2, 3] as $k) {
         $rows[$k] = [$rows[$k][0], $rows[$k][1], 30 + $k, $k === 3 ? null : 50];
@@ -180,7 +180,7 @@ it('downloads a totals-only score sheet and reads its totals back', function () 
 
     // the detailed sheet still lists every assessment, then the totals
     $detail = $this->actingAs($this->lecturer)->get(route('results.sheets.template', [$sheet->id, 'format' => 'csv']))->assertOk()->getContent();
-    expect($detail)->toContain('"CA1 (10)","CA2 (15)","CA3 (15)","Q1 (30)","Q2 (30)","CA total (40)","Exam total (60)","Total (100)","Grade"');
+    expect($detail)->toContain('"CA1 (10)","CA2 (15)","CA3 (15)","Q1 (30)","Q2 (30)","CA total (40)","Exam total (60)","Absent","Total (100)","Grade"');
 });
 
 it('lists everyone on a course by subject, and only the chosen class by student', function () {

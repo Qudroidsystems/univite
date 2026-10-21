@@ -215,8 +215,11 @@ it('keeps a sheet on its scheme once marks are in, and locks the scheme\'s asses
 
     app(ResultService::class)->saveScores($sheet, [$this->students[0]->id => new \App\Data\Results\Score(items: ['T1' => 5])]);
     $this->schemes->assign($second, 'university', null, null, $this->admin);
+    // the T1 mark has nowhere to go in an exam-only scheme, so that sheet stays and is reported; the empty one follows
     expect($sheet->fresh()->assessment_scheme_id)->toBe($first->id)
-        ->and($empty->fresh()->assessment_scheme_id)->toBe($second->id);   // no marks yet: follows the change
+        ->and($empty->fresh()->assessment_scheme_id)->toBe($second->id)
+        ->and($this->schemes->lastRefresh['kept'])->toHaveCount(1)
+        ->and($this->schemes->outdated()->pluck('sheet.id')->all())->toBe([$sheet->id]);
 
     $this->actingAs($this->admin)->put(route('academics.assessments.update', $first->id), ['name' => 'Renamed', 'items' => [['name' => 'Exam', 'component' => 'exam', 'max_score' => 100]]])
         ->assertSessionHasErrors('items');
@@ -229,12 +232,51 @@ it('keeps a sheet on its scheme once marks are in, and locks the scheme\'s asses
     expect(AssessmentScheme::where('name', 'Renamed (copy)')->first()->items)->toHaveCount(4);
 });
 
-it('leaves a sheet that already has plain CA and exam marks on the old split', function () {
+it('moves a sheet being filled in to a newly assigned scheme, keeping its marks', function () {
     $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
-    app(ResultService::class)->saveScores($sheet, [$this->students[0]->id => new \App\Data\Results\Score(20, 50)]);
-    $this->schemes->assign(standardScheme(), 'university', null, null, $this->admin);
-    app(ResultService::class)->syncRows($sheet->fresh());
-    expect($sheet->fresh()->assessment_scheme_id)->toBeNull();
+    app(ResultService::class)->saveScores($sheet, [$this->students[0]->id => new \App\Data\Results\Score(24, 50)]);
+    $scheme = standardScheme();
+    $this->schemes->assign($scheme, 'university', null, null, $this->admin);
+    $r = CourseResult::where('student_id', $this->students[0]->id)->first();
+    expect($sheet->fresh()->assessment_scheme_id)->toBe($scheme->id)
+        ->and($this->schemes->lastRefresh['moved'])->toBe(1)
+        ->and($r->ca)->toBe(24.0)->and($r->exam)->toBe(50.0)->and($r->total)->toBe(74.0)
+        ->and(app(AssessmentService::class)->snapshot($r, $scheme->fresh('items')))->toEqual(['T1' => 8, 'T2' => 8, 'ASG' => 8, 'EXAM' => 50])
+        ->and($sheet->events()->where('action', 'scheme')->exists())->toBeTrue();
+
+    // a new version of the scheme (same codes, a Practical added to the CA): kept codes keep their marks
+    $v2 = makeScheme([
+        ['name' => 'Test 1', 'code' => 'T1', 'component' => 'ca', 'max_score' => 10],
+        ['name' => 'Test 2', 'code' => 'T2', 'component' => 'ca', 'max_score' => 10],
+        ['name' => 'Practical', 'code' => 'PRAC', 'component' => 'ca', 'max_score' => 10],
+        ['name' => 'Examination', 'code' => 'EXAM', 'component' => 'exam', 'max_score' => 70],
+    ], 'Tests, practical and exam');
+    app(ResultService::class)->saveScores($sheet->fresh(), [$this->students[1]->id => new \App\Data\Results\Score(items: ['T1' => 7, 'T2' => 6])]);   // still being marked
+    $this->actingAs($this->admin)->post(route('academics.assessments.assign'), ['assessment_scheme_id' => $v2->id, 'scope_type' => 'course', 'course_id' => $this->course->id])
+        ->assertSessionHas('success', fn ($m) => str_contains($m, 'moved to it with their marks'));
+    $b = CourseResult::where('student_id', $this->students[1]->id)->first();
+    expect($sheet->fresh()->assessment_scheme_id)->toBe($v2->id)
+        ->and(app(AssessmentService::class)->snapshot($b, $v2->fresh('items')))->toEqual(['T1' => 7, 'T2' => 6, 'PRAC' => null, 'EXAM' => null])
+        ->and(CourseResult::where('student_id', $this->students[0]->id)->value('total'))->toBe(74.0);
+    $this->get(route('results.sheets.show', $sheet->id))->assertOk()->assertDontSee('still has');
+});
+
+it('warns on the sheet and lists sheets left on an older scheme', function () {
+    ResultStage::query()->delete();
+    $first = standardScheme();
+    $this->schemes->assign($first, 'university', null, null, $this->admin);
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    $all = [$this->students[0]->id => new \App\Data\Results\Score(items: ['T1' => 5, 'T2' => 5, 'ASG' => 5, 'EXAM' => 30]),
+        $this->students[1]->id => new \App\Data\Results\Score(items: ['T1' => 5, 'T2' => 5, 'ASG' => 5, 'EXAM' => 30])];
+    app(ResultService::class)->saveScores($sheet, $all);
+    app(ResultService::class)->submit($sheet->fresh(), $this->lecturer);   // no approval steps: approved straight away
+
+    $second = makeScheme([['name' => 'Test', 'code' => 'T', 'max_score' => 40], ['name' => 'Exam', 'code' => 'EXAM', 'component' => 'exam', 'max_score' => 60]], 'Forty sixty');
+    $this->actingAs($this->admin)->post(route('academics.assessments.assign'), ['assessment_scheme_id' => $second->id, 'scope_type' => 'university'])
+        ->assertSessionHas('warning', fn ($m) => str_contains($m, 'already submitted or approved'));
+    expect($sheet->fresh()->assessment_scheme_id)->toBe($first->id);
+    $this->get(route('academics.assessments.index'))->assertOk()->assertSee('Sheets on another scheme')->assertSee('BIO 101');
+    $this->get(route('results.sheets.show', $sheet->id))->assertOk()->assertSee('now uses')->assertSee('Forty sixty');
 });
 
 it('corrects single assessments on a published result and can reverse the correction', function () {
@@ -296,4 +338,55 @@ it('lets the exams office put a sheet that already has CA and exam marks on a sc
     // back to plain CA and exam
     $this->actingAs($this->admin)->post(route('results.sheets.scheme', $sheet->id), ['assessment_scheme_id' => ''])->assertSessionHas('success');
     expect($sheet->fresh()->assessment_scheme_id)->toBeNull()->and(AssessmentScore::count())->toBe(0);
+});
+
+it('tells a student who did not sit (Absent) apart from one who scored 0', function () {
+    ResultStage::query()->delete();
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    [$tola, $bisi] = [$this->students[0], $this->students[1]];
+
+    // Tola sat and scored 0 in the exam; Bisi did not sit. Leaving Bisi blank holds the sheet back...
+    $this->actingAs($this->lecturer)->post(route('results.sheets.save', $sheet->id), ['scores' => [$tola->id => ['ca' => 10, 'exam' => 0], $bisi->id => ['ca' => 18, 'exam' => '']]]);
+    $this->post(route('results.sheets.submit', $sheet->id))->assertSessionHas('error', fn ($m) => str_contains($m, 'tick Absent'));
+
+    // ...ticking Absent does not
+    $this->post(route('results.sheets.save', $sheet->id), ['scores' => [$bisi->id => ['ca' => 18, 'exam' => '', 'absent' => '1']]])->assertSessionHas('success');
+    $b = CourseResult::where('student_id', $bisi->id)->first();
+    $t = CourseResult::where('student_id', $tola->id)->first();
+    expect($b->absent)->toBeTrue()->and($b->grade)->toBe('ABS')->and($b->total)->toBeNull()->and($b->points)->toBeNull()->and($b->is_pass)->toBeFalse()->and($b->ca)->toBe(18.0)
+        ->and($t->absent)->toBeFalse()->and($t->total)->toBe(10.0)->and($t->grade)->not->toBe('ABS');
+    $this->get(route('results.sheets.show', $sheet->id))->assertOk()->assertSee('data-absent', false);
+    $this->post(route('results.sheets.submit', $sheet->id))->assertSessionHas('success');
+
+    // ABS is left out of the GPA (no points) and stays outstanding
+    expect(\App\Support\GradeScale::gpa([$b->fresh(), $t->fresh()]))->toBe((float) $t->fresh()->points);
+    expect(app(\App\Services\RegistrationService::class)->outstanding($bisi->fresh(), false)->pluck('course.code')->all())->toContain('BIO 101');
+});
+
+it('grades an absent student with the marks they have when the school says so', function () {
+    Setting::put('results.absent_policy', 'zero');
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    app(ResultService::class)->saveScores($sheet, [$this->students[1]->id => new \App\Data\Results\Score(18, null, absent: true)]);
+    $b = CourseResult::where('student_id', $this->students[1]->id)->first();
+    expect($b->absent)->toBeTrue()->and($b->total)->toBe(18.0)->and($b->grade)->not->toBe('ABS')->and($b->points)->not->toBeNull();
+
+    // un-ticking Absent puts the row back to needing its exam mark
+    app(ResultService::class)->saveScores($sheet, [$this->students[1]->id => new \App\Data\Results\Score(18, null, absent: false)]);
+    expect($b->fresh()->absent)->toBeFalse()->and($b->fresh()->total)->toBeNull()->and(app(ResultService::class)->incomplete($sheet))->toBe(2);
+});
+
+it('reads ABS in an upload and from the app', function () {
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    $csv = "Matric Number,CA,Exam\n2026/0001,20,ABS\n2026/0002,15,40\n";
+    $this->actingAs($this->lecturer)->post(route('results.sheets.upload', $sheet->id), ['file' => UploadedFile::fake()->createWithContent('s.csv', $csv)]);
+    expect(CourseResult::where('student_id', $this->students[0]->id)->first()->grade)->toBe('ABS')
+        ->and(CourseResult::where('student_id', $this->students[1]->id)->first()->total)->toBe(55.0);
+    expect($this->get(route('results.sheets.template', [$sheet->id, 'format' => 'csv']))->getContent())->toContain('"Absent"')->toContain('"ABS"');
+
+    \Laravel\Sanctum\Sanctum::actingAs($this->lecturer);
+    $this->putJson("/api/v1/teaching/sheets/{$sheet->id}/scores", ['scores' => [$this->students[1]->id => ['absent' => true]]])->assertOk()
+        ->assertJsonPath('data.absent_policy', 'incomplete');
+    $rows = collect($this->getJson("/api/v1/teaching/sheets/{$sheet->id}")->json('data.rows'));
+    expect($rows->firstWhere('student_id', $this->students[1]->id)['absent'])->toBeTrue()
+        ->and($rows->firstWhere('student_id', $this->students[1]->id)['grade'])->toBe('ABS');
 });

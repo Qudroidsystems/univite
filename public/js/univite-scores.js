@@ -5,7 +5,10 @@
  *  - typing a total directly clears that part's assessments, so the total is saved as it is
  *  - typing the overall total (data-grand) clears every assessment and both part totals; the total is saved as typed
  *  - the total and grade (from the university's grade bands on data-bands) follow, with a short highlight
- *  - the header shows how many students are complete, passed and failed, and the average
+ *  - the header shows how many students are complete, passed, failed and absent, and the average
+ *  - "Absent" (data-absent) marks a student who did not sit, told apart from a 0: under the school's "incomplete"
+ *    rule (data-absent-policy) the grade shows ABS and no total; under "zero" the marks they have are graded,
+ *    missing ones counting 0. Either way the student no longer holds the sheet back
  *  - on an approver's sheet (data-locked) every score is read-only behind a lock icon: clicking it unlocks that score,
  *    clicking again locks it. A form holding the table (data-lock-form) will not save while a score is unlocked, and
  *    the approval form (data-lock-guard) will not go while a score is unlocked or a change is not saved yet
@@ -36,8 +39,27 @@
         input.classList.toggle('is-over', v !== null && (v < 0 || (max !== null && v > max)));
     }
 
+    /** What an absent student's total is under the "zero" rule: every mark they have, the rest counting 0. */
+    function partialTotal(tr) {
+        var grand = tr.querySelector('[data-grand]'), sum = 0, any = false;
+        ['ca', 'exam'].forEach(function (part) {
+            var items = tr.querySelectorAll('[data-item="' + part + '"]'), totalIn = tr.querySelector('[data-total="' + part + '"]');
+            var filled = Array.prototype.filter.call(items, function (i) { return num(i.value) !== null; });
+            if (filled.length) { filled.forEach(function (i) { sum += num(i.value); }); any = true; }
+            else if (totalIn && num(totalIn.value) !== null) { sum += num(totalIn.value); any = true; }
+        });
+        if (!any && grand && num(grand.value) !== null) { return num(grand.value); }
+        return sum;
+    }
+
     /** Recompute one row. source: the input just typed in, if any. */
     function row(table, tr, source) {
+        var absentBox = tr.querySelector('[data-absent]');
+        if (absentBox && absentBox.checked) {
+            if (table.getAttribute('data-absent-policy') === 'zero') { show(table, tr, partialTotal(tr), source, true); }
+            else { show(table, tr, null, source, true); }
+            return;
+        }
         var parts = {}, complete = true, any = false;
         var grand = tr.querySelector('[data-grand]');
         if (grand && source === grand) {
@@ -92,8 +114,9 @@
         show(table, tr, total, source);
     }
 
-    function show(table, tr, total, source) {
+    function show(table, tr, total, source, absent) {
         var g = grade(table, total);
+        var incomplete = absent && total === null;
         var totalOut = tr.querySelector('[data-out="total"]'), gradeOut = tr.querySelector('[data-out="grade"]');
         var isInput = totalOut.tagName === 'INPUT';
         var before = isInput ? totalOut.value : totalOut.textContent;
@@ -101,26 +124,28 @@
             if (isInput) { totalOut.value = fmt(total); } else { totalOut.textContent = fmt(total); }
             if (source && before !== fmt(total)) { flash(totalOut.parentNode); }
         }
-        var letter = g ? g.grade : '';
+        var letter = incomplete ? 'ABS' : (g ? g.grade : '');
         if (gradeOut.textContent !== letter) {
             gradeOut.textContent = letter;
-            gradeOut.className = 'uv-grade badge ' + (g ? (g.pass ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') : '');
-            if (source && g) { gradeOut.classList.add('uv-pop'); setTimeout(function () { gradeOut.classList.remove('uv-pop'); }, 220); }
+            gradeOut.className = 'uv-grade badge ' + (incomplete ? 'bg-warning-subtle text-warning' : (g ? (g.pass ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') : ''));
+            if (source && (g || incomplete)) { gradeOut.classList.add('uv-pop'); setTimeout(function () { gradeOut.classList.remove('uv-pop'); }, 220); }
         }
-        tr._state = { total: total, pass: g ? !!g.pass : null };
+        tr.classList.toggle('uv-absent', !!absent);
+        tr._state = { total: total, pass: g ? !!g.pass : null, absent: !!absent };
     }
 
     function summary(table) {
-        var rows = table.querySelectorAll('[data-row]'), done = 0, pass = 0, fail = 0, sum = 0;
+        var rows = table.querySelectorAll('[data-row]'), done = 0, pass = 0, fail = 0, sum = 0, absent = 0, graded = 0;
         rows.forEach(function (tr) {
             var s = tr._state || {};
-            if (s.total !== null && s.total !== undefined) { done++; sum += s.total; if (s.pass) { pass++; } else { fail++; } }
+            if (s.absent) { absent++; done++; if (s.total !== null && s.total !== undefined) { graded++; sum += s.total; if (s.pass) { pass++; } else { fail++; } } return; }
+            if (s.total !== null && s.total !== undefined) { done++; graded++; sum += s.total; if (s.pass) { pass++; } else { fail++; } }
         });
         var bar = table.querySelector('[data-progress]'), label = table.querySelector('[data-progress-label]');
         if (bar) { bar.style.width = (rows.length ? Math.round(done * 100 / rows.length) : 0) + '%'; }
         if (label) { label.textContent = done + ' of ' + rows.length + ' students complete'; }
         var set = function (k, v) { var el = table.querySelector('[data-count="' + k + '"]'); if (el) { el.textContent = v; } };
-        set('pass', pass); set('fail', fail); set('avg', done ? fmt(sum / done) : '–');
+        set('pass', pass); set('fail', fail); set('absent', absent); set('avg', graded ? fmt(sum / graded) : '–');
     }
 
     function init(root) {
@@ -129,6 +154,14 @@
             summary(table);
         });
     }
+
+    document.addEventListener('change', function (e) {
+        var box = e.target;
+        if (!box.matches || !box.matches('[data-score-table] [data-absent]')) { return; }
+        var table = box.closest('[data-score-table]'), tr = box.closest('[data-row]');
+        row(table, tr, box);
+        summary(table);
+    });
 
     document.addEventListener('input', function (e) {
         var input = e.target;

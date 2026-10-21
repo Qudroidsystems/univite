@@ -85,7 +85,7 @@ it('lets a lecturer download the sheet as Excel, fill it in and upload it from t
     $path = tempnam(sys_get_temp_dir(), 'x') . '.xlsx';
     file_put_contents($path, $res->getContent());
     $rows = Xlsx::read($path);
-    expect($rows[0])->toBe(['Matric Number', 'Name', 'T1 (20)', 'ASG (10)', 'EXAM (70)', 'CA total (30)', 'Exam total (70)', 'Total (100)', 'Grade'])->and(count($rows))->toBe(3);
+    expect($rows[0])->toBe(['Matric Number', 'Name', 'T1 (20)', 'ASG (10)', 'EXAM (70)', 'CA total (30)', 'Exam total (70)', 'Absent', 'Total (100)', 'Grade'])->and(count($rows))->toBe(3);
 
     // fill in: one good row, one mark out of range
     $filled = [$rows[0], [$rows[1][0], $rows[1][1], 15, 8, 50], [$rows[2][0], $rows[2][1], 25, 5, 40]];
@@ -98,7 +98,7 @@ it('lets a lecturer download the sheet as Excel, fill it in and upload it from t
 
     // CSV works too, and other files are refused
     $csv = $this->withToken($this->token)->get("/api/v1/teaching/sheets/{$this->sheet['id']}/file?format=csv")->assertOk()->getContent();
-    expect($csv)->toContain('"Matric Number","Name","T1 (20)","ASG (10)","EXAM (70)","CA total (30)","Exam total (70)","Total (100)","Grade"')->toContain(',15,8,50,23,50,73,');
+    expect($csv)->toContain('"Matric Number","Name","T1 (20)","ASG (10)","EXAM (70)","CA total (30)","Exam total (70)","Absent","Total (100)","Grade"')->toContain(',15,8,50,23,50,,73,');
     $this->withToken($this->token)->post("/api/v1/teaching/sheets/{$this->sheet['id']}/upload", ['file' => UploadedFile::fake()->create('scores.pdf', 10)], ['Accept' => 'application/json'])->assertUnprocessable();
 
     // another lecturer cannot download or upload

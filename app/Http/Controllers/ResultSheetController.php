@@ -83,7 +83,7 @@ class ResultSheetController extends Controller
         return redirect()->route('results.sheets.show', $sheet->id);
     }
 
-    public function show(ResultSheet $sheet): View
+    public function show(ResultSheet $sheet, \App\Services\AssessmentService $assessments): View
     {
         abort_unless($this->mayView($sheet), 403);
         if ($sheet->isEditable() && $this->results->canEnter(auth()->user(), $sheet)) {
@@ -105,6 +105,8 @@ class ResultSheetController extends Controller
             'schemes'    => ($sheet->isEditable() && (auth()->user()->can('Assign assessment schemes') || auth()->user()->can('Enter results for any course')))
                 ? \App\Models\AssessmentScheme::where('is_active', true)->orderBy('name')->get() : collect(),
             'missing'    => $sheet->isEditable() ? $this->results->incomplete($sheet) : 0,
+            // the course now uses another scheme than this sheet (not shown once published)
+            'newer'      => $sheet->status !== 'published' ? $assessments->newerScheme($sheet) : null,
             'complaints' => \App\Models\ResultComplaint::with('student')->whereIn('course_result_id', $sheet->results->pluck('id'))->latest()->get(),
         ]);
     }
@@ -112,7 +114,7 @@ class ResultSheetController extends Controller
     public function save(Request $request, ResultSheet $sheet): RedirectResponse
     {
         $this->authorizeEntry($sheet);
-        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array'], 'scores.*.total' => ['nullable']]);
+        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array'], 'scores.*.total' => ['nullable'], 'scores.*.absent' => ['nullable']]);
 
         try {
             $problems = $this->results->saveScores($sheet, Score::many($data['scores']), $request->user());
@@ -129,7 +131,7 @@ class ResultSheetController extends Controller
     public function correct(Request $request, ResultSheet $sheet): RedirectResponse
     {
         abort_unless($this->results->canCorrect($request->user(), $sheet), 403);
-        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array'], 'scores.*.total' => ['nullable'],
+        $data = $request->validate(['scores' => ['required', 'array'], 'scores.*.ca' => ['nullable'], 'scores.*.exam' => ['nullable'], 'scores.*.items' => ['nullable', 'array'], 'scores.*.total' => ['nullable'], 'scores.*.absent' => ['nullable'],
             'note' => ['nullable', 'string', 'max:400']]);
 
         try {

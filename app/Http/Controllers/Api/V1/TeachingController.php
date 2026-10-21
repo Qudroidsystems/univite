@@ -110,6 +110,7 @@ class TeachingController extends ApiController
      * PUT /api/v1/teaching/sheets/{sheet}/scores
      * {"scores": {"<student_id>": {"marks": {"<assessment id>": 8.5, ...}}}}  (only the marks sent change; null clears one)
      * On a sheet without a scheme: {"scores": {"<student_id>": {"ca": 20, "exam": 45}}}
+     * A student who did not sit: {"scores": {"<student_id>": {"absent": true}}} (false undoes it)
      */
     public function save(Request $request, ResultSheet $sheet): JsonResponse
     {
@@ -122,6 +123,7 @@ class TeachingController extends ApiController
             'scores.*.ca' => ['nullable', 'numeric'],
             'scores.*.exam' => ['nullable', 'numeric'],
             'scores.*.total' => ['nullable', 'numeric'],
+            'scores.*.absent' => ['nullable', 'boolean'],
         ]);
 
         $scores = [];
@@ -133,10 +135,12 @@ class TeachingController extends ApiController
             }
             // A total on its own (no marks, CA or exam) is kept as given and clears the assessments.
             $total = $s['total'] ?? null;
+            // "absent": true for a student who did not sit (not the same as 0), false to undo it, left out to keep it.
+            $absent = array_key_exists('absent', $s) && $s['absent'] !== null ? (bool) $s['absent'] : null;
             $scores[(int) $studentId] = match (true) {
-                $total !== null && ! array_key_exists('ca', $s) && ! array_key_exists('exam', $s) && ! array_filter($s['marks'] ?? [], fn ($v) => $v !== null) => new Score(total: $total),
-                (bool) $sheet->assessment_scheme_id => new Score(items: $s['marks'] ?? []),
-                default => new Score(array_key_exists('ca', $s) ? $s['ca'] : $row->ca, array_key_exists('exam', $s) ? $s['exam'] : $row->exam),
+                $total !== null && ! array_key_exists('ca', $s) && ! array_key_exists('exam', $s) && ! array_filter($s['marks'] ?? [], fn ($v) => $v !== null) => new Score(total: $total, absent: $absent),
+                (bool) $sheet->assessment_scheme_id => new Score(items: $s['marks'] ?? [], absent: $absent),
+                default => new Score(array_key_exists('ca', $s) ? $s['ca'] : $row->ca, array_key_exists('exam', $s) ? $s['exam'] : $row->exam, absent: $absent),
             };
         }
 

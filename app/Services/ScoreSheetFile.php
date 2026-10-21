@@ -42,7 +42,8 @@ class ScoreSheetFile
         $head[] = ($sheet->scheme ? 'Exam total' : 'Exam') . ' (' . ($examMax + 0) . ')';
         $limits[$at] = [0, (float) $caMax];
         $limits[$at + 1] = [0, (float) $examMax];
-        $limits[$at + 2] = [0, (float) ($caMax + $examMax)];
+        $head[] = 'Absent';
+        $limits[$at + 3] = [0, (float) ($caMax + $examMax)];
         $head[] = 'Total (' . ($caMax + $examMax + 0) . ')';
         $head[] = 'Grade';
 
@@ -52,7 +53,7 @@ class ScoreSheetFile
             $table[] = array_merge(
                 [$r->student->matric_number, $r->student->full_name],
                 $items->map(fn ($i) => $have->has($i->id) ? $num($have[$i->id]->score) : null)->all(),
-                [$num($r->ca), $num($r->exam), $num($r->total), $r->grade],
+                [$num($r->ca), $num($r->exam), $r->absent ? 'ABS' : null, $num($r->total), $r->grade],
             );
         }
 
@@ -78,7 +79,7 @@ class ScoreSheetFile
                 ? 'Enter each assessment mark. The number in brackets is the most it is out of; Excel refuses anything outside 0 to that number. The CA and exam totals are added up by the portal; you may instead leave a part\'s assessments empty and type its total.'
                 : 'Enter each student\'s CA total and exam total. The number in brackets is the most each is out of; Excel refuses anything outside 0 to that number.',
             'Total is worked out by the portal from the CA and exam. To give a student only an overall total, leave the CA, exam' . ($detailed ? ' and assessment' : '') . ' cells empty and type the Total; the assessments are then cleared. Grade is always worked out.',
-            'Leave a cell empty to keep it as it is on the portal. Type 0 for a student who was absent.',
+            'Leave a cell empty to keep it as it is on the portal. 0 means the student sat and scored nothing. For a student who did not sit, type ABS in the Absent column (or in place of a mark).',
             'The Matric Number, Name and Grade columns are locked. Do not change the column headings. Rows can be in any order.',
             'Save the file and upload it on the score sheet (in the app: the menu on the sheet, Upload Excel; on the portal: Upload).',
             $sheet->scheme ? 'Assessments: ' . $sheet->scheme->summary() . '.' : 'This sheet has one CA and one exam score per student.',

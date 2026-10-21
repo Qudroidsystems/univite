@@ -191,3 +191,12 @@ When the school locks the whole portal and app for unpaid fees, every other call
 
 The planners now know about carry-overs: `GET /planner/gpa` has `outstanding` and a `carryover` flag per course, and the
 reading planner has a `carryover` criterion (on by default) that gives outstanding courses more time.
+
+## Absent students and score sheets
+
+A student who did not sit is marked **absent**, which is not the same as scoring 0. `GET /teaching/sheets/{sheet}`
+rows carry `absent` (true/false) and the sheet carries `absent_policy`: `incomplete` (the grade is `ABS`, there is no
+total, it is left out of the GPA and the course stays outstanding) or `zero` (the marks the student has are graded,
+missing ones counting 0). Mark or unmark a student with `PUT /teaching/sheets/{sheet}/scores`
+`{"scores": {"<student_id>": {"absent": true}}}`, alone or with marks. An absent student no longer counts in `missing`,
+so the sheet can be submitted. In uploads, `ABS` in any mark cell or in an `Absent` column marks the student absent.

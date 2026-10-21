@@ -108,7 +108,59 @@ class ResultService
      * to. When $items is given (typed or uploaded), a part whose assessments are all blank may take its CA or exam total
      * directly (see AssessmentService::applyMixed); when $items is null the CA and exam are spread over the items.
      */
-    private function apply(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null, $total = null): void
+    private function apply(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null, $total = null, ?bool $absent = null): void
+    {
+        $this->applyMarks($row, $ca, $exam, $scheme, $items, $user, $total);
+        $this->settleAbsence($row, $absent ?? (bool) $row->absent, $scheme);
+    }
+
+    /** How an absent student is graded: "incomplete" (ABS, not in the GPA, stays outstanding) or "zero" (missing marks count 0). */
+    public static function absentPolicy(): string
+    {
+        return Setting::get('results.absent_policy', 'incomplete') === 'zero' ? 'zero' : 'incomplete';
+    }
+
+    /**
+     * A student marked absent did not sit: they are not short of marks, so the sheet can be submitted. Under the
+     * "incomplete" rule the result is ABS with no total, no points (left out of the GPA) and not passed, so the
+     * course stays outstanding until they sit it; under the "zero" rule the marks they have are graded, missing
+     * ones counting 0. Marks already entered (a CA, say) are kept either way.
+     */
+    private function settleAbsence(CourseResult $row, bool $absent, ?AssessmentScheme $scheme): void
+    {
+        if (! $absent) {
+            if ($row->absent) {
+                $row->update(['absent' => false]);
+            }
+
+            return;
+        }
+        if (self::absentPolicy() === 'incomplete') {
+            $row->update(['absent' => true, 'total' => null, 'grade' => CourseResult::ABSENT_GRADE, 'points' => null, 'is_pass' => false]);
+
+            return;
+        }
+        $total = $row->total;
+        if ($total === null || $row->ca === null || $row->exam === null) {
+            $part = function (string $component, ?float $given) use ($row, $scheme) {
+                if ($given !== null) {
+                    return $given;
+                }
+                if (! $scheme) {
+                    return 0.0;
+                }
+                $ids = $scheme->items->where('component', $component)->pluck('id');
+
+                return (float) AssessmentScore::where('course_result_id', $row->id)->whereIn('assessment_item_id', $ids)->sum('score');
+            };
+            $total = ($row->ca === null && $row->exam === null && $row->total !== null) ? (float) $row->total
+                : round($part('ca', $row->ca) + $part('exam', $row->exam), 2);
+        }
+        $g = GradeScale::gradeResult($row, $total);
+        $row->update(['absent' => true, 'total' => $total, 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null]);
+    }
+
+    private function applyMarks(CourseResult $row, $ca, $exam, ?AssessmentScheme $scheme = null, ?array $items = null, ?User $user = null, $total = null): void
     {
         // Only the overall total given (every CA, exam and assessment mark blank): keep it as typed and clear the
         // assessments, so the CA and exam are left empty.
@@ -171,7 +223,7 @@ class ResultService
                     continue;
                 }
                 try {
-                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user, $s->total));
+                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user, $s->total, $s->absent));
                 } catch (RuntimeException $e) {
                     $problems[] = $row->student->matric_number . ': ' . $e->getMessage();
                 }
@@ -203,6 +255,7 @@ class ResultService
         $ca = $col(['ca', 'catotal', 'continuousassessment', 'testscore', 'catest']);
         $ex = $col(['exam', 'examtotal', 'examscore', 'examination']);
         $tot = $col(['total', 'totalscore']);
+        $abs = $col(['absent', 'abs', 'didnotsit']);
 
         $itemCols = [];
         if ($scheme = $sheet->scheme?->loadMissing('items')) {
@@ -235,13 +288,16 @@ class ResultService
             // On a scheme sheet a part's assessments win; a part with only its total filled in takes the total as it
             // is (a "totals only" download comes back this way). Without a scheme the CA and Exam columns are the marks.
             $given = $tot !== null ? ($line[$tot] ?? null) : null;
+            // "ABS" in any mark, or an Absent column (Yes / ABS / 1), marks a student who did not sit.
+            $absent = $abs !== null ? (in_array(strtoupper(trim((string) ($line[$abs] ?? ''))), ['Y', 'YES', '1', 'TRUE', 'ABS', 'ABSENT', 'X'], true)) : null;
             $scores[$row->student_id] = $scheme
-                ? new Score($ca !== null ? ($line[$ca] ?? null) : null, $ex !== null ? ($line[$ex] ?? null) : null, array_map(fn ($i) => $line[$i] ?? null, $itemCols), $given)
-                : new Score(
+                ? Score::read($ca !== null ? ($line[$ca] ?? null) : null, $ex !== null ? ($line[$ex] ?? null) : null, array_map(fn ($i) => $line[$i] ?? null, $itemCols), $given, $absent)
+                : Score::read(
                     $ca !== null ? ($line[$ca] ?? null) : (blank($given) ? $row->ca : null),
                     $ex !== null ? ($line[$ex] ?? null) : (blank($given) ? $row->exam : null),
                     null,
                     $given,
+                    $absent,
                 );
         }
 
@@ -253,10 +309,10 @@ class ResultService
         return $this->reader->read($file->getRealPath(), $file->getClientOriginalExtension());
     }
 
-    /** Rows that still lack a total: a CA or exam score is missing and no total was typed directly. */
+    /** Rows that still lack a total: a CA or exam score is missing, no total was typed directly, and the student is not marked absent. */
     public function incomplete(ResultSheet $sheet): int
     {
-        return $sheet->results()->whereNull('total')->count();
+        return $sheet->results()->whereNull('total')->where('absent', false)->count();
     }
 
     public function submit(ResultSheet $sheet, User $user): ResultSheet
@@ -269,8 +325,8 @@ class ResultService
         }
         if ($n = $this->incomplete($sheet)) {
             throw new RuntimeException($sheet->assessment_scheme_id
-                ? "{$n} student(s) still have no mark for one or more assessments. Enter every mark (use 0 for an absent student) before submitting."
-                : "{$n} student(s) still have no CA or exam score. Enter every score (use 0 for an absent student) before submitting.");
+                ? "{$n} student(s) still have no mark for one or more assessments. Enter every mark, or tick Absent for a student who did not sit (0 means they sat and scored nothing)."
+                : "{$n} student(s) still have no CA or exam score. Enter every score, or tick Absent for a student who did not sit (0 means they sat and scored nothing).");
         }
 
         $first = ResultStage::chain()->first();
@@ -383,7 +439,7 @@ class ResultService
                 }
                 $was = $row->total;
                 try {
-                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user, $s->total));
+                    DB::transaction(fn () => $this->apply($row, $s->ca, $s->exam, $scheme, $s->items, $user, $s->total, $s->absent));
                 } catch (RuntimeException $e) {
                     $problems[] = $row->student->matric_number . ': ' . $e->getMessage();
 
@@ -420,7 +476,11 @@ class ResultService
             }
         }
 
-        return ! $same($s->ca, $row->ca) || ! $same($s->exam, $row->exam) || ($s->total !== null && ! $same($s->total, $row->total));
+        if ($s->absent !== null && $s->absent !== (bool) $row->absent) {
+            return true;
+        }
+
+        return ! $same($s->ca, $row->ca) || ! $same($s->exam, $row->exam) || ($s->total !== null && ! $same($s->total, $row->total) && ! $row->absent);
     }
 
     public function returnToLecturer(ResultSheet $sheet, User $user, ?string $note): ResultSheet

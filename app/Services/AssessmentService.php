@@ -149,7 +149,7 @@ class AssessmentService
                 $now = $scheme->items->map(fn ($i) => [$i->name, $i->code, $i->component, (float) $i->max_score])->all();
                 $new = array_map(fn ($i) => [$i['name'], $i['code'], $i['component'], $i['max_score']], $clean);
                 if ($now !== $new) {
-                    throw new RuntimeException('Marks have already been entered with this scheme, so its assessments can no longer change. Duplicate it and change the copy instead.');
+                    throw new RuntimeException('Marks have already been entered with this scheme, so its assessments can no longer change. Duplicate it, change the copy and assign the copy: score sheets still being filled in then move to it, keeping their marks.');
                 }
                 $scheme->update($fields);
 
@@ -213,24 +213,90 @@ class AssessmentService
             ['assessment_scheme_id' => $scheme->id, 'assigned_by' => $user->id],
         );
         $this->assignments = null;
-        $this->refreshOpenSheets();
+        $this->lastRefresh = $this->refreshOpenSheets($user);
 
         return $assignment;
     }
 
-    public function unassign(AssessmentAssignment $assignment): void
+    public function unassign(AssessmentAssignment $assignment, ?User $user = null): void
     {
         $assignment->delete();
         $this->assignments = null;
-        $this->refreshOpenSheets();
+        $this->lastRefresh = $this->refreshOpenSheets($user);
     }
 
-    /** Draft sheets with no mark yet follow assignment changes straight away. */
-    private function refreshOpenSheets(): void
+    /** What the last assign / unassign did to the score sheets (see refreshOpenSheets). */
+    public ?array $lastRefresh = null;
+
+    /**
+     * Score sheets still being filled in follow a change of scheme straight away: a sheet with no mark simply takes the
+     * new scheme; a sheet with marks moves to it with its marks (an assessment with the same code keeps its mark, the
+     * rest of a CA or exam is spread over the new assessments), logged on the sheet. A sheet whose marks cannot fit
+     * the new scheme stays as it is and is reported. Submitted, approved and published sheets are not touched.
+     *
+     * @return array{switched: int, moved: int, kept: array<int, array{sheet: ResultSheet, reason: string}>, locked: int}
+     */
+    public function refreshOpenSheets(?User $user = null): array
     {
-        ResultSheet::with('course.department')->where('status', 'draft')
-            ->whereDoesntHave('results', fn ($q) => $q->where(fn ($w) => $w->whereNotNull('ca')->orWhereNotNull('exam')->orWhereHas('assessmentScores')))
-            ->get()->each(fn ($s) => $this->attach($s, false));
+        $out = ['switched' => 0, 'moved' => 0, 'kept' => [], 'locked' => 0];
+        foreach (ResultSheet::with('course.department', 'scheme.items')->whereIn('status', ['draft', 'submitted', 'approved'])->get() as $sheet) {
+            if (! $sheet->course) {
+                continue;
+            }
+            [$scheme] = $this->resolve($sheet->course, $sheet->academic_session_id);
+            if ((int) $sheet->assessment_scheme_id === (int) $scheme?->id) {
+                continue;
+            }
+            if (! $sheet->isEditable()) {
+                $out['locked']++;
+
+                continue;
+            }
+            if (! $this->hasMarks($sheet)) {
+                $this->attach($sheet, false);
+                $out['switched']++;
+
+                continue;
+            }
+            $from = $sheet->scheme?->name ?? 'plain CA and exam';
+            try {
+                $this->convert($sheet, $scheme, $user, true);
+                \App\Models\ResultSheetEvent::create(['result_sheet_id' => $sheet->id, 'user_id' => $user?->id, 'action' => 'scheme', 'created_at' => now(),
+                    'note' => 'Assessments changed from ' . $from . ' to ' . ($scheme?->name ?? 'plain CA and exam') . ' (Assessment Schemes). Marks already entered were kept; check them.']);
+                $out['moved']++;
+            } catch (RuntimeException $e) {
+                $out['kept'][] = ['sheet' => $sheet, 'reason' => $e->getMessage()];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Sheets not on the scheme their course uses now: drafts whose marks could not be moved, and sheets already
+     * submitted or approved (return them to the lecturer to change their assessments). Published sheets are left out.
+     *
+     * @return \Illuminate\Support\Collection<int, array{sheet: ResultSheet, now: ?AssessmentScheme}>
+     */
+    public function outdated(): Collection
+    {
+        return ResultSheet::with('course.department', 'scheme', 'session', 'semesterType')->whereIn('status', ['draft', 'submitted', 'approved'])->get()
+            ->map(function ($sheet) {
+                if (! $sheet->course) {
+                    return null;
+                }
+                [$scheme] = $this->resolve($sheet->course, $sheet->academic_session_id);
+
+                return (int) $sheet->assessment_scheme_id === (int) $scheme?->id ? null : ['sheet' => $sheet, 'now' => $scheme];
+            })->filter()->values();
+    }
+
+    /** The scheme a sheet's course uses now, when it differs from the sheet's own (null when they agree). */
+    public function newerScheme(ResultSheet $sheet): array
+    {
+        [$scheme] = $this->resolve($sheet->course ?? Course::findOrFail($sheet->course_id), $sheet->academic_session_id);
+
+        return (int) $sheet->assessment_scheme_id === (int) $scheme?->id ? ['differs' => false, 'scheme' => $scheme] : ['differs' => true, 'scheme' => $scheme];
     }
 
     // ---- Which scheme a sheet uses -----------------------------------------------------------------------
@@ -287,7 +353,7 @@ class AssessmentService
      *
      * @return int students whose marks were moved
      */
-    public function convert(ResultSheet $sheet, ?AssessmentScheme $scheme, User $user): int
+    public function convert(ResultSheet $sheet, ?AssessmentScheme $scheme, ?User $user = null, bool $strict = false): int
     {
         if (! $sheet->isEditable()) {
             throw new RuntimeException('Only a draft sheet can change its assessments. Return it to the lecturer first.');
@@ -306,20 +372,90 @@ class AssessmentService
             }
         }
 
-        return DB::transaction(function () use ($sheet, $scheme, $rows, $user) {
+        // The marks on the old assessments, by code and part, so an assessment kept in the new scheme keeps its mark.
+        $old = $sheet->scheme?->loadMissing('items');
+        $oldMarks = [];
+        if ($old) {
+            foreach ($rows as $row) {
+                $m = $this->marks($row, $old);
+                foreach ($old->items as $i) {
+                    if ($m[$i->id] !== null) {
+                        $oldMarks[$row->id][$i->component][strtoupper($i->code)] = (float) $m[$i->id];
+                    }
+                }
+            }
+        }
+
+        // Moving on its own (an assignment changed), a sheet is not moved when a mark would have nowhere to go: the
+        // new scheme has no CA (or no exam) for marks already entered, or a part still being marked loses assessments.
+        if ($strict && $scheme) {
+            $lose = $rows->filter(function ($r) use ($scheme, $oldMarks) {
+                foreach (['ca' => $r->ca, 'exam' => $r->exam] as $component => $total) {
+                    $mine = array_filter($oldMarks[$r->id][$component] ?? [], fn ($v) => $v > 0);
+                    $codes = $scheme->items->where('component', $component)->map(fn ($i) => strtoupper($i->code))->all();
+                    if (! $codes && ($mine || (float) $total > 0)) {
+                        return true;
+                    }
+                    if ($total === null && array_diff(array_keys($mine), $codes)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+            if ($lose->isNotEmpty()) {
+                throw new RuntimeException('marks already entered for ' . $lose->count() . ' student(s) (' . $lose->take(5)->map(fn ($r) => $r->student->matric_number)->implode(', ')
+                    . ') have no place in ' . $scheme->name . '. Move the sheet by hand on its page, or finish the marks first.');
+            }
+        }
+
+        return DB::transaction(function () use ($sheet, $scheme, $rows, $user, $oldMarks) {
             AssessmentScore::whereIn('course_result_id', $rows->pluck('id'))->delete();
             $sheet->update(['assessment_scheme_id' => $scheme?->id]);
             $moved = 0;
             if ($scheme) {
                 foreach ($rows as $row) {
-                    if ($row->ca === null && $row->exam === null) {
+                    $row->unsetRelation('assessmentScores');
+                    $mine = $oldMarks[$row->id] ?? [];
+                    if ($row->ca === null && $row->exam === null && ! $mine) {
                         continue;
                     }
-                    $this->distribute($row, $scheme, $row->ca, $row->exam, $user);
+                    // Part by part: the new assessments all found under the same code (and adding up to the part's
+                    // total, when there is one) keep their marks; otherwise the part's total is spread over them.
+                    $keep = [];
+                    $spread = ['ca' => null, 'exam' => null];
+                    foreach (['ca' => $row->ca, 'exam' => $row->exam] as $component => $total) {
+                        $newItems = $scheme->items->where('component', $component);
+                        $map = [];
+                        foreach ($newItems as $it) {
+                            $v = $mine[$component][strtoupper($it->code)] ?? null;
+                            if ($v !== null && $v <= (float) $it->max_score + 0.001) {
+                                $map[$it->id] = $v;
+                            }
+                        }
+                        $all = $newItems->isNotEmpty() && count($map) === $newItems->count();
+                        if ($all && ($total === null || abs(array_sum($map) - (float) $total) < 0.01)) {
+                            $keep += $map;
+                        } elseif ($total !== null) {
+                            $spread[$component] = $total;
+                        } else {
+                            $keep += $map;   // a part still being marked: the marks that carry over
+                        }
+                    }
+                    if ($spread['ca'] !== null || $spread['exam'] !== null) {
+                        $this->distribute($row, $scheme, $spread['ca'], $spread['exam'], $user);
+                    }
+                    if ($keep) {
+                        $this->applyItems($row, $scheme, $keep, $user);
+                    }
                     [$ca, $exam] = $this->components($row, $scheme);
                     $total = ($ca !== null && $exam !== null) ? round($ca + $exam, 2) : null;
                     $g = \App\Support\GradeScale::gradeResult($row, $total);
-                    $row->update(['ca' => $ca, 'exam' => $exam, 'total' => $total, 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null]);
+                    $attrs = ['ca' => $ca, 'exam' => $exam, 'total' => $total, 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null];
+                    if ($row->absent && \App\Services\ResultService::absentPolicy() === 'incomplete') {
+                        $attrs = ['ca' => $ca, 'exam' => $exam, 'total' => null, 'grade' => CourseResult::ABSENT_GRADE, 'points' => null, 'is_pass' => false];
+                    }
+                    $row->update($attrs);
                     $moved++;
                 }
             }

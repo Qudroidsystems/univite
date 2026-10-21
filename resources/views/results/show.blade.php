@@ -23,8 +23,19 @@
                 <p class="text-muted fs-13 mt-n2"><i class="ri-survey-line me-1"></i>Assessment scheme <strong>{{ $scheme->name }}</strong>: {{ $scheme->summary() }}. Enter each mark and the CA, exam, total and grade add up as you type, or type a CA or exam total directly. Save as often as you like; every student needs a total before you submit.</p>
             @endif
 
+            @if ($newer && $newer['differs'])
+                <div class="alert alert-warning d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                    <span><i class="ri-error-warning-line me-1"></i>{{ $sheet->course->code }} now uses <strong>{{ $newer['scheme']?->name ?? 'plain CA and exam' }}</strong>{{ $newer['scheme'] ? ' (' . $newer['scheme']->summary() . ')' : '' }}, but this sheet still has {{ $scheme?->name ?? 'plain CA and exam' }}.
+                        @if (! $sheet->isEditable()) It has been submitted, so it keeps its assessments unless it is returned to the lecturer.@elseif ($schemes->isEmpty()) Ask the exams office to move it.@endif</span>
+                    @if ($sheet->isEditable() && $schemes->isNotEmpty())
+                        <form method="POST" action="{{ route('results.sheets.scheme', $sheet->id) }}" data-confirm="Move this sheet to {{ $newer['scheme']?->name ?? 'plain CA and exam' }}? Marks already entered are kept: an assessment with the same code keeps its mark, the rest of a CA or exam is spread over the new assessments.">@csrf
+                            <input type="hidden" name="assessment_scheme_id" value="{{ $newer['scheme']?->id }}"><button class="btn btn-sm btn-warning">Move to {{ $newer['scheme']?->name ?? 'plain CA and exam' }}</button></form>
+                    @endif
+                </div>
+            @endif
+
             @if ($schemes->isNotEmpty())
-                <form method="POST" action="{{ route('results.sheets.scheme', $sheet->id) }}" class="card" data-confirm="Change the assessments on this sheet? Marks already entered are kept and spread over the new assessments.">
+                <form method="POST" action="{{ route('results.sheets.scheme', $sheet->id) }}" class="card" data-confirm="Change the assessments on this sheet? Marks already entered are kept: an assessment with the same code keeps its mark, the rest of a CA or exam is spread over the new assessments.">
                     @csrf
                     <div class="card-body d-flex flex-wrap gap-2 align-items-end">
                         <div style="min-width:260px;flex:1"><label class="form-label mb-1">Assessments on this sheet</label>

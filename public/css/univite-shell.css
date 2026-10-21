@@ -155,3 +155,13 @@
 [data-layout=horizontal] #navbar-nav .nav-link.menu-link.nav-active-parent { color: var(--tb-primary) !important; background: transparent !important; border-left: 0; padding-left: revert-layer; box-shadow: inset 0 -2px 0 var(--tb-primary); }
 [data-layout=horizontal] #navbar-nav .nav-link.menu-link.nav-active-parent i { color: var(--tb-primary) !important; }
 [data-layout=horizontal] #navbar-nav .nav-sm .nav-link.nav-active-child { color: var(--tb-primary) !important; }
+/* Across the top, the page uses the full width (the theme keeps it to 90% in the middle); the top bar and the menu
+   line up with it. */
+@media (min-width: 1024.1px) {
+    [data-layout=horizontal] .container-fluid,
+    [data-layout=horizontal] .layout-width { max-width: 100%; margin: 0; }
+    [data-layout=horizontal] .page-content > .container-fluid,
+    [data-layout=horizontal] .footer > .container-fluid { padding-left: 24px; padding-right: 24px; }
+    [data-layout=horizontal] #page-topbar .layout-width { padding-left: 12px; padding-right: 12px; }
+    [data-layout=horizontal] .navbar-menu .container-fluid { padding-left: 12px; padding-right: 12px; }
+}

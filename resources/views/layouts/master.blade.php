@@ -105,11 +105,11 @@
                     <div class="position-relative" id="pn-wrapper">
                         <button type="button" id="pn-btn" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle position-relative" aria-label="Notifications">
                             <i class="ri-notification-3-line fs-20"></i>
-                            @if ($unreadCount)<span class="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-danger">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>@endif
+                            <span id="pn-count" class="position-absolute topbar-badge fs-10 translate-middle badge rounded-pill bg-danger" @unless ($unreadCount) style="display:none" @endunless>{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
                         </button>
                         <div id="pn-dropdown" class="uv-pop" style="display:none;width:340px;max-width:92vw;padding:0;right:-60px;">
                             <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom"><strong class="fs-14">Notifications</strong><a href="{{ route('notifications.index') }}" class="fs-12">See all</a></div>
-                            <div style="max-height:360px;overflow:auto;">
+                            <div id="pn-list" style="max-height:360px;overflow:auto;" data-live="{{ route('notifications.live') }}" data-since="{{ now()->toIso8601String() }}">
                                 @forelse ($unread as $n)
                                     <a href="{{ route('notifications.open', $n->id) }}" class="d-flex gap-2 px-3 py-2 text-decoration-none border-bottom uv-pn-item">
                                         <i class="ri-notification-badge-line fs-18 text-primary"></i>
@@ -118,7 +118,7 @@
                                             <span class="text-muted fs-11">{{ $n->created_at->diffForHumans() }}</span></span>
                                     </a>
                                 @empty
-                                    <div class="p-4 text-center text-muted fs-13">You are all caught up.</div>
+                                    <div class="p-4 text-center text-muted fs-13" data-empty>You are all caught up.</div>
                                 @endforelse
                             </div>
                         </div>
@@ -189,6 +189,7 @@
 @if (Route::is('permissions.*')) @include('layouts.pages-assets.js.permissions-list-js') @endif
 <script src="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
 <script src="{{ asset('js/univite-app.js') }}?v={{ @filemtime(public_path('js/univite-app.js')) }}"></script>
+<script src="{{ asset('js/univite-live.js') }}?v={{ @filemtime(public_path('js/univite-live.js')) }}"></script>
 <script src="{{ asset('js/univite-nav.js') }}?v={{ @filemtime(public_path('js/univite-nav.js')) }}"></script>
 <script src="{{ asset('js/univite-shell.js') }}?v={{ @filemtime(public_path('js/univite-shell.js')) }}"></script>
 <script src="{{ asset('js/univite-lookups.js') }}?v={{ @filemtime(public_path('js/univite-lookups.js')) }}"></script>

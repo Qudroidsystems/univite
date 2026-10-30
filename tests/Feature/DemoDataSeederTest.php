@@ -32,12 +32,19 @@ it('seeds a whole sample university that hangs together', function () {
     expect($current?->name)->toBe('2026/2027');
 
     // Students at every level, with matric numbers from their entry session.
+    // The university's schools, departments and programmes: degree, NCE, part-time and sandwich, with combinations.
+    expect(\App\Models\Faculty::count())->toBeGreaterThanOrEqual(12)
+        ->and(\App\Models\Department::count())->toBeGreaterThanOrEqual(50)
+        ->and(\App\Models\Programme::where('is_combination', true)->count())->toBeGreaterThan(10)
+        ->and(\App\Models\Programme::whereHas('studyCategory', fn ($q) => $q->where('code', 'NCE'))->count())->toBeGreaterThan(0)
+        ->and(\App\Models\Programme::whereHas('studyCategory', fn ($q) => $q->where('code', 'DEG'))->count())->toBeGreaterThan(0);
+
     expect(Student::count())->toBeGreaterThan(200);
     foreach ([100, 200, 300, 400] as $level) {
         expect(Student::where('current_level', $level)->count())->toBeGreaterThan(0);
     }
     $finalist = Student::where('current_level', 400)->whereNotNull('matric_number')->first();
-    expect($finalist->matric_number)->toStartWith('2023/');
+    expect($finalist->matric_number)->toContain('/2023/');
 
     // Finished semesters have results; in the running one only final-year sheets have scores, still going through approval.
     expect(CourseResult::count())->toBeGreaterThan(1000)
@@ -62,13 +69,19 @@ it('seeds a whole sample university that hangs together', function () {
 
     // A lecturer can open the score sheet of a course they teach this semester and enter scores.
     $assignment = \App\Models\CourseAssignment::where('academic_session_id', $current->id)->where('semester_type_id', \App\Models\SemesterType::where('sort_order', 1)->value('id'))
-        ->whereHas('course', fn ($q) => $q->where('code', 'EDU 101'))->firstOrFail();
+        ->whereHas('course', fn ($q) => $q->where('code', 'EDU111'))->firstOrFail();
     $this->actingAs($assignment->user)->get(route('results.open', $assignment->course_id))->assertRedirect();
     $sheet = \App\Models\ResultSheet::where('course_id', $assignment->course_id)->where('academic_session_id', $current->id)->firstOrFail();
     expect($sheet->results()->count())->toBeGreaterThan(10);
     $scores = $sheet->results()->pluck('student_id')->mapWithKeys(fn ($id) => [$id => ['ca' => 20, 'exam' => 50]])->all();
     $this->actingAs($assignment->user)->post(route('results.sheets.save', $sheet), ['scores' => $scores])->assertSessionHasNoErrors();
     expect($sheet->results()->where('total', 70)->count())->toBe(count($scores));
+
+    // This semester's lecture and examination timetables are published with every class placed, and people were told.
+    $timetables = \App\Models\Timetable::where('academic_session_id', $current->id)->get();
+    expect($timetables->pluck('kind')->sort()->values()->all())->toBe(['exam', 'lecture'])
+        ->and($timetables->every(fn ($t) => $t->status === 'published' && ($t->summary['unplaced'] ?? 0) === 0))->toBeTrue()
+        ->and(\Illuminate\Support\Facades\DB::table('notifications')->where('data', 'like', '%timetable%')->exists())->toBeTrue();
 
     // Every sample account signs in with the documented password.
     $bursar = User::role('Bursar')->first();

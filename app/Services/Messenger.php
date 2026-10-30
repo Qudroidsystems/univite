@@ -50,7 +50,7 @@ class Messenger
     /** The mobile app screen a notice on each topic opens. */
     public const SCREENS = [
         'results' => 'results', 'registration' => 'courses', 'fees' => 'fees', 'clearance' => 'clearance', 'timetable' => 'timetable',
-        'seating' => 'exams', 'library' => 'library', 'accommodation' => 'accommodation', 'id_cards' => 'id_card', 'payslip' => 'payslips',
+        'seating' => 'exams', 'venues' => 'timetable', 'library' => 'library', 'accommodation' => 'accommodation', 'id_cards' => 'id_card', 'payslip' => 'payslips',
         'leave' => 'leave', 'leave_approvals' => 'leave', 'teaching_practice' => 'teaching_practice', 'health' => 'health',
         'chat' => 'chat', 'marketplace' => 'marketplace', 'feed' => 'feed', 'materials' => 'materials',
     ];

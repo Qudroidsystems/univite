@@ -22,7 +22,7 @@ use RuntimeException;
  */
 class StudentRecordService
 {
-    public function __construct(private OperationAudit $audit)
+    public function __construct(private OperationAudit $audit, private \App\Services\Messenger $messenger)
     {
     }
 
@@ -50,6 +50,9 @@ class StudentRecordService
             $student->update(['programme_id' => $to->id, 'course_option_id' => $r->courseOptionId, 'current_level' => $r->level,
                 'sub_department_id' => $to->sub_department_id ?? null]);
             $this->audit->note('student_transfer', 'students', $by, 'transferred', $student, $before, ['programme' => $to->name, 'level' => $r->level, 'course_option_id' => $r->courseOptionId], $r->reason);
+            if ($student->user) {
+                $this->messenger->notify($student->user, 'registration', 'You have been transferred to ' . $to->name, 'Your programme is now ' . $to->name . ' at ' . \App\Support\Levels::label($r->level, $to->studyCategory) . '. Your courses and timetable follow the new programme.', $student, route('my.registration'), 'info');
+            }
 
             return $t;
         });
@@ -74,6 +77,9 @@ class StudentRecordService
             ]);
             $student->update(['status' => 'deferred']);
             $this->audit->note('admission_deferral', 'students', $by, 'deferred', $student, ['status' => $d->previous_status], ['status' => 'deferred', 'until' => $to->name], $reason);
+            if ($student->user) {
+                $this->messenger->notify($student->user, 'registration', 'Your studies are deferred to ' . $to->name, "You cannot register courses until {$to->name}. Reason given: {$reason}", $student, route('dashboard'), 'warning');
+            }
 
             return $d;
         });
@@ -97,6 +103,9 @@ class StudentRecordService
             ]));
             $d->update(['status' => 'resumed', 'resumed_at' => now(), 'resumed_by' => $by->id]);
             $this->audit->note('admission_deferral', 'students', $by, 'resumed', $student, ['status' => 'deferred'], ['status' => $student->status]);
+            if ($student->user) {
+                $this->messenger->notify($student->user, 'registration', 'Welcome back: your studies have resumed', 'You can register your courses again.', $student, route('my.registration'), 'success');
+            }
         });
     }
 

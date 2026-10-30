@@ -13,13 +13,13 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 
 /**
- * Sample data, part 3: six students in every level of every programme (each admitted in the session that puts them at
- * that level now, with a matric number), plus applicants waiting for a decision this session. A few new students
- * are still completing onboarding. Every account's password is "password".
+ * Sample data, part 3: two students in every level of every programme (each admitted in the session that puts them at
+ * that level now, with a matric number in the department's format), plus applicants waiting for a decision this
+ * session. A few new students are still completing onboarding. Every account's password is "password".
  */
 class DemoStudentSeeder extends Seeder
 {
-    public const PER_LEVEL = 6;
+    public const PER_LEVEL = 2;
 
     public function run(MatricNumberGenerator $matric): void
     {
@@ -30,13 +30,16 @@ class DemoStudentSeeder extends Seeder
         $currentIndex = $sessions->search(fn ($s) => $s->id === $current->id);
         $n = 0;
 
-        foreach (Programme::orderBy('id')->get() as $programme) {
-            foreach ([100, 200, 300, 400] as $level) {
+        foreach (Programme::with('studyCategory')->orderBy('id')->get() as $programme) {
+            $top = min(count($sessions), (int) ($programme->duration_years ?: 4));
+            $degree = in_array($programme->studyCategory?->code, ['DEG', null], true);
+            foreach (range(1, $top) as $l) {
+                $level = $l * 100;
                 for ($i = 0; $i < self::PER_LEVEL; $i++) {
                     $n++;
-                    $direct = $level === 200 && $i === 5;   // one direct-entry student per programme, admitted straight into 200 level this session
+                    $direct = $degree && $level === 200 && $i === 1;   // one direct-entry student per degree programme, admitted straight into 200 level this session
                     $entry = $direct ? $current : $sessions[max(0, $currentIndex - ($level / 100 - 1))];
-                    $onboarding = $level === 100 && $i === 5;
+                    $onboarding = $level === 100 && $i === 1 && $programme->id % 3 === 0;
                     $p = $people->person();
                     [$state, $lga] = $people->origin();
                     $year = (int) substr($entry->name, 0, 4);
@@ -57,7 +60,7 @@ class DemoStudentSeeder extends Seeder
                         'entry_mode' => $direct ? 'direct_entry' : 'utme', 'entry_level' => $direct ? 200 : 100, 'status' => 'admitted', 'decided_at' => now()->setYear($year)->setMonth(9),
                         'submitted_at' => now()->setYear($year)->setMonth(7), 'admission_batch' => 'First Batch', 'password' => DemoStaffSeeder::passwordHash(),
                     ]);
-                    $number = $onboarding ? null : $matric->next($programme, $entry);
+                    $number = $onboarding ? null : $matric->next($programme, $entry, $direct ? 'direct_entry' : 'utme');
                     $user = User::create([
                         'name' => "{$p['first']} {$p['last']}", 'email' => $email, 'username' => $number ?? $applicant->application_no, 'phone_number' => $profile['phone_number'],
                         'gender' => $p['gender'], 'date_of_birth' => $profile['date_of_birth'], 'password' => DemoStaffSeeder::passwordHash(),

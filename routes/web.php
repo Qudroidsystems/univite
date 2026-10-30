@@ -579,6 +579,7 @@ Route::middleware('auth')->group(function () {
     Route::post('messaging/retry', [\App\Http\Controllers\MessagingController::class, 'retry'])->name('messaging.retry');
     Route::get('notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('notifications/live', [\App\Http\Controllers\NotificationController::class, 'live'])->middleware('throttle:120,1')->name('notifications.live');
     Route::get('notifications/settings', [\App\Http\Controllers\NotificationController::class, 'preferences'])->name('notifications.preferences');
     Route::put('notifications/settings', [\App\Http\Controllers\NotificationController::class, 'savePreferences'])->name('notifications.preferences.save');
     Route::get('notifications/{id}', [\App\Http\Controllers\NotificationController::class, 'open'])->name('notifications.open');

@@ -63,3 +63,22 @@ it('finds invoices by their reference or a payment reference', function () {
 it('needs a signed-in person to search', function () {
     $this->getJson(route('search', ['q' => 'chem']))->assertUnauthorized();
 });
+
+it('keeps the bell current without a reload: new notices since the page opened, with the unread count', function () {
+    $page = $this->actingAs($this->clerk)->get(route('academics.courses.index'))->assertOk();
+    $page->assertSee('id="pn-count"', false)->assertSee('data-live="' . route('notifications.live') . '"', false)->assertSee('univite-live.js');
+
+    $opened = now()->subSecond()->toIso8601String();
+    $this->travel(1)->seconds();
+    app(\App\Services\Messenger::class)->notify($this->clerk, 'timetable', 'Timetable published', 'The lecture timetable is out.', url: route('dashboard'), channels: ['portal']);
+
+    $live = $this->actingAs($this->clerk)->getJson(route('notifications.live', ['after' => $opened]))->assertOk();
+    expect($live->json('unread'))->toBe(1)
+        ->and($live->json('items.0.title'))->toBe('Timetable published')
+        ->and($live->json('items.0.topic'))->toBe('timetable')
+        ->and($live->json('items.0.url'))->toBe(route('dashboard'));
+
+    // Asked again from the time of that answer, nothing is new.
+    $again = $this->actingAs($this->clerk)->getJson(route('notifications.live', ['after' => $live->json('now')]))->assertOk();
+    expect($again->json('items'))->toBe([])->and($again->json('unread'))->toBe(1);
+});

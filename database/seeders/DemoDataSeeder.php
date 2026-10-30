@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * A whole sample university for a development machine: academic structure, staff, students, registrations and results,
- * fees and payments, venues, hostels, the library and teaching-practice schools. The parts depend on each other, so they
+ * fees and payments, venues, hostels, the library, teaching-practice schools, and published lecture and examination
+ * timetables. The parts depend on each other, so they
  * run together in one transaction: if one fails, nothing is left half-seeded. DatabaseSeeder runs it only in the local
  * or development environment; it can also be run on its own with  php artisan db:seed --class=DemoDataSeeder
  */
@@ -29,6 +30,7 @@ class DemoDataSeeder extends Seeder
         DemoResultKeySeeder::class,
         DemoFeesSeeder::class,
         DemoCampusSeeder::class,
+        DemoTimetableSeeder::class,
     ];
 
     public function run(): void

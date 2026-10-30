@@ -495,6 +495,9 @@ class ResultService
         $sheet->update(['status' => 'draft', 'stage_id' => null]);
         $this->mirror($sheet);
         $this->log($sheet, $user, 'returned', $stage, $note);
+        if ($lecturer = User::find($sheet->submitted_by)) {
+            $this->messenger->notify($lecturer, 'results', "{$sheet->course?->code} score sheet returned to you", "{$user->name} returned it at the {$stage} step: {$note}", $sheet, route('results.sheets.show', $sheet), 'warning');
+        }
 
         return $sheet;
     }

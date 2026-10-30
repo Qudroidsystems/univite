@@ -142,7 +142,8 @@ it('moves through the approval chain, honours step roles, supports returning, an
 
     $this->actingAs($hod)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'return'])->assertSessionHas('error');   // note required
     $this->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'return', 'note' => 'Check Okon\'s exam score'])->assertSessionHas('success');
-    expect($this->sheet->fresh()->status)->toBe('draft');
+    expect($this->sheet->fresh()->status)->toBe('draft')
+        ->and($this->lecturer->notifications()->where('data->title', 'like', '%score sheet returned to you')->exists())->toBeTrue();   // the lecturer is told why
 
     $this->actingAs($this->lecturer)->post(route('results.sheets.submit', $this->sheet->id));
     $this->actingAs($hod)->post(route('results.sheets.decide', $this->sheet->id), ['decision' => 'approve']);

@@ -27,7 +27,7 @@ use RuntimeException;
  */
 class StudentTrackService
 {
-    public function __construct(private OperationAudit $audit)
+    public function __construct(private OperationAudit $audit, private \App\Services\Messenger $messenger)
     {
     }
 
@@ -101,6 +101,10 @@ class StudentTrackService
                     'previous_level' => $s->current_level, 'previous_semester_type_id' => $s->current_semester_type_id, 'created_by' => $by->id,
                 ]);
                 $s->update(['current_level' => $m->toLevel, 'current_semester_type_id' => $scope->toSemesterTypeId]);
+                if ($s->user) {
+                    $where = \App\Support\Levels::label((int) $m->toLevel, $s->programme?->studyCategory) . ', ' . (\App\Models\SemesterType::find($scope->toSemesterTypeId)?->name ?? 'next semester');
+                    $this->messenger->notify($s->user, 'registration', 'You have moved on to ' . $where, "Your record now shows {$where}. Course registration for it opens when the school says so.", $s, route('my.registration'), 'success', "track{$run->id}-s{$s->id}");
+                }
             }
             $op = $this->audit->begin('track_migration', 'students', $by, $scope->toSessionId, null, ['key' => $run->key]);
             $this->audit->record($op, 'moved', $run, null, ['moved' => $run->moved, 'held' => $run->held], null, null, $run->key);

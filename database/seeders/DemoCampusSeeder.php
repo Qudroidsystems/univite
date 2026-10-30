@@ -109,6 +109,17 @@ class DemoCampusSeeder extends Seeder
                 'wheelchair_access' => $type !== 'laboratory', 'status' => 'available', 'is_active' => true,
             ]);
         }
+        // Every school has its own block of classrooms, so the whole lecture timetable fits with no class left out.
+        foreach (\App\Models\Faculty::orderBy('id')->get() as $school) {
+            foreach ([1 => 150, 2 => 120, 3 => 100, 4 => 80, 5 => 60, 6 => 60, 7 => 40, 8 => 40] as $room => $capacity) {
+                Venue::updateOrCreate(['code' => "{$school->code}{$room}"], [
+                    'name' => "{$school->name} Room {$room}", 'type' => 'classroom', 'campus' => 'Main campus', 'building' => "{$school->name} Block",
+                    'capacity' => $capacity, 'teaching_capacity' => $capacity, 'exam_capacity' => (int) floor($capacity / 2),
+                    'seat_rows' => (int) ceil($capacity / 2 / 10), 'seats_per_row' => 10, 'uses' => ['lecture', 'exam'], 'facilities' => $room <= 2 ? ['projector'] : [],
+                    'shared_exams' => false, 'wheelchair_access' => $room <= 4, 'status' => 'available', 'is_active' => true,
+                ]);
+            }
+        }
     }
 
     private function hostels(DemoPeople $people, AcademicSession $session): void

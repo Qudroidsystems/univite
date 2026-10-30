@@ -38,7 +38,7 @@ class DemoAssessmentSeeder extends Seeder
         ]);
 
         AssessmentAssignment::create(['assessment_scheme_id' => $standard->id, 'scope_type' => 'university', 'scope_id' => null, 'academic_session_id' => $session->id]);
-        if ($faculty = Faculty::orderBy('id')->first()) {
+        if ($faculty = Faculty::where('code', 'SCI')->first() ?? Faculty::orderBy('id')->first()) {
             AssessmentAssignment::create(['assessment_scheme_id' => $practical->id, 'scope_type' => 'faculty', 'scope_id' => $faculty->id, 'academic_session_id' => $session->id]);
         }
     }

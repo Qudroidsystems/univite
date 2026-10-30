@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Messaging\Gateway;
 use App\Services\Messenger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,6 +25,27 @@ class NotificationController extends Controller
 
         // Only follow links into this portal.
         return $url && str_starts_with($url, url('/')) ? redirect()->to($url) : redirect()->route('notifications.index');
+    }
+
+    /**
+     * What the bell needs to stay current without a page reload: the unread count and the notices that arrived after
+     * the time the page last saw (the page asks every half minute while it is open, and when it comes back into view).
+     */
+    public function live(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $after = rescue(fn () => \Illuminate\Support\Carbon::parse((string) $request->query('after')), null, false);
+        $new = $after ? $user->unreadNotifications()->where('created_at', '>', $after)->latest()->limit(10)->get() : collect();
+
+        return response()->json([
+            'unread' => $user->unreadNotifications()->count(),
+            'now' => now()->toIso8601String(),
+            'items' => $new->map(fn ($n) => [
+                'id' => $n->id, 'title' => $n->data['title'] ?? 'Notice', 'body' => \Illuminate\Support\Str::limit($n->data['body'] ?? '', 140),
+                'topic' => $n->data['topic'] ?? null, 'level' => $n->data['level'] ?? 'info',
+                'url' => $n->data['url'] ?? null, 'open' => route('notifications.open', $n->id), 'ago' => $n->created_at->diffForHumans(),
+            ])->values(),
+        ]);
     }
 
     public function readAll(Request $request): RedirectResponse

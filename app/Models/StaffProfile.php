@@ -17,6 +17,7 @@ class StaffProfile extends Model
         'salary_structure_id', 'step', 'employment_status', 'first_appointment_date', 'confirmation_date', 'professorial', 'exit_date', 'exit_reason',
         'supervisor_id', 'critical_role', 'bank_name', 'bank_code', 'bank_account_number', 'bank_account_name', 'pfa_code', 'rsa_pin',
         'tax_id', 'tax_state', 'nhf_number',
+        'file_number', 'ippis_number', 'id_card_number', 'payslip_number', 'institutional_email', 'signature',
     ];
 
     protected $casts = [

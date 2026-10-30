@@ -15,7 +15,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
             <div>
                 <h4 class="mb-0">{{ $applicant->full_name }}</h4>
-                <div class="text-muted">{{ $applicant->application_no }} · {{ $applicant->programme->name }} · {{ \App\Models\EntryMode::label($applicant->entry_mode) }}</div>
+                <div class="text-muted">{{ $applicant->application_no }} · {{ $applicant->programme->applicationLabel() }} · {{ \App\Models\EntryMode::label($applicant->entry_mode) }}</div>
             </div>
             <span class="badge fs-6 {{ ['draft' => 'bg-secondary-subtle text-secondary', 'pending' => 'bg-warning-subtle text-warning', 'admitted' => 'bg-success-subtle text-success', 'rejected' => 'bg-danger-subtle text-danger'][$applicant->status] }}">{{ \App\Models\Applicant::STATUSES[$applicant->status] }}</span>
         </div>
@@ -30,9 +30,11 @@
                 <h5 class="alert-heading"><i class="ri-medal-line me-1"></i>Congratulations, you have been admitted!</h5>
                 @if ($applicant->student)<p class="mb-1">{!! $applicant->student->matric_number ? 'Your matric number is <strong>' . e($applicant->student->matric_number) . '</strong>.' : 'Your matric number will be issued after you complete clearance.' !!}</p>@endif
                 <p class="mb-0">Sign in at <a href="{{ route('login') }}">Student / staff sign in</a> with <strong>{{ $applicant->email }}</strong> and the password you chose when you applied.</p>
+                @if ($applicant->decision_message)<hr><p class="mb-0" style="white-space:pre-line">{{ $applicant->decision_message }}</p>@endif
             </div>
         @elseif ($applicant->status === 'rejected')
-            <div class="alert alert-danger">We are sorry. Your application was not successful this time.</div>
+            <div class="alert alert-danger">We are sorry. Your application was not successful this time.
+                @if ($applicant->decision_message)<div class="mt-2" style="white-space:pre-line">{{ $applicant->decision_message }}</div>@endif</div>
         @elseif ($applicant->status === 'pending')
             <div class="alert alert-info d-flex justify-content-between align-items-center">
                 <span>Your application has been submitted and is being reviewed. We will contact you by email.</span>

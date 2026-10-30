@@ -66,7 +66,7 @@ class MatricController extends Controller
     {
         $student = $this->matric->waiting()->with('programme.department.faculty', 'entrySession')->orderBy('last_name')->first();
 
-        return $student ? $this->generator->preview($student->programme, $student->entrySession) : null;
+        return $student ? $this->generator->preview($student->programme, $student->entrySession, entryMode: $student->entry_mode) : null;
     }
 
     /** Who would get a number, and which, before anything is issued. */

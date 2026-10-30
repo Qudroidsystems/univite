@@ -15,6 +15,7 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
+            <x-owing-notice />
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Course registration</h4>
                 <a href="{{ route('dashboard') }}" class="btn btn-light">Back</a>

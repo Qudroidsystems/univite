@@ -76,6 +76,7 @@
                     <div class="col-md-3"><label class="form-label">Relationship</label><input name="guardian_relationship" value="{{ $field('guardian_relationship') }}" class="form-control" required {{ $ro }}></div>
                     <div class="col-md-4"><label class="form-label">Guardian phone</label><input name="guardian_phone" value="{{ $field('guardian_phone') }}" class="form-control" required {{ $ro }}></div>
                     <div class="col-12"><label class="form-label">Guardian address</label><textarea name="guardian_address" rows="2" class="form-control" {{ $ro }}>{{ $field('guardian_address') }}</textarea></div>
+                    @include('partials.student-extra-fields', ['settings' => app(\App\Support\StudentSettings::class)])
                     @include('partials.custom-field-inputs', ['cfTarget' => 'student', 'cfSubject' => $student ?? null, 'cfSelfService' => true, 'cfReadonly' => $locked])
                     @unless ($locked)<div class="col-12"><button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save biodata</button></div>@endunless
                 </form>

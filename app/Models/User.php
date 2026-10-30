@@ -14,7 +14,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'username', 'phone_number', 'whatsapp_number', 'notify_sms', 'notify_whatsapp', 'notify_push', 'gender', 'date_of_birth',
-        'avatar', 'password', 'must_change_password', 'is_disabled', 'last_login_at', 'share_lodging', 'lodging_note', 'bio', 'last_seen_at',
+        'avatar', 'password', 'must_change_password', 'is_disabled', 'last_login_at', 'share_lodging', 'lodging_note', 'bio', 'last_seen_at', 'preferences',
     ];
 
     /** Who may see where a student lives (set by the student in the app). */
@@ -35,6 +35,7 @@ class User extends Authenticatable
             'notify_whatsapp'      => 'boolean',
             'notify_push'          => 'boolean',
             'last_seen_at'         => 'datetime',
+            'preferences'          => 'array',
         ];
     }
 

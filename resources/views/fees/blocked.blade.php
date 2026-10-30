@@ -6,7 +6,7 @@
     <div class="row justify-content-center"><div class="col-lg-7">
         <div class="card border-danger-subtle">
             <div class="card-body text-center py-4">
-                <i class="ri-lock-2-line text-danger" style="font-size:48px"></i>
+                <i class="ri-lock-2-line text-danger" style="font-size:3rem"></i>
                 <h5 class="mt-2">{{ $title }}</h5>
                 <p class="text-muted mb-3">{{ $reason }}</p>
                 @include('fees.partials.standing', ['standing' => $standing])

@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -24,37 +25,67 @@ class InvoiceService
 
     /**
      * Build a student's fees for a session from the school bills: every active bill for their programme
-     * and level that applies to them (fresh = entered in this session, otherwise returning).
+     * and level that applies to them (fresh = entered in this session, otherwise returning). Fees paid on the
+     * invoice share one school fees invoice; a fee set to be paid separately gets an invoice of its own.
      *
-     * @return Invoice|null null when no bills are set for them (nothing to invoice)
+     * @return Invoice|null the school fees invoice (or the first separate one); null when no bills are set for them
      */
     public function generateForStudent(Student $student, AcademicSession $session, ?int $createdBy = null, ?int $semesterTypeId = null): ?Invoice
     {
-        $existing = $this->sessionInvoice($student, $session, $semesterTypeId);
-        if ($existing) {
-            return $existing;
-        }
+        $this->ensureInvoices($student, $session, $createdBy, $semesterTypeId);
 
+        return $this->sessionInvoice($student, $session, $semesterTypeId) ?? $this->separateInvoices($student, $session, $semesterTypeId)->first();
+    }
+
+    /**
+     * Create whichever of the student's invoices for the term are missing. @return Collection<int, Invoice> the new ones
+     */
+    public function ensureInvoices(Student $student, AcademicSession $session, ?int $createdBy = null, ?int $semesterTypeId = null): Collection
+    {
+        $created = collect();
+        $main = $this->sessionInvoice($student, $session, $semesterTypeId);
+        $separate = $this->separateInvoices($student, $session, $semesterTypeId)->keyBy('bill_item_id');
         $bills = $this->matcher->forStudent($student, $session, $semesterTypeId);
-
         if ($bills->isEmpty()) {
-            return null;
+            return $created;
         }
 
+        [$own, $together] = $bills->partition(fn (Bill $b) => $b->item->paysSeparately());
         $semester = $semesterTypeId ? \App\Models\SemesterType::find($semesterTypeId) : null;
-        [$opens, $closes] = $this->matcher->window($bills);
+        $level = \App\Support\Levels::label((int) $student->current_level, $student->programme->studyCategory);
 
-        return DB::transaction(function () use ($student, $session, $bills, $createdBy, $semester, $opens, $closes) {
+        if (! $main && $together->isNotEmpty()) {
+            $created->push($this->createInvoice($student, $session, $semester, $together, "{$session->name}" . ($semester ? " {$semester->name}" : '') . " school fees ({$level})", null, $createdBy));
+        }
+        foreach ($own as $bill) {
+            if (! $separate->has($bill->bill_item_id)) {
+                $created->push($this->createInvoice($student, $session, $semester, collect([$bill]), "{$session->name}" . ($semester ? " {$semester->name}" : '') . " {$bill->item->name} ({$level})", $bill->item, $createdBy));
+            }
+        }
+
+        return $created;
+    }
+
+    /** @param Collection<int, Bill> $bills */
+    private function createInvoice(Student $student, AcademicSession $session, ?\App\Models\SemesterType $semester, Collection $bills, string $title, ?\App\Models\BillItem $item, ?int $createdBy): Invoice
+    {
+        [$opens, $closes] = $this->matcher->window($bills);
+        // The strictest limit among the fees on the invoice applies.
+        $max = $bills->map(fn (Bill $b) => $b->item->maxPayments())->filter()->min();
+
+        return DB::transaction(function () use ($student, $session, $bills, $createdBy, $semester, $opens, $closes, $title, $item, $max) {
             $invoice = Invoice::create([
                 'semester_type_id'    => $semester?->id,
-                'installment_plan'    => $this->matcher->plan($bills),
+                'installment_plan'    => $max === 1 ? [] : $this->matcher->plan($bills),
+                'max_payments'        => $max,
+                'bill_item_id'        => $item?->id,
                 'opens_at'            => $opens,
                 'closes_at'           => $closes,
                 'payable_type'        => Student::class,
                 'payable_id'          => $student->id,
                 'kind'                => 'fees',
                 'academic_session_id' => $session->id,
-                'title'               => "{$session->name}" . ($semester ? " {$semester->name}" : '') . " school fees (" . \App\Support\Levels::label((int) $student->current_level, $student->programme->studyCategory) . ')',
+                'title'               => $title,
                 'total'               => round($bills->sum(fn ($b) => (float) $b->amount), 2),
                 'amount_paid'         => 0,
                 'status'              => 'unpaid',
@@ -70,6 +101,20 @@ class InvoiceService
         });
     }
 
+    /** The fees the student pays on their own invoices for the term. @return Collection<int, Invoice> */
+    public function separateInvoices(Student $student, AcademicSession $session, ?int $semesterTypeId = null): Collection
+    {
+        return Invoice::where('payable_type', Student::class)->where('payable_id', $student->id)
+            ->where('kind', 'fees')->where('academic_session_id', $session->id)->where('semester_type_id', $semesterTypeId)
+            ->whereNotNull('bill_item_id')->where('status', '!=', 'cancelled')->orderBy('id')->get();
+    }
+
+    /** Whether the student has any live fees invoice for the term. */
+    private function hasTermInvoices(Student $student, AcademicSession $session, ?int $semesterTypeId): bool
+    {
+        return $this->sessionInvoice($student, $session, $semesterTypeId) !== null || $this->separateInvoices($student, $session, $semesterTypeId)->isNotEmpty();
+    }
+
     private function bulkTargets(?int $programmeId, ?int $level)
     {
         return Student::whereIn('status', \App\Models\StudentStatus::codesWhere('is_enrolled'))
@@ -83,7 +128,7 @@ class InvoiceService
     {
         $out = new BulkInvoicePreview();
         $this->bulkTargets($target->programmeId, $target->level)->with('programme')->each(function (Student $student) use ($target, $out) {
-            if ($this->sessionInvoice($student, $target->session, $target->semesterTypeId)) {
+            if ($this->hasTermInvoices($student, $target->session, $target->semesterTypeId)) {
                 $out->existing++;
 
                 return;
@@ -111,11 +156,15 @@ class InvoiceService
 
         $this->bulkTargets($target->programmeId, $target->level)
             ->each(function (Student $student) use ($target, $by, $op, &$created, &$existing, &$noBills) {
-                if ($this->sessionInvoice($student, $target->session, $target->semesterTypeId)) {
-                    $existing++;
-                } elseif ($invoice = $this->generateForStudent($student, $target->session, $by?->id, $target->semesterTypeId)) {
+                $had = $this->hasTermInvoices($student, $target->session, $target->semesterTypeId);
+                $new = $this->ensureInvoices($student, $target->session, $by?->id, $target->semesterTypeId);
+                foreach ($new as $invoice) {
                     $this->audit->record($op, 'invoice_created', $invoice, null, ['status' => 'unpaid', 'total' => (string) $invoice->total, 'student' => $student->full_name]);
+                }
+                if ($new->isNotEmpty()) {
                     $created++;
+                } elseif ($had) {
+                    $existing++;
                 } else {
                     $noBills++;
                 }
@@ -126,11 +175,11 @@ class InvoiceService
         return new BulkInvoiceResult($created, $existing, $noBills, $op->operation_id);
     }
 
-    /** A student's live (not cancelled) invoice for a session, if any. */
+    /** A student's live (not cancelled) school fees invoice for a session, if any (not the fees paid on their own). */
     public function sessionInvoice(Student $student, AcademicSession $session, ?int $semesterTypeId = null): ?Invoice
     {
         return Invoice::where('payable_type', Student::class)->where('payable_id', $student->id)
-            ->where('kind', 'fees')->where('academic_session_id', $session->id)->where('semester_type_id', $semesterTypeId)
+            ->where('kind', 'fees')->whereNull('bill_item_id')->where('academic_session_id', $session->id)->where('semester_type_id', $semesterTypeId)
             ->where('status', '!=', 'cancelled')->first();
     }
 

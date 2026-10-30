@@ -19,7 +19,7 @@
                         <tr><th>Name</th><td>{{ $applicant->full_name }}</td></tr>
                         <tr><th>JAMB number</th><td>{{ $applicant->jamb_reg_no }}</td></tr>
                         @if ($applicant->jamb_score)<tr><th>UTME score</th><td>{{ $applicant->jamb_score }}</td></tr>@endif
-                        <tr><th>Programme</th><td>{{ $applicant->programme->name }}</td></tr>
+                        <tr><th>Programme</th><td>{{ $applicant->programme->applicationLabel() }}</td></tr>
                         <tr><th>Faculty</th><td>{{ $applicant->programme->department->faculty->name }}</td></tr>
                         <tr><th>Entry mode</th><td>{{ \App\Models\EntryMode::label($applicant->entry_mode) }}</td></tr>
                         <tr><th>Submitted</th><td>{{ $applicant->submitted_at?->format('d M Y, H:i') }}</td></tr>

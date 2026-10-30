@@ -114,6 +114,16 @@ Route::middleware('auth')->group(function () {
     Route::get('institution', [\App\Http\Controllers\InstitutionController::class, 'edit'])->name('institution.edit');
     Route::put('institution', [\App\Http\Controllers\InstitutionController::class, 'update'])->name('institution.update');
 
+    // ---- Appearance: the school's default font and text size, and each person's own ----
+    Route::get('appearance', [\App\Http\Controllers\Appearance\AppearanceSettingsController::class, 'edit'])->name('appearance.edit');
+    Route::put('appearance', [\App\Http\Controllers\Appearance\AppearanceSettingsController::class, 'update'])->name('appearance.update');
+    Route::controller(\App\Http\Controllers\Appearance\MyAppearanceController::class)->prefix('my/display')->name('my.appearance')->group(function () {
+        Route::get('/', 'edit');
+        Route::put('/', 'update')->name('.update');
+        Route::post('quick', 'quick')->name('.quick');
+        Route::delete('/', 'reset')->name('.reset');
+    });
+
     // ---- Academic setup ----
     Route::prefix('academics')->name('academics.')->group(function () {
         Route::post('sessions/{session}/make-current', [SessionController::class, 'makeCurrent'])->name('sessions.make-current');
@@ -131,8 +141,12 @@ Route::middleware('auth')->group(function () {
         Route::resource('semester-types', SemesterTypeController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('student-statuses', StudentStatusController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('entry-modes', EntryModeController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('department-categories', \App\Http\Controllers\Academics\DepartmentCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('sub-departments', \App\Http\Controllers\Academics\SubDepartmentController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('course-options', \App\Http\Controllers\Academics\CourseOptionController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('grade-bands', GradeBandController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('result-keys', \App\Http\Controllers\Academics\ResultKeyController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('result-signatories', \App\Http\Controllers\Academics\ResultSignatoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('degree-classes', DegreeClassController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('course-assignments', CourseAssignmentController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('result-stages', ResultStageController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -168,6 +182,8 @@ Route::middleware('auth')->group(function () {
     // ---- Admissions & students ----
     Route::get('applicants/settings', [ApplicationSettingsController::class, 'edit'])->name('applicants.settings');
     Route::put('applicants/settings', [ApplicationSettingsController::class, 'update'])->name('applicants.settings.update');
+    Route::resource('applicants/types', \App\Http\Controllers\Academics\ApplicationTypeController::class)->only(['index', 'store', 'update', 'destroy'])
+        ->names('applicants.types')->parameters(['types' => 'id']);
     Route::post('applicants/admit-batch', [ApplicantController::class, 'admitBatch'])->name('applicants.admit-batch');
     Route::get('applicants/documents/{document}', [ApplicantController::class, 'document'])->name('applicants.documents.show');
     Route::get('applicants/{applicant}', [ApplicantController::class, 'show'])->name('applicants.show')->whereNumber('applicant');
@@ -175,10 +191,33 @@ Route::middleware('auth')->group(function () {
     Route::post('applicants/{applicant}/reject', [ApplicantController::class, 'reject'])->name('applicants.reject');
     Route::resource('applicants', ApplicantController::class)->only(['index', 'store', 'update', 'destroy']);
 
+    Route::resource('students/matric-formats', \App\Http\Controllers\Academics\MatricFormatController::class)->only(['index', 'store', 'update', 'destroy'])->names('students.matric-formats')->parameters(['matric-formats' => 'id']);
     Route::get('students/matric-format', [MatricSettingsController::class, 'edit'])->name('students.settings');
     Route::put('students/matric-format', [MatricSettingsController::class, 'update'])->name('students.settings.update');
     Route::put('students/matric-format/issue', [MatricSettingsController::class, 'updateIssue'])->name('students.settings.issue');
     Route::post('students/{student}/photo', [StudentController::class, 'photo'])->name('students.photo');
+    Route::post('students/{student}/signature', [StudentController::class, 'signature'])->name('students.signature');
+    Route::post('students/{student}/transfer', [StudentController::class, 'transfer'])->name('students.transfer');
+    Route::post('students/{student}/defer', [StudentController::class, 'defer'])->name('students.defer');
+    Route::put('students/{student}/referees', [StudentController::class, 'referees'])->name('students.referees');
+    Route::get('imports/students', [\App\Http\Controllers\Students\PeopleImportController::class, 'index'])->defaults('kind', 'students')->name('imports.students');
+    Route::get('imports/staff', [\App\Http\Controllers\Students\PeopleImportController::class, 'index'])->defaults('kind', 'staff')->name('imports.staff');
+    Route::controller(\App\Http\Controllers\Students\PeopleImportController::class)->prefix('imports/{kind}')->whereIn('kind', ['students', 'staff'])->name('imports.people')->group(function () {
+        Route::get('/', 'index');
+        Route::get('template', 'template')->name('.template');
+        Route::post('/', 'store')->name('.store');
+        Route::post('{import}/import', 'import')->name('.import');
+        Route::post('{import}/undo', 'undo')->name('.undo');
+    });
+    Route::get('student-tracks', [\App\Http\Controllers\Students\StudentTrackController::class, 'index'])->name('tracks.index');
+    Route::post('student-tracks', [\App\Http\Controllers\Students\StudentTrackController::class, 'store'])->name('tracks.store');
+    Route::post('student-tracks/{run}/undo', [\App\Http\Controllers\Students\StudentTrackController::class, 'undo'])->name('tracks.undo');
+    Route::get('student-deferrals', [\App\Http\Controllers\Students\DeferralController::class, 'index'])->name('students.deferrals');
+    Route::post('student-deferrals/{deferral}/resume', [\App\Http\Controllers\Students\DeferralController::class, 'resume'])->name('students.deferrals.resume');
+    Route::get('student-settings', [\App\Http\Controllers\Students\StudentSettingsController::class, 'edit'])->name('students.profile-settings');
+    Route::put('student-settings', [\App\Http\Controllers\Students\StudentSettingsController::class, 'update'])->name('students.profile-settings.update');
+    Route::get('my/profile', [\App\Http\Controllers\Students\MyProfileController::class, 'edit'])->name('my.profile');
+    Route::put('my/profile', [\App\Http\Controllers\Students\MyProfileController::class, 'update'])->name('my.profile.update');
     Route::post('students/{student}/status', [StudentController::class, 'status'])->name('students.status');
     Route::post('students/{student}/reset-password', [StudentController::class, 'resetPassword'])->name('students.reset-password');
     Route::resource('students', StudentController::class)->only(['index', 'show', 'update']);
@@ -203,6 +242,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/', 'update')->name('update');
         Route::post('students/{student}', 'setException')->name('override');
     });
+    Route::resource('fees/department-rules', \App\Http\Controllers\Fees\DepartmentFeeRuleController::class)->only(['index', 'store', 'update', 'destroy'])
+        ->names('fees.department-rules')->parameters(['department-rules' => 'id']);
     Route::controller(\App\Http\Controllers\Fees\LoanAdminController::class)->prefix('loans')->name('loans.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::put('settings', 'settings')->name('settings');
@@ -546,6 +587,7 @@ Route::middleware('auth')->group(function () {
         Route::get('staff/retirements', 'retirements')->name('staff.retirements');
         Route::put('staff/{staff}/pay', 'updatePay')->name('staff.pay');
         Route::post('staff/{staff}/pay-items', 'storeItem')->name('staff.items.store');
+        Route::post('staff/{staff}/signature', 'signature')->name('staff.signature');
         Route::put('staff-pay-items/{item}', 'updateItem')->name('staff.items.update');
     });
     Route::resource('staff', \App\Http\Controllers\Hr\StaffRecordController::class)->only(['index', 'store', 'update', 'show'])->parameters(['staff' => 'staff']);

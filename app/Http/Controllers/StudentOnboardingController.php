@@ -18,7 +18,7 @@ class StudentOnboardingController extends Controller
 {
     use HasProfileFields;
 
-    public function __construct(private OnboardingService $onboarding)
+    public function __construct(private OnboardingService $onboarding, private \App\Support\StudentSettings $settings)
     {
     }
 
@@ -66,6 +66,12 @@ class StudentOnboardingController extends Controller
         $rules = collect($this->profileRules())->only(['phone_number', 'gender', 'date_of_birth', 'state_of_origin', 'lga', 'nationality', 'address', 'guardian_name', 'guardian_relationship', 'guardian_phone', 'guardian_address'])->all();
         foreach (array_diff(array_keys($rules), ['guardian_address']) as $field) {
             $rules[$field] = array_merge(['required'], array_values(array_diff($rules[$field], ['nullable'])));
+        }
+        // NIN, religion, blood group ... are optional unless Settings → Students asks for the NIN.
+        $settings = $this->settings;
+        $rules += collect($this->profileRules())->only(['religion', 'blood_group', 'genotype', 'marital_status', 'next_of_kin_email'])->all();
+        if ($settings->on('show_nin')) {
+            $rules['nin'] = [$settings->on('require_nin') ? 'required' : 'nullable', 'digits:11'];
         }
 
         $custom = \App\Support\CustomFields::rules('student', $student, true, true);

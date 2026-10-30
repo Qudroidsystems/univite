@@ -15,8 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
 class FeeAccessGate
 {
     private const OPEN = [
-        'my.fees*', 'my.receipt', 'my.loans*', 'my.access-locked', 'payments.*', 'logout', 'login*', 'password.*', 'notifications.*', 'dashboard', 'home',
-        'api.logout', 'api.me', 'api.dashboard', 'api.fees*', 'api.payments.*', 'api.devices.*', 'api.loans*', 'api.notifications*', 'api.ping', 'api.login', 'api.me.password',
+        'my.fees*', 'my.receipt', 'my.loans*', 'my.access-locked', 'payments.*', 'logout', 'login*', 'password.*', 'notifications.*', 'my.appearance*', 'dashboard', 'home',
+        'api.logout', 'api.me', 'api.dashboard', 'api.fees*', 'api.payments.*', 'api.devices.*', 'api.loans*', 'api.notifications*', 'api.ping', 'api.login', 'api.me.password', 'api.me.appearance*',
     ];
 
     public function __construct(private FeeAccess $access)

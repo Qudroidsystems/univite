@@ -18,16 +18,16 @@
 <style>
 .pm-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; position:sticky; top:0; z-index:3; background:var(--rol-surface,#fff); padding:4px 0; }
 .pm-search { flex:1; min-width:200px; position:relative; }
-.pm-search input { width:100%; border:1px solid var(--rol-border,#e2e8f0); border-radius:9px; padding:8px 12px 8px 34px; font-size:13px; }
+.pm-search input { width:100%; border:1px solid var(--rol-border,#e2e8f0); border-radius:9px; padding:8px 12px 8px 34px; font-size:0.8125rem; }
 .pm-search i { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#94a3b8; }
-.pm-count { font-size:12px; font-weight:700; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:20px; padding:5px 12px; white-space:nowrap; }
-.pm-linkbtn { font-size:12px; font-weight:700; color:#6366f1; background:none; border:none; cursor:pointer; padding:5px 8px; border-radius:7px; }
+.pm-count { font-size:0.75rem; font-weight:700; color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:20px; padding:5px 12px; white-space:nowrap; }
+.pm-linkbtn { font-size:0.75rem; font-weight:700; color:#6366f1; background:none; border:none; cursor:pointer; padding:5px 8px; border-radius:7px; }
 .pm-linkbtn:hover { background:#eef2ff; }
 .pm-group { border:1px solid var(--rol-border,#e2e8f0); border-radius:12px; margin-bottom:12px; overflow:hidden; }
 .pm-group-head { display:flex; align-items:center; gap:10px; padding:11px 14px; background:#f8fafc; border-bottom:1px solid var(--rol-border,#e9edf3); cursor:pointer; }
-.pm-group-head label { display:flex; align-items:center; gap:9px; font-weight:700; font-size:13.5px; color:#1e293b; cursor:pointer; margin:0; flex:1; }
-.pm-group-about { font-size:12px; color:#64748b; padding:8px 14px 0; line-height:1.45; }
-.pm-group-badge { font-size:11px; font-weight:700; color:#64748b; background:#fff; border:1px solid #e2e8f0; border-radius:20px; padding:2px 9px; }
+.pm-group-head label { display:flex; align-items:center; gap:9px; font-weight:700; font-size:0.8438rem; color:#1e293b; cursor:pointer; margin:0; flex:1; }
+.pm-group-about { font-size:0.75rem; color:#64748b; padding:8px 14px 0; line-height:1.45; }
+.pm-group-badge { font-size:0.6875rem; font-weight:700; color:#64748b; background:#fff; border:1px solid #e2e8f0; border-radius:20px; padding:2px 9px; }
 .pm-caret { color:#94a3b8; transition:transform .2s; }
 .pm-group.collapsed .pm-caret { transform:rotate(-90deg); }
 .pm-group.collapsed .pm-group-body { display:none; }
@@ -37,14 +37,14 @@
 .pm-item input { margin-top:2px; width:16px; height:16px; accent-color:var(--rol-accent,#6366f1); cursor:pointer; flex-shrink:0; }
 .pm-item-main { display:flex; flex-direction:column; gap:2px; min-width:0; }
 .pm-item-top { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
-.pm-item-label { font-size:13px; font-weight:600; color:#0f172a; }
-.pm-item-desc { font-size:11.5px; color:#64748b; line-height:1.4; }
-.pm-chip { font-size:9.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; padding:2px 7px; border-radius:5px; white-space:nowrap; }
+.pm-item-label { font-size:0.8125rem; font-weight:600; color:#0f172a; }
+.pm-item-desc { font-size:0.7188rem; color:#64748b; line-height:1.4; }
+.pm-chip { font-size:0.5938rem; font-weight:800; letter-spacing:.4px; text-transform:uppercase; padding:2px 7px; border-radius:5px; white-space:nowrap; }
 .pm-chip-view{background:#e0f2fe;color:#0369a1} .pm-chip-create{background:#dcfce7;color:#15803d}
 .pm-chip-edit{background:#fef9c3;color:#a16207} .pm-chip-manage{background:#ede9fe;color:#6d28d9}
 .pm-chip-delete{background:#fee2e2;color:#b91c1c} .pm-chip-approve{background:#cffafe;color:#0e7490}
 .pm-chip-money{background:#fae8ff;color:#a21caf} .pm-chip-other{background:#e2e8f0;color:#475569}
-.pm-empty { text-align:center; color:#94a3b8; font-size:13px; padding:26px 0; display:none; }
+.pm-empty { text-align:center; color:#94a3b8; font-size:0.8125rem; padding:26px 0; display:none; }
 @media (prefers-color-scheme:dark){
   .pm-group-head{background:#1e293b;border-color:#334155} .pm-group-head label{color:#e2e8f0}
   .pm-item:hover{background:#1e293b} .pm-item-label{color:#f1f5f9} .pm-search input{background:#0f172a;border-color:#334155;color:#e2e8f0}

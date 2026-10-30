@@ -18,12 +18,16 @@ Route::prefix('v1')->middleware(\App\Http\Middleware\ApiJson::class)->name('api.
         ],
         // Feature switches, the certificate setting and the like, from Settings -> Mobile App.
         'mobile' => app(\App\Support\MobileAppSettings::class)->config(),
+        // The school's default font and text size, so the app looks right before anyone signs in.
+        'appearance' => app(\App\Support\Appearance::class)->forApp(null),
     ]]))->name('ping');
     Route::post('auth/login', [V1\AuthController::class, 'login'])->middleware('throttle:mobile-login')->name('login');
 
     Route::middleware(['auth:sanctum', 'throttle:mobile-api', \App\Http\Middleware\FeeAccessGate::class])->group(function () {
         Route::post('auth/logout', [V1\AuthController::class, 'logout'])->name('logout');
         Route::get('me', [V1\AuthController::class, 'me'])->name('me');
+        Route::get('me/appearance', [V1\AppearanceController::class, 'show'])->name('me.appearance');
+        Route::put('me/appearance', [V1\AppearanceController::class, 'update'])->name('me.appearance.update');
         Route::get('dashboard', V1\DashboardController::class)->name('dashboard');
 
         Route::get('results', [V1\AcademicsController::class, 'results'])->name('results');

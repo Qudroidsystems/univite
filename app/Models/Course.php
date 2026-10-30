@@ -36,6 +36,12 @@ class Course extends Model
         return $this->belongsTo(AcademicSession::class, 'academic_session_id');
     }
 
+    /** Older courses this one replaces: passing this one clears a failed older one. */
+    public function replaces(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_replacements', 'course_id', 'replaces_course_id')->withTimestamps();
+    }
+
     public function prerequisites(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Course::class, 'course_prerequisites', 'course_id', 'prerequisite_id');

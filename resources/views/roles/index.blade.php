@@ -56,15 +56,15 @@ body{font-family:var(--rol-font);}
     width:160px; height:160px; background:rgba(139,92,246,.1);
     border-radius:50%; animation:pulse 4s ease-in-out infinite 2s;
 }
-.rol-hero h1 { font-size:24px; font-weight:800; color:#fff; margin:0 0 6px; position:relative; z-index:1; letter-spacing:-.3px; }
-.rol-hero p  { font-size:13.5px; color:rgba(255,255,255,.65); margin:0; position:relative; z-index:1; }
+.rol-hero h1 { font-size:1.5rem; font-weight:800; color:#fff; margin:0 0 6px; position:relative; z-index:1; letter-spacing:-.3px; }
+.rol-hero p  { font-size:0.8438rem; color:rgba(255,255,255,.65); margin:0; position:relative; z-index:1; }
 .rol-hero-actions { position:relative; z-index:1; margin-top:20px; }
 
 /* ── Buttons ─────────────────────────────────────── */
 .rol-btn-primary {
     background:linear-gradient(135deg,var(--rol-accent),var(--rol-accent2));
     color:#fff; border:none; border-radius:9px;
-    padding:9px 18px; font-size:13px; font-weight:600;
+    padding:9px 18px; font-size:0.8125rem; font-weight:600;
     cursor:pointer; font-family:var(--rol-font);
     display:inline-flex; align-items:center; gap:6px;
     transition:transform .15s,box-shadow .15s;
@@ -105,30 +105,30 @@ body{font-family:var(--rol-font);}
     width:46px; height:46px; border-radius:12px;
     background:rgba(255,255,255,.14);
     display:flex; align-items:center; justify-content:center;
-    font-size:20px; color:#fff; margin-bottom:12px;
+    font-size:1.25rem; color:#fff; margin-bottom:12px;
     backdrop-filter:blur(4px);
     position:relative; z-index:1;
 }
 .rol-card-name {
-    font-size:16px; font-weight:800; color:#fff;
+    font-size:1rem; font-weight:800; color:#fff;
     position:relative; z-index:1; margin-bottom:4px;
 }
 .rol-card-count {
-    font-size:12px; color:rgba(255,255,255,.65);
+    font-size:0.75rem; color:rgba(255,255,255,.65);
     position:relative; z-index:1;
     display:flex; align-items:center; gap:5px;
 }
-.rol-card-count strong { color:rgba(255,255,255,.9); font-size:18px; }
+.rol-card-count strong { color:rgba(255,255,255,.9); font-size:1.125rem; }
 
 .rol-card-body { padding:14px 18px; flex:1; }
 .rol-perm-tag {
     display:inline-flex; align-items:center; gap:4px;
     background:#f0f4ff; color:#4338ca; border:1px solid #c7d2fe;
-    border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600;
+    border-radius:20px; padding:3px 10px; font-size:0.6875rem; font-weight:600;
     margin:2px; transition:background .15s;
 }
 .rol-perm-tag:hover { background:#e0e7ff; }
-.rol-perm-more { color:var(--rol-accent); font-size:11.5px; font-weight:600; text-decoration:none; }
+.rol-perm-more { color:var(--rol-accent); font-size:0.7188rem; font-weight:600; text-decoration:none; }
 .rol-perm-more:hover { text-decoration:underline; }
 
 .rol-card-footer {
@@ -140,15 +140,15 @@ body{font-family:var(--rol-font);}
 .rol-users-badge {
     display:inline-flex; align-items:center; gap:5px;
     background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;
-    border-radius:20px; padding:3px 12px; font-size:11.5px; font-weight:600;
+    border-radius:20px; padding:3px 12px; font-size:0.7188rem; font-weight:600;
 }
-.rol-view-link { font-size:12.5px; font-weight:600; color:var(--rol-accent); text-decoration:none; display:flex; align-items:center; gap:4px; }
+.rol-view-link { font-size:0.7812rem; font-weight:600; color:var(--rol-accent); text-decoration:none; display:flex; align-items:center; gap:4px; }
 .rol-view-link:hover { color:var(--rol-accent2); }
 
 /* ── Dropdown ────────────────────────────────────── */
 .rol-dropdown .dropdown-toggle {
     background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
-    color:#fff; border-radius:8px; padding:5px 9px; font-size:14px;
+    color:#fff; border-radius:8px; padding:5px 9px; font-size:0.875rem;
     transition:background .15s;
 }
 .rol-dropdown .dropdown-toggle:hover { background:rgba(255,255,255,.25); }
@@ -158,7 +158,7 @@ body{font-family:var(--rol-font);}
     animation:scaleIn .15s ease;
 }
 .rol-dropdown .dropdown-item {
-    border-radius:7px; font-size:13px; font-weight:500; padding:8px 12px;
+    border-radius:7px; font-size:0.8125rem; font-weight:500; padding:8px 12px;
     display:flex; align-items:center; gap:8px; transition:background .12s;
 }
 .rol-dropdown .dropdown-item:hover { background:#f0f4ff; color:var(--rol-accent); }
@@ -183,7 +183,7 @@ body{font-family:var(--rol-font);}
     padding:20px 24px; border:none;
     flex: 0 0 auto;
 }
-.rol-modal .modal-title { color:#fff; font-weight:700; font-size:16px; }
+.rol-modal .modal-title { color:#fff; font-weight:700; font-size:1rem; }
 .rol-modal .modal-header .btn-close { filter:invert(1); opacity:.8; }
 .rol-modal .modal-body  {
     padding:22px 24px;
@@ -196,10 +196,10 @@ body{font-family:var(--rol-font);}
     flex: 0 0 auto;
 }
 
-.rol-form-label { font-size:11.5px; font-weight:700; color:var(--rol-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block; }
+.rol-form-label { font-size:0.7188rem; font-weight:700; color:var(--rol-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block; }
 .rol-form-control {
     border:1.5px solid var(--rol-border); border-radius:9px;
-    padding:9px 13px; font-size:13px; font-family:var(--rol-font);
+    padding:9px 13px; font-size:0.8125rem; font-family:var(--rol-font);
     width:100%; transition:border-color .2s, box-shadow .2s;
 }
 .rol-form-control:focus { border-color:var(--rol-accent); box-shadow:0 0 0 3px rgba(99,102,241,.12); outline:none; }
@@ -208,29 +208,29 @@ body{font-family:var(--rol-font);}
 .perm-table { width:100%; border-collapse:separate; border-spacing:0; }
 .perm-table thead th {
     background:var(--rol-primary); color:#fff;
-    padding:10px 14px; font-size:11px; font-weight:700;
+    padding:10px 14px; font-size:0.6875rem; font-weight:700;
     text-transform:uppercase; letter-spacing:.5px;
 }
 .perm-table thead th:first-child { border-radius:8px 0 0 0; }
 .perm-table thead th:last-child  { border-radius:0 8px 0 0; }
 .perm-table tbody tr:hover td { background:#f5f3ff; }
-.perm-table tbody td { padding:9px 14px; border-bottom:1px solid #f1f5f9; font-size:13px; vertical-align:middle; }
-.perm-table .perm-group { font-weight:700; color:var(--rol-primary); font-size:12.5px; }
+.perm-table tbody td { padding:9px 14px; border-bottom:1px solid #f1f5f9; font-size:0.8125rem; vertical-align:middle; }
+.perm-table .perm-group { font-weight:700; color:var(--rol-primary); font-size:0.7812rem; }
 .perm-check { accent-color:var(--rol-accent); width:15px; height:15px; cursor:pointer; }
 .select-all-row td { background:#f0f4ff; }
 
 /* ── Alerts ──────────────────────────────────────── */
-.rol-alert-success { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:9px; padding:10px 14px; font-size:13px; color:#16a34a; }
-.rol-alert-danger  { background:#fef2f2; border:1px solid #fecaca; border-radius:9px; padding:10px 14px; font-size:13px; color:#b91c1c; }
+.rol-alert-success { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:9px; padding:10px 14px; font-size:0.8125rem; color:#16a34a; }
+.rol-alert-danger  { background:#fef2f2; border:1px solid #fecaca; border-radius:9px; padding:10px 14px; font-size:0.8125rem; color:#b91c1c; }
 
 /* ── Empty state ─────────────────────────────────── */
 .rol-empty {
     text-align:center; padding:60px 24px;
     animation:fadeUp .5s ease;
 }
-.rol-empty-icon { font-size:56px; opacity:.2; margin-bottom:14px; display:block; }
-.rol-empty h4   { font-weight:700; color:var(--rol-muted); font-size:17px; }
-.rol-empty p    { font-size:13px; color:var(--rol-muted); }
+.rol-empty-icon { font-size:3.5rem; opacity:.2; margin-bottom:14px; display:block; }
+.rol-empty h4   { font-weight:700; color:var(--rol-muted); font-size:1.0625rem; }
+.rol-empty p    { font-size:0.8125rem; color:var(--rol-muted); }
 </style>
 
 <div class="main-content">
@@ -321,13 +321,13 @@ body{font-family:var(--rol-font);}
 
                 {{-- Permissions --}}
                 <div class="rol-card-body">
-                    <div style="font-size:10.5px;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+                    <div style="font-size:0.6562rem;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
                         Permissions
                     </div>
                     @forelse($role_permissions as $perm)
                         <span class="rol-perm-tag"><i class="bi bi-check2"></i>{{ $perm }}</span>
                     @empty
-                        <span style="font-size:12px;color:var(--rol-muted);">No permissions assigned</span>
+                        <span style="font-size:0.75rem;color:var(--rol-muted);">No permissions assigned</span>
                     @endforelse
                     @if($role->permissions->count() > 4)
                         @can('View roles')
@@ -393,7 +393,7 @@ body{font-family:var(--rol-font);}
                             </div>
                         </div>
 
-                        <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:9px;padding:10px 14px;font-size:12.5px;color:#3730a3;margin-bottom:16px;">
+                        <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:9px;padding:10px 14px;font-size:0.7812rem;color:#3730a3;margin-bottom:16px;">
                             <i class="bi bi-info-circle-fill me-1"></i> Tick the permissions this role should have. Use a group's checkbox to select everything under it at once, or the search box to find one quickly.
                         </div>
 

@@ -15,16 +15,28 @@ class Applicant extends Model
         'first_name', 'last_name', 'other_names', 'phone_number', 'gender', 'date_of_birth',
         'state_of_origin', 'lga', 'nationality', 'address',
         'guardian_name', 'guardian_relationship', 'guardian_phone', 'guardian_address',
+        'nin', 'religion', 'blood_group', 'genotype', 'marital_status', 'next_of_kin_email',
     ];
 
     protected $fillable = [
         'application_no', 'email', 'jamb_reg_no', 'jamb_score', 'password', 'submitted_at', 'admission_batch', 'programme_id', 'academic_session_id', 'entry_mode', 'entry_level',
-        'status', 'decided_at', ...self::PROFILE_FIELDS,
+        'status', 'decided_at', 'application_type_id', 'decision_message', 'decided_by', ...self::PROFILE_FIELDS,
     ];
 
     protected $hidden = ['password'];
 
     protected $casts = ['date_of_birth' => 'date', 'decided_at' => 'datetime', 'submitted_at' => 'datetime', 'password' => 'hashed'];
+
+    public function applicationType(): BelongsTo
+    {
+        return $this->belongsTo(ApplicationType::class);
+    }
+
+    /** The staff member who admitted or rejected the application. */
+    public function decider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'decided_by');
+    }
 
     public function programme(): BelongsTo
     {

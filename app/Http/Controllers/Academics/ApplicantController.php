@@ -48,7 +48,7 @@ class ApplicantController extends CrudController
 
     protected function query(Request $request): Builder
     {
-        return parent::query($request)->with(['programme', 'session', 'student']);
+        return parent::query($request)->with(['programme', 'session', 'student', 'applicationType', 'decider']);
     }
 
     protected function viewData(Request $request): array
@@ -65,6 +65,7 @@ class ApplicantController extends CrudController
             ['status', 'Status', Applicant::STATUSES],
             ['programme_id', 'Programme', Programme::orderBy('name')->pluck('name', 'id')->all()],
             ['academic_session_id', 'Session', AcademicSession::orderByDesc('name')->pluck('name', 'id')->all()],
+            ['application_type_id', 'Applied for', \App\Models\ApplicationType::orderBy('name')->pluck('name', 'id')->all()],
         ];
     }
 
@@ -116,10 +117,14 @@ class ApplicantController extends CrudController
         return [
             ['Application no.', fn ($r) => new HtmlString('<span class="badge bg-light text-body border">' . e($r->application_no) . '</span>')],
             ['Applicant', fn ($r) => new HtmlString('<a href="' . e(route('applicants.show', $r->id)) . '" class="fw-semibold">' . e($r->full_name) . '</a><div class="text-muted fs-12">' . e($r->email) . '</div>' . ($r->jamb_reg_no ? '<div class="text-muted fs-12">JAMB ' . e($r->jamb_reg_no) . ($r->jamb_score ? ' · ' . $r->jamb_score : '') . '</div>' : ''))],
-            ['Programme', fn ($r) => new HtmlString(e($r->programme->name) . '<div class="text-muted fs-12">' . e(\App\Models\EntryMode::label($r->entry_mode)) . ' · ' . $r->entry_level . 'L · ' . e($r->session->name) . '</div>')],
+            ['Programme', fn ($r) => new HtmlString(e($r->programme->name) . '<div class="text-muted fs-12">' . e(\App\Models\EntryMode::label($r->entry_mode)) . ' · ' . $r->entry_level . 'L · ' . e($r->session->name) . ($r->applicationType ? ' · ' . e($r->applicationType->name) : '') . '</div>')],
             ['Status', function ($r) {
                 $cls = ['draft' => 'bg-secondary-subtle text-secondary', 'pending' => 'bg-warning-subtle text-warning', 'admitted' => 'bg-success-subtle text-success', 'rejected' => 'bg-danger-subtle text-danger'][$r->status];
                 $extra = $r->student ? '<div class="text-muted fs-12 mt-1">' . e($r->student->matric_label) . '</div>' : '';
+                if ($r->decided_at && in_array($r->status, ['admitted', 'rejected'], true)) {
+                    $extra .= '<div class="text-muted fs-12">' . e($r->decided_at->format('j M Y')) . ($r->decider ? ' by ' . e($r->decider->name) : '') . '</div>'
+                        . ($r->decision_message ? '<div class="fs-12 text-truncate" style="max-width:220px" title="' . e($r->decision_message) . '">' . e($r->decision_message) . '</div>' : '');
+                }
 
                 return new HtmlString('<span class="badge ' . $cls . '">' . e(Applicant::STATUSES[$r->status]) . '</span>' . $extra);
             }],
@@ -166,12 +171,14 @@ class ApplicantController extends CrudController
         return parent::destroy($id);
     }
 
-    public function admit(AdmissionService $admissions, $id): RedirectResponse
+    public function admit(Request $request, AdmissionService $admissions, $id): RedirectResponse
     {
         $applicant = Applicant::findOrFail($id);
+        $message = $request->validate(['message' => ['nullable', 'string', 'max:1000']])['message'] ?? null;
 
         try {
             $admission = $admissions->admit($applicant);
+            $applicant->update(['decided_by' => $request->user()->id, 'decision_message' => $message]);
             $student = $admission->student;
             $password = $admission->temporaryPassword;
         } catch (RuntimeException $e) {
@@ -216,6 +223,7 @@ class ApplicantController extends CrudController
             ->orderBy('id')->each(function (Applicant $applicant) use ($admissions, $data, &$admitted, &$failed) {
                 try {
                     $admissions->admit($applicant, $data['batch']);
+                    $applicant->update(['decided_by' => auth()->id()]);
                     $admitted++;
                 } catch (RuntimeException $e) {
                     $failed[] = "{$applicant->application_no}: " . $e->getMessage();
@@ -232,15 +240,16 @@ class ApplicantController extends CrudController
         return $back;
     }
 
-    public function reject($id): RedirectResponse
+    public function reject(Request $request, $id): RedirectResponse
     {
         $applicant = Applicant::findOrFail($id);
+        $message = $request->validate(['message' => ['nullable', 'string', 'max:1000']])['message'] ?? null;
 
         if ($applicant->status !== 'pending') {
             return back()->with('error', 'Only pending applications can be rejected.');
         }
 
-        $applicant->update(['status' => 'rejected', 'decided_at' => now()]);
+        $applicant->update(['status' => 'rejected', 'decided_at' => now(), 'decided_by' => $request->user()->id, 'decision_message' => $message]);
 
         return back()->with('success', "{$applicant->full_name}'s application was rejected.");
     }

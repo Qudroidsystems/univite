@@ -1,0 +1,39 @@
+/* Font, text size, spacing and motion chosen under Settings → Appearance or "Display & reading".
+   resources/views/partials/appearance-head.blade.php sets --uv-scale (text size ÷ 13) and the root font size,
+   so everything written in rem grows with the chosen size. */
+
+/* Size helpers used across the views (13px design sizes, written in rem so they follow the chosen size). */
+.fs-10 { font-size: .625rem !important; } .fs-11 { font-size: .6875rem !important; } .fs-12 { font-size: .75rem !important; }
+.fs-13 { font-size: .8125rem !important; } .fs-14 { font-size: .875rem !important; } .fs-15 { font-size: .9375rem !important; }
+.fs-16 { font-size: 1rem !important; } .fs-17 { font-size: 1.0625rem !important; } .fs-18 { font-size: 1.125rem !important; }
+.fs-19 { font-size: 1.1875rem !important; } .fs-20 { font-size: 1.25rem !important; } .fs-22 { font-size: 1.375rem !important; }
+.fs-24 { font-size: 1.5rem !important; }
+
+/* The side menu widens a little with larger text so its labels still fit. */
+html[data-theme] { --tb-vertical-menu-width: min(calc(250px * var(--uv-scale, 1)), 330px); }
+
+/* Relaxed line spacing. */
+html[data-uv-lines="relaxed"] body { line-height: 1.75; }
+html[data-uv-lines="relaxed"] .table > :not(caption) > * > * { line-height: 1.6; }
+
+/* Compact: less padding so more fits on the screen. */
+html[data-uv-density="compact"] .card-body { padding: .75rem; }
+html[data-uv-density="compact"] .card-header, html[data-uv-density="compact"] .card-footer { padding: .5rem .75rem; }
+html[data-uv-density="compact"] .table > :not(caption) > * > * { padding: .35rem .5rem; }
+html[data-uv-density="compact"] .form-control, html[data-uv-density="compact"] .form-select { padding-top: .3rem; padding-bottom: .3rem; }
+html[data-uv-density="compact"] .mb-4 { margin-bottom: 1rem !important; }
+
+/* Less motion. */
+html[data-uv-motion="reduce"] *, html[data-uv-motion="reduce"] *::before, html[data-uv-motion="reduce"] *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;
+}
+
+/* "Display & reading" page: the live preview. */
+.uv-look-preview { border: 1px dashed var(--tb-border-color); border-radius: 12px; padding: 1rem; background: var(--tb-secondary-bg); }
+.uv-look-preview .uv-look-sample { font-size: .8125rem; }
+.uv-font-choice { cursor: pointer; border: 1px solid var(--tb-border-color); border-radius: 10px; padding: .6rem .8rem; display: block; height: 100%; }
+.uv-font-choice:has(input:checked) { border-color: var(--tb-primary); box-shadow: 0 0 0 2px rgba(64,81,137,.18); }
+.uv-font-choice .uv-font-sample { font-size: 1.05rem; display: block; }
+
+/* Printing keeps the sizes documents were designed for, whatever text size is chosen on screen. */
+@media print { html[data-theme] { font-size: 16px; } }

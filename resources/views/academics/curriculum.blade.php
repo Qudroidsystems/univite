@@ -86,7 +86,9 @@
                                                 @forelse ($sem['entries'] as $e)
                                                     <tr>
                                                         <td style="width:90px"><span class="badge bg-primary-subtle text-primary">{{ $e->course->code }}</span></td>
-                                                        <td>{{ $e->course->title }}<div class="mt-1"><x-course-tag :course="$e->course" :type="$e->status" full /></div></td>
+                                                        <td>{{ $e->course->title }}<div class="mt-1"><x-course-tag :course="$e->course" :type="$e->status" full />
+                                                            @if ($e->kind !== 'normal')<span class="badge bg-info-subtle text-info ms-1">{{ $kinds[$e->kind] ?? $e->kind }}</span>@endif
+                                                            @if ($e->courseOption)<span class="badge bg-light text-body border ms-1" title="Only for this course option">{{ $e->courseOption->name }} only</span>@endif</div></td>
                                                         <td class="text-end text-nowrap">{{ $e->course->credit_units }} u</td>
                                                         <td><x-last-change :record="$e" :among="$sem['entries']" /></td>
                                                         @if ($canEdit)
@@ -95,6 +97,7 @@
                                                                         data-url="{{ route('academics.curriculum.update', $e->id) }}"
                                                                         data-title="{{ $e->course->code }} — {{ $e->course->title }}"
                                                                         data-level="{{ $e->level }}" data-semester="{{ $e->semester_order }}" data-status="{{ $e->status }}"
+                                                                        data-kind="{{ $e->kind }}" data-option="{{ $e->course_option_id }}"
                                                                         data-allowed="{{ implode(',', \App\Support\CourseSharing::allowed($e->course, $programme)) }}"><i class="ri-pencil-line"></i></button>
                                                                 <form method="POST" action="{{ route('academics.curriculum.destroy', $e->id) }}" class="d-inline" onsubmit="return confirm('Remove this course from the curriculum?')">
                                                                     @csrf @method('DELETE')
@@ -151,6 +154,20 @@
                                 @foreach ($statuses as $v => $l) <option value="{{ $v }}" @selected(old('status') === $v)>{{ $l }}</option> @endforeach
                             </select>
                             <div class="form-text">A course from another department takes the type that department allows.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Kind</label>
+                            <select name="kind" class="form-select">
+                                @foreach ($kinds as $v => $l) <option value="{{ $v }}" @selected(old('kind', 'normal') === $v)>{{ $l }}</option> @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">For</label>
+                            <select name="course_option_id" class="form-select">
+                                <option value="">Every student on the programme</option>
+                                @foreach ($options as $v => $l) <option value="{{ $v }}" @selected((string) old('course_option_id') === (string) $v)>{{ $l }} option only</option> @endforeach
+                            </select>
+                            @if (! $options)<div class="form-text">Add course options under Course Options to limit a course to one.</div>@endif
                         </div>
                         <div class="col-12">
                             <label class="form-label">Courses <span class="text-danger">*</span> <span class="text-muted fs-12">(hold Ctrl/Cmd to select several)</span></label>
@@ -217,6 +234,19 @@
                             @foreach ($statuses as $v => $l) <option value="{{ $v }}">{{ $l }}</option> @endforeach
                         </select>
                     </div>
+                    <div class="mt-3">
+                        <label class="form-label">Kind</label>
+                        <select name="kind" id="move-kind" class="form-select">
+                            @foreach ($kinds as $v => $l) <option value="{{ $v }}">{{ $l }}</option> @endforeach
+                        </select>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">For</label>
+                        <select name="course_option_id" id="move-option" class="form-select">
+                            <option value="">Every student on the programme</option>
+                            @foreach ($options as $v => $l) <option value="{{ $v }}">{{ $l }} option only</option> @endforeach
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -238,6 +268,9 @@
             const allowed = (btn.dataset.allowed || '').split(',').filter(Boolean);
             document.querySelectorAll('#move-status option').forEach(o => { o.disabled = allowed.length > 0 && !allowed.includes(o.value); });
             document.getElementById('move-status').value = btn.dataset.status;
+            document.getElementById('move-kind').value = btn.dataset.kind || 'normal';
+            document.getElementById('move-option').value = btn.dataset.option || '';
+            ['move-kind', 'move-option'].forEach(id => window.UvSelect && window.UvSelect.refresh(document.getElementById(id)));
             if (window.UvSelect) window.UvSelect.refresh(document.getElementById('move-status'));
             moveModal.show();
         }));

@@ -45,7 +45,8 @@ class ApplicationPortalController extends Controller
             'minScore'   => ApplicationSettings::minUtmeScore(),
             'instructions' => ApplicationSettings::instructions(),
             'entryModes' => \App\Models\EntryMode::where('is_active', true)->where('open_online', true)->orderBy('sort_order')->get(),
-            'programmes' => Programme::where('is_active', true)->with('department.faculty')->orderBy('name')->get(),
+            'programmes' => Programme::where('is_active', true)->where('show_on_application', true)->with('department.faculty')->orderBy('name')->get(),
+            'types'      => \App\Models\ApplicationType::open(),
         ]);
     }
 
@@ -60,6 +61,10 @@ class ApplicationPortalController extends Controller
         ]);
 
         $usesUtme = (bool) \App\Models\EntryMode::byCode($request->input('entry_mode'))?->uses_utme;
+        // When the school runs several kinds of application, the applicant picks one that is open now.
+        $types = \App\Models\ApplicationType::open();
+        $type = $types->firstWhere('id', (int) $request->input('application_type_id'));
+        $needsJamb = ! $type || $type->needs_jamb;
 
         $data = $request->validate([
             'first_name'   => ['required', 'string', 'max:100'],
@@ -67,10 +72,16 @@ class ApplicationPortalController extends Controller
             'other_names'  => ['nullable', 'string', 'max:100'],
             'email'        => ['required', 'email', 'max:255', Rule::unique('applicants', 'email'), Rule::unique('users', 'email')],
             'phone_number' => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s()]{6,20}$/'],
-            'jamb_reg_no'  => ['required', 'regex:/^\d{8}[A-Za-z]{2}$/', Rule::unique('applicants', 'jamb_reg_no')],
+            'application_type_id' => [Rule::requiredIf($types->isNotEmpty()), 'nullable', Rule::in($types->pluck('id')->all())],
+            'jamb_reg_no'  => [$needsJamb ? 'required' : 'nullable', 'regex:/^\d{8}[A-Za-z]{2}$/', Rule::unique('applicants', 'jamb_reg_no')],
             'entry_mode'   => ['required', Rule::in(array_keys(\App\Models\EntryMode::options(true)))],
             'jamb_score'   => ['nullable', 'integer', 'between:0,400', Rule::requiredIf($usesUtme), 'gte:' . ($usesUtme ? ApplicationSettings::minUtmeScore() : 0)],
-            'programme_id' => ['required', Rule::exists('programmes', 'id')->where('is_active', true)],
+            'programme_id' => ['required', Rule::exists('programmes', 'id')->where('is_active', true)->where('show_on_application', true), function ($attr, $value, $fail) use ($type) {
+                $programme = Programme::find($value);
+                if ($type && $programme && ! $type->allows($programme)) {
+                    $fail("{$programme->applicationLabel()} is not offered under {$type->name}.");
+                }
+            }],
             'password'     => ['required', 'string', 'min:8', 'confirmed'],
         ], [
             'jamb_reg_no.regex'  => 'A JAMB registration number is 8 digits followed by 2 letters, e.g. 12345678AB.',
@@ -78,11 +89,14 @@ class ApplicationPortalController extends Controller
             'email.unique'       => 'This email is already in use. Use "Continue my application" to sign in.',
             'jamb_score.gte'     => 'The minimum UTME score for screening is ' . ApplicationSettings::minUtmeScore() . '.',
             'jamb_score.required' => 'Enter your UTME score.',
+            'application_type_id.required' => 'Choose what you are applying for.',
+            'application_type_id.in' => 'That application is not open now.',
         ]);
 
         unset($data['password_confirmation']);
         $data['email'] = strtolower($data['email']);
-        $data['jamb_reg_no'] = strtoupper($data['jamb_reg_no']);
+        $data['jamb_reg_no'] = filled($data['jamb_reg_no'] ?? null) ? strtoupper($data['jamb_reg_no']) : null;
+        $data['application_type_id'] = $type?->id;
         if (! $usesUtme) {
             $data['jamb_score'] = null;
         }

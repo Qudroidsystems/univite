@@ -35,7 +35,17 @@
                         <div class="col-md-6"><label class="form-label">Email *</label><input type="email" name="email" value="{{ old('email') }}" class="form-control" required>
                             <div class="form-text">Use an email you check often. We contact you here.</div></div>
                         <div class="col-md-6"><label class="form-label">Phone number *</label><input name="phone_number" value="{{ old('phone_number') }}" class="form-control" required></div>
-                        <div class="col-md-6"><label class="form-label">JAMB registration number *</label><input name="jamb_reg_no" value="{{ old('jamb_reg_no') }}" class="form-control text-uppercase" maxlength="10" placeholder="12345678AB" required></div>
+                        @if ($types->isNotEmpty())
+                            <div class="col-12"><label class="form-label">What are you applying for? *</label>
+                                <select name="application_type_id" id="application_type" class="form-select" required>
+                                    <option value="">Select…</option>
+                                    @foreach ($types as $t)
+                                        <option value="{{ $t->id }}" data-category="{{ $t->study_category_id }}" data-jamb="{{ $t->needs_jamb ? 1 : 0 }}" data-fee="{{ number_format($t->screeningFee(), 2) }}" data-instructions="{{ $t->instructions }}" @selected((string) old('application_type_id') === (string) $t->id)>{{ $t->name }}@if ($t->closes_on) (closes {{ $t->closes_on->format('j M Y') }})@endif</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text" id="type-note"></div></div>
+                        @endif
+                        <div class="col-md-6" id="jamb-box"><label class="form-label">JAMB registration number <span id="jamb-star">*</span></label><input name="jamb_reg_no" id="jamb_reg_no" value="{{ old('jamb_reg_no') }}" class="form-control text-uppercase" maxlength="10" placeholder="12345678AB" required></div>
                         <div class="col-md-6"><label class="form-label">How are you applying? *</label>
                             <select name="entry_mode" id="entry_mode" class="form-select" required>
                                 @foreach ($entryModes as $mode)
@@ -45,10 +55,10 @@
                         <div class="col-md-6" id="score-box"><label class="form-label">UTME score *</label><input type="number" name="jamb_score" value="{{ old('jamb_score') }}" min="0" max="400" class="form-control">
                             <div class="form-text">Minimum {{ $minScore }}.</div></div>
                         <div class="col-md-6"><label class="form-label">Programme *</label>
-                            <select name="programme_id" class="form-select" required>
+                            <select name="programme_id" id="programme_id" class="form-select" required>
                                 <option value="">Select…</option>
                                 @foreach ($programmes->groupBy(fn ($p) => $p->department->faculty->name) as $faculty => $group)
-                                    <optgroup label="{{ $faculty }}">@foreach ($group as $p)<option value="{{ $p->id }}" @selected((string) old('programme_id') === (string) $p->id)>{{ $p->name }}</option>@endforeach</optgroup>
+                                    <optgroup label="{{ $faculty }}">@foreach ($group as $p)<option value="{{ $p->id }}" data-category="{{ $p->study_category_id }}" @selected((string) old('programme_id') === (string) $p->id)>{{ $p->applicationLabel() }}</option>@endforeach</optgroup>
                                 @endforeach
                             </select></div>
                         <div class="col-md-6"><label class="form-label">Choose a password *</label><input type="password" name="password" class="form-control" minlength="8" required autocomplete="new-password"><div class="form-text">At least 8 characters.</div></div>
@@ -65,6 +75,19 @@
 <script>
     const mode = document.getElementById('entry_mode'), box = document.getElementById('score-box');
     if (mode) { const sync = () => { box.style.display = mode.selectedOptions[0]?.dataset.utme === '1' ? '' : 'none'; }; mode.addEventListener('change', sync); sync(); }
+    // An application type narrows the programmes to its category, sets the fee shown and whether a JAMB number is needed.
+    const type = document.getElementById('application_type');
+    if (type) {
+        const prog = document.getElementById('programme_id'), jamb = document.getElementById('jamb_reg_no'), note = document.getElementById('type-note');
+        const syncType = () => {
+            const o = type.selectedOptions[0], cat = o?.dataset.category || '';
+            prog.querySelectorAll('option[data-category]').forEach(p => { p.hidden = cat !== '' && p.dataset.category !== cat; if (p.hidden && p.selected) prog.value = ''; });
+            const needs = !o || !o.value || o.dataset.jamb === '1';
+            jamb.required = needs; document.getElementById('jamb-star').textContent = needs ? '*' : '(if you have one)';
+            note.textContent = o && o.value ? 'Screening fee: ₦' + o.dataset.fee + '. ' + (o.dataset.instructions || '') : '';
+        };
+        type.addEventListener('change', syncType); syncType();
+    }
 </script>
 @endpush
 @endsection

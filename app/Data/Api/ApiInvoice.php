@@ -18,6 +18,8 @@ final readonly class ApiInvoice
             'total' => (float) $i->total, 'paid' => (float) $i->amount_paid, 'outstanding' => (float) $i->outstanding, 'status' => $i->status,
             'due_date' => $i->due_date ? \Illuminate\Support\Carbon::parse($i->due_date)->toDateString() : null,
             'pay_url' => route('my.fees.show', $i),
+            'paid_separately' => $i->bill_item_id !== null, 'payments_left' => $i->status === 'paid' ? 0 : $i->paymentsLeft(),
+            'minimum_payment' => $i->status === 'paid' ? 0.0 : $i->minimumPayment(),
         ];
         if ($detail) {
             $data['lines'] = $i->lines->map(fn ($l) => ['description' => $l->description, 'amount' => (float) $l->amount])->values()->all();

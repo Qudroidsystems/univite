@@ -36,6 +36,20 @@
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
     }
 
+    /* Save a topbar choice to the person's Display & reading settings, so it follows them to other devices and the app. */
+    function remember(data) {
+        var meta = qs('meta[name="uv-appearance"]'), token = qs('meta[name="csrf-token"]');
+        if (!meta || !token || !window.fetch) { return; }
+        var url = null;
+        try { url = JSON.parse(meta.getAttribute('content')).save; } catch (e) { /* no saved settings on this page */ }
+        if (!url) { return; }
+        fetch(url, {
+            method: 'POST', credentials: 'same-origin', keepalive: true,
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': token.getAttribute('content'), 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify(data)
+        }).catch(function () { /* the browser still remembers it */ });
+    }
+
     /* ── light / dark / same as device ── */
     function initTheme() {
         var html = document.documentElement, icon = document.getElementById('theme-icon');
@@ -52,7 +66,7 @@
         }
         apply(store('uv-theme') || 'light');
         qsa('.theme-mode-item').forEach(function (a) {
-            a.addEventListener('click', function (e) { e.preventDefault(); apply(a.getAttribute('data-mode')); document.getElementById('theme-dropdown').style.display = 'none'; });
+            a.addEventListener('click', function (e) { e.preventDefault(); apply(a.getAttribute('data-mode')); remember({ theme: a.getAttribute('data-mode') }); document.getElementById('theme-dropdown').style.display = 'none'; });
         });
         if (media && media.addEventListener) { media.addEventListener('change', function () { if (store('uv-theme') === 'auto') { apply('auto'); } }); }
     }
@@ -67,6 +81,7 @@
                 var choice = a.getAttribute('data-menu');
                 if (choice === current) { document.getElementById('theme-dropdown').style.display = 'none'; return; }
                 store('uv-menu', choice === 'top' ? 'top' : null);
+                remember({ menu: choice === 'top' ? 'top' : 'side' });
                 try { sessionStorage.setItem('data-layout', choice === 'top' ? 'horizontal' : 'vertical'); } catch (err) { /* the head script sets it again */ }
                 // The theme builds the menu for its layout when the page loads.
                 location.reload();

@@ -129,6 +129,10 @@ class RegistrationService
         if ($rule === 'none') {
             return null;
         }
+        // The student's department lets its students register before paying (what they owe is shown to them instead).
+        if (\App\Models\DepartmentFeeRule::forStudent($student)?->register_without_paying) {
+            return null;
+        }
         $invoice = $this->invoices->sessionInvoice($student, $ctx->session, $ctx->type->id)
             ?? $this->invoices->sessionInvoice($student, $ctx->session);
         if (! $invoice) {
@@ -146,7 +150,17 @@ class RegistrationService
     /** Course ids the student has passed (approved or published results only). @return Collection<int, int> */
     public function passed(Student $student): Collection
     {
-        return CourseResult::where('student_id', $student->id)->where('is_pass', true)->whereIn('status', ['approved', 'published'])->pluck('course_id')->unique()->values();
+        return $this->withReplaced(CourseResult::where('student_id', $student->id)->where('is_pass', true)->whereIn('status', ['approved', 'published'])->pluck('course_id')->unique()->values());
+    }
+
+    /** Passed course ids plus the older courses they replace (passing the new course clears the old one). */
+    private function withReplaced(Collection $passed): Collection
+    {
+        if ($passed->isEmpty()) {
+            return $passed;
+        }
+
+        return $passed->merge(\Illuminate\Support\Facades\DB::table('course_replacements')->whereIn('course_id', $passed)->pluck('replaces_course_id'))->unique()->values();
     }
 
     /** Course ids the student failed and has not passed since, leaving out carry-overs the department waived. @return Collection<int, int> */
@@ -173,7 +187,7 @@ class RegistrationService
         if ($results->isEmpty()) {
             return collect();
         }
-        $passed = $results->where('is_pass', true)->pluck('course_id')->flip();
+        $passed = $this->withReplaced($results->where('is_pass', true)->pluck('course_id')->unique()->values())->flip();
         $waived = \App\Models\CarryoverWaiver::courseIdsFor($student->id)->flip();
         $curriculum = ProgrammeCourse::where('programme_id', $student->programme_id)->get()->keyBy('course_id');
         $rules = $this->rules->forStudent($student);
@@ -221,7 +235,8 @@ class RegistrationService
         $checkPrereqs = (bool) $this->rules($student, $ctx)['check_prerequisites'];
         $rows = collect();
         foreach ($current->merge($carry)->unique('course_id') as $pc) {
-            if ($passed->contains($pc->course_id) || ! $pc->course->is_active) {
+            // a course for another course option is not offered (a carry-over always is)
+            if ($passed->contains($pc->course_id) || ! $pc->course->is_active || (! $pc->appliesTo($student) && ! $failed->contains($pc->course_id))) {
                 continue;
             }
             $isCarry = $failed->contains($pc->course_id);

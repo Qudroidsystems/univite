@@ -35,7 +35,7 @@ class LookupService
     public function lists(): array
     {
         return ['sessions', 'semester-types', 'semester-orders', 'faculties', 'departments', 'programmes', 'courses', 'bill-items',
-            'study-categories', 'entry-modes', 'units', 'leave-types', 'hostels', 'venues', 'tp-schools', 'salary-structures'];
+            'study-categories', 'entry-modes', 'sub-departments', 'course-options', 'units', 'leave-types', 'hostels', 'venues', 'tp-schools', 'salary-structures'];
     }
 
     /** @return LookupOption[]|null null when there is no such list */
@@ -64,6 +64,16 @@ class LookupService
             'bill-items' => $this->pairs($this->filter(BillItem::query(), $query, ['name', 'code'])->orderBy('name'), 'id', fn ($b) => $b->name),
             'study-categories' => $this->pairs($this->filter(StudyCategory::query(), $query, ['name'])->orderBy('name'), 'id', fn ($s) => $s->name),
             'entry-modes' => $this->pairs($this->search(EntryMode::query()->where('is_active', true), $query, ['name'])->orderBy('sort_order'), 'code', fn ($e) => $e->name),
+            'sub-departments' => $this->pairs(
+                $this->filter(\App\Models\SubDepartment::query(), $query, ['name', 'code'])
+                    ->when($query->parent, fn ($q, $id) => $q->where('department_id', $id))->orderBy('name'),
+                'id', fn ($d) => $d->name,
+            ),
+            'course-options' => $this->pairs(
+                $this->filter(\App\Models\CourseOption::query(), $query, ['name', 'code'])
+                    ->when($query->parent, fn ($q, $id) => $q->where('programme_id', $id))->orderBy('name'),
+                'id', fn ($o) => $o->name,
+            ),
             'units' => $this->pairs($this->filter(Unit::query(), $query, ['name'])->orderBy('name'), 'id', fn ($u) => $u->name),
             'leave-types' => $this->pairs($this->filter(LeaveType::query(), $query, ['name'])->orderBy('sort_order'), 'id', fn ($t) => $t->name),
             'hostels' => $this->pairs($this->filter(Hostel::query(), $query, ['name'])->orderBy('sort_order')->orderBy('name'), 'id', fn ($h) => $h->name),

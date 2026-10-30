@@ -38,7 +38,7 @@ class RoleSeeder extends Seeder
         'Head of Unit' => ['badge bg-secondary', [], ['View leave applications', 'View staff records']],
         'Lecturer' => ['badge bg-info', [], ['Enter results for assigned courses']],
         'Senate' => ['badge bg-dark', ['Senate result approval'], ['View result sheets', 'View student results', 'Approve results', 'Edit scores while approving', 'Publish results']],
-        'Registrar' => ['badge bg-primary', ['Applicants', 'Application settings', 'Students', 'Clearance', 'Matric numbers', 'Course registrations', 'Student results', 'Graduation lists', 'Academic sessions', 'Staff leave', 'O Level results'], ['!Approve leave for any staff', 'View senate review', 'View fee access']],
+        'Registrar' => ['badge bg-primary', ['Applicants', 'Application settings', 'Application types', 'Students', 'Clearance', 'Matric numbers', 'Course registrations', 'Student results', 'Graduation lists', 'Academic sessions', 'Staff leave', 'O Level results'], ['!Approve leave for any staff', 'View senate review', 'View fee access']],
         'Bursar' => ['badge bg-primary', ['Bill items', 'School bills', 'Invoices & payments', 'Fee access rules', 'School loans'], []],
         // Leave goes through its approval route; acting on any step out of turn is left for an administrator to give.
         'HR Officer' => ['badge bg-primary', ['Staff records', 'Staff leave', 'Units', 'Payroll'], ['!Approve leave for any staff']],

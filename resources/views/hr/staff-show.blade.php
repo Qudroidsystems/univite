@@ -27,7 +27,19 @@
                     <tr><th class="ps-3">Supervisor</th><td>{{ $p->supervisor?->name ?? '—' }}</td></tr>
                     @if ($p->exit_date)<tr><th class="ps-3">Left</th><td>{{ $p->exit_date->format('j M Y') }} · {{ $p->exit_reason }}</td></tr>@endif
                     <tr><th class="ps-3">Email · phone</th><td>{{ $p->user?->email }}@if ($p->user?->phone_number) · {{ $p->user->phone_number }}@endif</td></tr>
+                    <tr><th class="ps-3">Institutional email</th><td>{{ $p->institutional_email ?: '—' }}</td></tr>
+                    <tr><th class="ps-3">File number</th><td>{{ $p->file_number ?: '—' }}</td></tr>
+                    <tr><th class="ps-3">IPPIS number</th><td>{{ $p->ippis_number ?: '—' }}</td></tr>
+                    <tr><th class="ps-3">ID card · payslip no.</th><td>{{ $p->id_card_number ?: '—' }} · {{ $p->payslip_number ?: '—' }}</td></tr>
                 </tbody></table>
+            </div></div>
+            <div class="card"><div class="card-header"><h6 class="card-title mb-0">Signature</h6></div><div class="card-body">
+                @if ($p->signature)<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($p->signature) }}" alt="Signature" class="border rounded bg-white p-1 mb-2" style="max-height:60px;">@else<div class="text-muted fs-13 mb-2">None yet. Used on letters and result sheets they sign.</div>@endif
+                @can('Edit staff profiles')
+                    <form method="POST" action="{{ route('staff.signature', $p) }}" enctype="multipart/form-data">@csrf
+                        <div class="input-group input-group-sm"><input type="file" name="signature" class="form-control" accept="image/png,image/jpeg" required><button class="btn btn-soft-primary">Upload</button></div>
+                    </form>
+                @endcan
             </div></div>
             @if ($leaveTaken->isNotEmpty())
                 <div class="card"><div class="card-header"><h6 class="card-title mb-0">Recent leave</h6></div><div class="card-body p-0"><table class="table table-sm mb-0"><tbody>

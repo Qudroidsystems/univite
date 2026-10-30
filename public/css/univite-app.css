@@ -2,7 +2,7 @@
 #uv-progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: #405189; z-index: 20000; transition: width .25s ease, opacity .3s ease; opacity: 0; pointer-events: none; }
 #uv-progress.on { opacity: 1; }
 
-.uv-net { display: inline-flex; align-items: flex-end; gap: 2px; padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,.04); font-size: 12px; font-weight: 500; line-height: 1; cursor: default; user-select: none; }
+.uv-net { display: inline-flex; align-items: flex-end; gap: 2px; padding: 6px 10px; border-radius: 999px; background: rgba(0,0,0,.04); font-size: 0.75rem; font-weight: 500; line-height: 1; cursor: default; user-select: none; }
 .uv-net i { display: inline-block; width: 4px; border-radius: 1px; background: #cbd5e1; }
 .uv-net i:nth-child(1) { height: 5px; } .uv-net i:nth-child(2) { height: 8px; } .uv-net i:nth-child(3) { height: 11px; } .uv-net i:nth-child(4) { height: 14px; }
 .uv-net .uv-net-label { margin-left: 6px; align-self: center; color: #475569; }
@@ -18,7 +18,7 @@
 .uv-busy .btn[disabled] { cursor: progress; }
 .uv-spin { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: uv-rot .6s linear infinite; vertical-align: -2px; margin-right: 6px; }
 @keyframes uv-rot { to { transform: rotate(360deg); } }
-.uv-err { font-size: 12px; }
+.uv-err { font-size: 0.75rem; }
 .uv-offline-spin { width: 38px; height: 38px; border-width: 3px; margin: 0 auto 8px; display: block; opacity: .5; }
 
 /* A dropdown fetching its options (univite-lookups.js): a small spinner replaces the arrow. */
@@ -39,12 +39,12 @@ select.uv-lookup-loading {
 /* Department, HoD and dean: the strip on a score sheet and the chips on each "My courses" row. */
 .uv-leader-in { animation: uvRowIn .5s cubic-bezier(.2,.7,.3,1) both; animation-delay: calc(var(--uv-i, 0) * 90ms); }
 .uv-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 8px 2px 3px; border-radius: 999px;
-    background: var(--vz-light, #f3f6f9); border: 1px solid var(--vz-border-color, #e9ebec); font-size: 12px; line-height: 20px; color: var(--vz-body-color, #212529);
+    background: var(--vz-light, #f3f6f9); border: 1px solid var(--vz-border-color, #e9ebec); font-size: 0.75rem; line-height: 20px; color: var(--vz-body-color, #212529);
     transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
 .uv-chip:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(30, 50, 90, .12); border-color: var(--vz-primary, #405189); }
-.uv-chip > i { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--vz-primary-bg-subtle, #e2e5ed); color: var(--vz-primary, #405189); font-size: 12px; }
+.uv-chip > i { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--vz-primary-bg-subtle, #e2e5ed); color: var(--vz-primary, #405189); font-size: 0.75rem; }
 .uv-chip > img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
-.uv-chip-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--vz-secondary-color, #878a99); }
+.uv-chip-tag { font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--vz-secondary-color, #878a99); }
 
 /* Searching a list ("My courses"): matches slide in one after another, the rest fold away, matched text is highlighted. */
 .uv-search-item { transition: opacity .28s ease, transform .28s ease, max-height .32s ease, padding .32s ease, border-width .32s ease; max-height: 600px; overflow: hidden; }
@@ -62,8 +62,8 @@ select.uv-lookup-loading {
 
 /* Course type (C / CE / E) and owning department beside a course. */
 .uv-ctag { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; margin-left: 4px; font-weight: 400; }
-.uv-ctag .badge { font-size: 10px; letter-spacing: .3px; }
-.uv-ctag-dept { display: inline-flex; align-items: center; gap: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vz-secondary-color, #878a99); }
+.uv-ctag .badge { font-size: 0.625rem; letter-spacing: .3px; }
+.uv-ctag-dept { display: inline-flex; align-items: center; gap: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.6875rem; color: var(--vz-secondary-color, #878a99); }
 @media print { .uv-ctag .badge { border: 1px solid #999; color: #000 !important; background: none !important; } }
 
 /* Long lists behind a button (master sheet outstanding results) */
@@ -72,7 +72,7 @@ select.uv-lookup-loading {
 .uv-more-pop { max-width: 400px; animation: uv-pop-in .18s ease-out; }
 .uv-more-pop .popover-body { padding: .5rem .75rem; }
 .uv-more-list { list-style: none; padding: 0; margin: 0; }
-.uv-more-list li { padding: .3rem 0; border-bottom: 1px dashed var(--tb-border-color, #e5e7eb); font-size: 13px; }
+.uv-more-list li { padding: .3rem 0; border-bottom: 1px dashed var(--tb-border-color, #e5e7eb); font-size: 0.8125rem; }
 .uv-more-list li:last-child { border-bottom: 0; }
 @keyframes uv-pop-in { from { opacity: 0; transform: translateY(4px) scale(.98); } to { opacity: 1; transform: none; } }
 @media print { .uv-more { display: none !important; } }
@@ -81,12 +81,12 @@ select.uv-lookup-loading {
 /* Dashboard menu cards and tiles */
 .uv-tile { border: 1px solid var(--vz-border-color, #e9ebec); transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
 .uv-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(30, 41, 59, .08); border-color: var(--vz-primary, #405189); }
-.uv-tile-icon { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; font-size: 22px;
+.uv-tile-icon { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; font-size: 1.375rem;
     background: var(--vz-primary-bg-subtle, rgba(64, 81, 137, .1)); color: var(--vz-primary, #405189); }
-.uv-tile-icon-sm { width: 36px; height: 36px; border-radius: 10px; font-size: 18px; flex-shrink: 0; }
+.uv-tile-icon-sm { width: 36px; height: 36px; border-radius: 10px; font-size: 1.125rem; flex-shrink: 0; }
 .uv-menu-card { border: 1px solid var(--vz-border-color, #e9ebec); }
 .uv-menu-card:hover { border-color: var(--vz-primary-border-subtle, #b3bce0); }
-.uv-menu-links li a { display: flex; align-items: center; gap: 2px; padding: 3px 0; font-size: 13px; color: var(--vz-body-color, #212529); }
+.uv-menu-links li a { display: flex; align-items: center; gap: 2px; padding: 3px 0; font-size: 0.8125rem; color: var(--vz-body-color, #212529); }
 .uv-menu-links li a:hover { color: var(--vz-primary, #405189); }
 .uv-menu-links li a i { color: var(--vz-secondary-color, #878a99); }
 .letter-spacing { letter-spacing: .6px; }
@@ -106,7 +106,7 @@ select.uv-lookup-loading {
 @media (prefers-reduced-motion: reduce) { .uv-updated, .uv-skeleton span { animation: none; } #ajax-root { transition: none; } }
 
 /* ---------------------------------------------------------------- activity HUD (Uv.hud): Apple-style loader */
-.uv-ios-spinner { position: relative; display: inline-block; width: 1em; height: 1em; font-size: 38px; color: inherit; }
+.uv-ios-spinner { position: relative; display: inline-block; width: 1em; height: 1em; font-size: 2.375rem; color: inherit; }
 .uv-ios-spinner i { position: absolute; left: 46%; top: 0; width: 8%; height: 27%; border-radius: 1em; background: currentColor; opacity: .14; transform-origin: 50% 185%; animation: uv-ios-fade 1s linear infinite; }
 .uv-ios-spinner i:nth-child(1) { transform: rotate(0deg); animation-delay: -1s; }
 .uv-ios-spinner i:nth-child(2) { transform: rotate(45deg); animation-delay: -.875s; }
@@ -118,7 +118,7 @@ select.uv-lookup-loading {
 .uv-ios-spinner i:nth-child(8) { transform: rotate(315deg); animation-delay: -.125s; }
 @keyframes uv-ios-fade { from { opacity: .85; } to { opacity: .14; } }
 .uv-ios-spinner.sm { font-size: 1.05em; vertical-align: -.18em; margin-right: 7px; }
-.uv-ios-spinner.lg { font-size: 44px; }
+.uv-ios-spinner.lg { font-size: 2.75rem; }
 
 #uv-hud { position: fixed; inset: 0; z-index: 20050; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .18s ease; }
 #uv-hud.on { opacity: 1; pointer-events: auto; background: rgba(15, 23, 42, .06); cursor: progress; }

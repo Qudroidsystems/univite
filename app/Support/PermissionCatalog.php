@@ -66,6 +66,7 @@ class PermissionCatalog
                 'permissions' => [
                     ['View institution profile', 'View', 'See the institution\'s name, address, contacts, principal officers and branding as set in the portal.'],
                     ['Edit institution profile', 'Edit', 'Change the institution\'s name, address, contacts, officers, logo, signature, stamp and colours. The change shows everywhere at once, including printed documents.'],
+                    ['Edit appearance settings', 'Edit', 'Choose the font, text size, light or dark look, menu position and spacing everyone sees by default in the portal and the mobile app, and whether each person may choose their own.'],
                 ],
             ],
 
@@ -186,6 +187,16 @@ class PermissionCatalog
                     ['Create result keys', 'Create', 'Add a CGPA range with its remark, rank, action and activity.'],
                     ['Edit result keys', 'Edit', 'Change a key to result row. Results already computed keep their remark until they are computed again.'],
                     ['Delete result keys', 'Delete', 'Remove a row from the key to result. Results already computed keep their remark until computed again.'],
+                ],
+            ],
+
+            'Result signatories' => [
+                'about' => 'The names, titles and positions printed under master sheets and transcripts, for the university or one school, department, category or programme.',
+                'permissions' => [
+                    ['View result signatories', 'View', 'See who signs printed results for each school, department, category and programme.'],
+                    ['Create result signatories', 'Create', 'Add a signatory, such as the Head of Department of Economics, with title, name and position.'],
+                    ['Edit result signatories', 'Edit', 'Change a signatory\'s name, title, position, order or where they sign.'],
+                    ['Delete result signatories', 'Delete', 'Remove a signatory, so the next most general one (or the approval steps) is printed instead.'],
                 ],
             ],
 
@@ -347,6 +358,36 @@ class PermissionCatalog
                 ],
             ],
 
+            'Department categories' => [
+                'about' => 'Which study categories each department runs, over which levels, with how many semesters a level has, and whether it may offer combined programmes.',
+                'permissions' => [
+                    ['View department categories', 'View', 'See which categories each department runs and their levels.'],
+                    ['Create department categories', 'Create', 'Add a category to a department with its lowest and highest level.'],
+                    ['Edit department categories', 'Edit', 'Change a department category\'s levels, semesters per level or combination setting. Programmes in it then run the new levels.'],
+                    ['Delete department categories', 'Delete', 'Remove a category from a department. Its programmes go back to the levels their duration gives.'],
+                ],
+            ],
+
+            'Sub-departments' => [
+                'about' => 'Units inside a department, such as Christian Religious Studies inside Religious Studies.',
+                'permissions' => [
+                    ['View sub departments', 'View', 'See the sub-departments of each department and how many programmes each has.'],
+                    ['Create sub departments', 'Create', 'Add a sub-department to a department, optionally for one study category.'],
+                    ['Edit sub departments', 'Edit', 'Rename a sub-department, change its code or mark it inactive.'],
+                    ['Delete sub departments', 'Delete', 'Delete a sub-department. This is refused while programmes or students belong to it.'],
+                ],
+            ],
+
+            'Course options' => [
+                'about' => 'Specialisations inside a programme, such as Acting or Directing in Theatre Arts.',
+                'permissions' => [
+                    ['View course options', 'View', 'See the options (specialisations) of each programme.'],
+                    ['Create course options', 'Create', 'Add an option, such as Acting or Directing, to a programme.'],
+                    ['Edit course options', 'Edit', 'Rename an option, change its code or mark it inactive.'],
+                    ['Delete course options', 'Delete', 'Delete an option. This is refused while students are in it.'],
+                ],
+            ],
+
             'Reference lists' => [
                 'about' => 'The pick-lists used across forms: titles, gender, religion, blood group, states and so on. Edit them so forms match this university.',
                 'permissions' => [
@@ -426,6 +467,16 @@ class PermissionCatalog
                 ],
             ],
 
+            'Application types' => [
+                'about' => 'The kinds of application open at once, such as Degree (UTME), PDE and NCE Part-Time, each with its own screening fee, dates and student category.',
+                'permissions' => [
+                    ['View application types', 'View', 'See the kinds of application, their screening fees and dates, and how many have applied under each.'],
+                    ['Create application types', 'Create', 'Add a kind of application, such as PDE or NCE Part-Time, with its fee, dates and the programmes it covers.'],
+                    ['Edit application types', 'Edit', 'Change an application type\'s name, fee, dates, category or instructions, or close it.'],
+                    ['Delete application types', 'Delete', 'Delete an application type nobody has applied under yet.'],
+                ],
+            ],
+
             'Students' => [
                 'about' => 'People who have been admitted and hold a matric number.',
                 'permissions' => [
@@ -434,6 +485,12 @@ class PermissionCatalog
                     ['Change student status', 'Manage', 'Mark a student active, deferred, suspended, withdrawn or graduated. Suspended and withdrawn students are blocked from signing in.'],
                     ['Verify new students', 'Manage', 'Confirm, after checking the original documents in person, that a newly admitted student has been physically verified. Can also be undone. Only possible once the student has accepted the offer, paid the acceptance fee and finished their biodata and uploads.'],
                     ['Reset student passwords', 'Manage', 'Generate a new temporary password for a student. The old password stops working at once.'],
+                    ['Change student programmes', 'Manage', 'Move a student to another programme, course option or level, with the reason. The move is kept on the student\'s record.'],
+                    ['Manage deferred admissions', 'Manage', 'Put off a student\'s studies to a later session and bring them back when it comes. A new student who never started takes the new session as their entry session.'],
+                    ['Import students', 'Import', 'Add students from a spreadsheet (for example from the old portal), check every row first, and undo an import.'],
+                    ['View student tracks', 'View', 'See where each student is semester by semester (session, semester, level, programme and option) and the class moves made so far.'],
+                    ['Change student semester and level', 'Manage', 'Move a class, or one student, to the next semester; after the last semester of a level they go up a level unless their result says to repeat. A move can be undone.'],
+                    ['Edit student profile settings', 'Edit', 'Choose whether students may update their own profile after verification and whether the NIN and JAMB number are asked for and shown.'],
                 ],
             ],
 
@@ -484,6 +541,10 @@ class PermissionCatalog
                 'permissions' => [
                     ['View matric number format', 'View', 'See the current matric number pattern and an example of the next number.'],
                     ['Set the matric number format', 'Set', 'Change the pattern used for students admitted from now on, when numbers are issued, whether they need approval, and the last number already used for each prefix (for example the last number issued before the portal). Existing matric numbers never change.'],
+                    ['View matric formats', 'View', 'See the matric number formats set for faculties, departments, categories, programmes and entry modes, with the next number each gives.'],
+                    ['Create matric formats', 'Create', 'Add a matric number format for part of the school, with its prefix, suffix and number range.'],
+                    ['Edit matric formats', 'Edit', 'Change a matric number format. Numbers already issued never change; new numbers follow the new format.'],
+                    ['Delete matric formats', 'Delete', 'Delete a matric number format. Students it covered then get the school-wide format.'],
                 ],
             ],
 
@@ -542,6 +603,7 @@ class PermissionCatalog
                 'permissions' => [
                     ['View staff records', 'View', 'See staff records: department or unit, designation, category, grade, appointment and service dates, status and expected retirement. Pay, bank, pension and tax details are not shown without "View payroll".'],
                     ['Edit staff profiles', 'Edit', 'Add a staff record and change its staff number, department or unit, designation, category, grade level, appointment, dates, supervisor, employment status and exit.'],
+                    ['Import staff', 'Import', 'Add staff and their sign-in accounts from a spreadsheet (for example from the old portal), check every row first, and undo an import.'],
                     ['Edit staff pay details', 'Edit', 'Change a member of staff\'s salary structure and step, bank account, pension fund administrator and RSA PIN, and tax details. Every change is kept on the operation history.'],
                 ],
             ],
@@ -669,6 +731,10 @@ class PermissionCatalog
                     ['View fee access', 'View', 'See the fee access rules and the eligibility list: each student\'s fees, what share is paid (school loans included), and whether they may register, write examinations, see results and use the portal.'],
                     ['Set fee access rules', 'Edit', 'Choose, for course registration, examinations, results and the whole portal and app, the share of fees that must be paid first, whether school loans count, and what happens when a loan repayment is overdue.'],
                     ['Manage fee access exceptions', 'Manage', 'Allow a student to register, write examinations, see results or use the portal although they have not paid enough (or bar one), for the session, with a reason.'],
+                    ['View department fee rules', 'View', 'See which departments let their students register courses before paying, and whether those students are shown what they owe.'],
+                    ['Create department fee rules', 'Create', 'Let a department\'s students register courses before paying, with the message shown to them beside the amount they owe.'],
+                    ['Edit department fee rules', 'Edit', 'Change a department\'s fee rule: registering before paying, showing what is owed, its message, or switch it off.'],
+                    ['Delete department fee rules', 'Delete', 'Remove a department\'s fee rule, so its students follow the school-wide fee access rules again.'],
                 ],
             ],
 

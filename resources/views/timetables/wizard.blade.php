@@ -3,16 +3,16 @@
 @push('styles')
 <style>
     .uv-steps { display: flex; flex-wrap: wrap; gap: .25rem; counter-reset: step; }
-    .uv-steps button { border: 1px solid var(--tb-border-color-translucent, #dfe3ea); background: var(--tb-body-bg, #fff); border-radius: 2rem; padding: .3rem .8rem .3rem .35rem; font-size: 13px; color: inherit; display: flex; align-items: center; gap: .4rem; }
-    .uv-steps button::before { counter-increment: step; content: counter(step); width: 1.5rem; height: 1.5rem; border-radius: 50%; display: inline-grid; place-items: center; background: var(--tb-light); font-weight: 600; font-size: 12px; }
+    .uv-steps button { border: 1px solid var(--tb-border-color-translucent, #dfe3ea); background: var(--tb-body-bg, #fff); border-radius: 2rem; padding: .3rem .8rem .3rem .35rem; font-size: 0.8125rem; color: inherit; display: flex; align-items: center; gap: .4rem; }
+    .uv-steps button::before { counter-increment: step; content: counter(step); width: 1.5rem; height: 1.5rem; border-radius: 50%; display: inline-grid; place-items: center; background: var(--tb-light); font-weight: 600; font-size: 0.75rem; }
     .uv-steps button.active { border-color: var(--tb-primary); color: var(--tb-primary); }
     .uv-steps button.active::before { background: var(--tb-primary); color: #fff; }
     .uv-steps button.done::before { background: var(--tb-success); color: #fff; content: '✓'; }
     .uv-step { display: none; } .uv-step.active { display: block; }
     .uv-day { display: flex; gap: 2px; flex-wrap: wrap; }
-    .uv-day span { font-size: 11px; padding: .2rem .4rem; border-radius: .25rem; background: var(--tb-primary-bg-subtle); color: var(--tb-primary); font-family: var(--tb-font-monospace); }
+    .uv-day span { font-size: 0.6875rem; padding: .2rem .4rem; border-radius: .25rem; background: var(--tb-primary-bg-subtle); color: var(--tb-primary); font-family: var(--tb-font-monospace); }
     .uv-day span.brk { background: var(--tb-warning-bg-subtle); color: var(--tb-warning-text-emphasis); }
-    #courseTable td, #courseTable th { white-space: nowrap; font-size: 13px; }
+    #courseTable td, #courseTable th { white-space: nowrap; font-size: 0.8125rem; }
     #courseTable input.form-control-sm, #courseTable select.form-select-sm { width: 4.5rem; padding: .15rem .3rem; }
     #courseTable select.uv-activity { width: 7rem; }
     #courseTable tr.excluded { opacity: .45; }

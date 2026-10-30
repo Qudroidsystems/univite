@@ -10,6 +10,7 @@ class AdmissionPermissionSeeder extends ModulePermissionSeeder
         return [
             'Applicants',
             'Application settings',
+            'Application types',
             'Students',
             'Clearance',
             'Clearance items',

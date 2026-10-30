@@ -98,6 +98,10 @@ class StaffRecordController extends CrudController
             'first_appointment_date' => ['nullable', 'date', 'before_or_equal:today'], 'confirmation_date' => ['nullable', 'date'],
             'supervisor_id' => ['nullable', 'exists:users,id'], 'critical_role' => ['nullable', 'boolean'], 'professorial' => ['nullable', 'boolean'],
             'employment_status' => ['required', 'string', 'max:30'], 'exit_date' => ['nullable', 'date'], 'exit_reason' => ['nullable', 'string', 'max:255'],
+            'file_number' => ['nullable', 'string', 'max:50', Rule::unique('staff_profiles', 'file_number')->ignore($record?->id)],
+            'ippis_number' => ['nullable', 'string', 'max:30', Rule::unique('staff_profiles', 'ippis_number')->ignore($record?->id)],
+            'id_card_number' => ['nullable', 'string', 'max:30'], 'payslip_number' => ['nullable', 'string', 'max:30'],
+            'institutional_email' => ['nullable', 'email', 'max:150'],
         ];
     }
 
@@ -119,6 +123,11 @@ class StaffRecordController extends CrudController
             ['name' => 'employment_status', 'label' => 'Status', 'type' => 'select', 'options' => Lookups::options('employment_status'), 'default' => 'active', 'required' => true, 'col' => 6],
             ['name' => 'exit_date', 'label' => 'Left on', 'type' => 'date', 'col' => 4, 'help' => 'Last day in service, if they have left.'],
             ['name' => 'exit_reason', 'label' => 'Reason for leaving', 'col' => 8],
+            ['name' => 'file_number', 'label' => 'Employee file number', 'col' => 4, 'placeholder' => 'DSSET/ADE/2425'],
+            ['name' => 'ippis_number', 'label' => 'IPPIS number', 'col' => 4],
+            ['name' => 'id_card_number', 'label' => 'ID card number', 'col' => 4],
+            ['name' => 'payslip_number', 'label' => 'Payslip number', 'col' => 4],
+            ['name' => 'institutional_email', 'label' => 'Institutional email', 'type' => 'email', 'col' => 8, 'help' => 'If it differs from their sign-in email.'],
             ['name' => 'critical_role', 'label' => 'Must be covered when away', 'type' => 'switch', 'col' => 6],
             ['name' => 'professorial', 'label' => 'Professorial cadre (later retirement age)', 'type' => 'switch', 'col' => 6],
         ];
@@ -143,7 +152,7 @@ class StaffRecordController extends CrudController
     protected function columns(): array
     {
         return [
-            ['Staff', fn ($r) => new HtmlString('<a href="' . route('staff.show', $r) . '" class="fw-semibold">' . e($r->displayName()) . '</a><div class="text-muted fs-12">' . e($r->staff_number ?: 'no staff number') . ($r->designation ? ' · ' . e($r->designation) : '') . '</div>')],
+            ['Staff', fn ($r) => new HtmlString('<a href="' . route('staff.show', $r) . '" class="fw-semibold">' . e($r->displayName()) . '</a><div class="text-muted fs-12">' . e($r->staff_number ?: 'no staff number') . ($r->file_number ? ' · File ' . e($r->file_number) : '') . ($r->ippis_number ? ' · IPPIS ' . e($r->ippis_number) : '') . ($r->designation ? ' · ' . e($r->designation) : '') . '</div>')],
             ['Department / unit', fn ($r) => $r->workplace() ?? '—'],
             ['Category', fn ($r) => collect([$r->category ? Lookups::label('staff_category', $r->category) : null, $r->payGrade(), $r->appointment_type ? Lookups::label('appointment_type', $r->appointment_type) : null])->filter()->implode(' · ') ?: '—'],
             ['Service', fn ($r) => $r->first_appointment_date ? intdiv($r->serviceMonths(), 12) . ' yr since ' . $r->first_appointment_date->format('Y') : '—'],
@@ -169,6 +178,19 @@ class StaffRecordController extends CrudController
     }
 
     /** Pay, bank, pension and tax details. Every change goes on the operation history with what it was before. */
+    public function signature(Request $request, StaffProfile $staff): RedirectResponse
+    {
+        abort_unless($request->user()->can('Edit staff profiles') && $this->scope($request)->coversStaff($staff), 403);
+        $request->validate(['signature' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:1024']]);
+        $path = $request->file('signature')->store('staff/signatures', 'public');
+        if ($staff->signature) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($staff->signature);
+        }
+        $staff->update(['signature' => $path]);
+
+        return back()->with('success', 'Signature updated.');
+    }
+
     public function updatePay(Request $request, StaffProfile $staff): RedirectResponse
     {
         $d = $request->validate([

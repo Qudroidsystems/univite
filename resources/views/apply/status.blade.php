@@ -24,7 +24,7 @@
                 @elseif ($result)
                     <hr>
                     <h6 class="mb-1">{{ $result->full_name }}</h6>
-                    <div class="text-muted mb-3">{{ $result->programme->name }}</div>
+                    <div class="text-muted mb-3">{{ $result->programme->applicationLabel() }}</div>
                     @switch($result->status)
                         @case('admitted')
                             <div class="alert alert-success mb-0">

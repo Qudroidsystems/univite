@@ -204,7 +204,7 @@ class ClearanceService
             }
 
             $student->loadMissing('programme.department.faculty', 'entrySession');
-            $matric = $this->matric->next($student->programme, $student->entrySession);
+            $matric = $this->matric->next($student->programme, $student->entrySession, $student->entry_mode);
 
             if (MatricNumberGenerator::requiresApproval()) {
                 // Reserve it; it becomes the student's number when the batch is approved and published.

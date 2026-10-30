@@ -109,6 +109,7 @@ class Menu
         $add($this->scoped->scope($u, 'View course registrations')->isEmpty() && CourseAdviser::where('user_id', $u->id)->exists(), 'My Advisees', 'registrations.index', 'ph-users-three', ['registrations.*'], ['course adviser']);
         $add($u->scoringAssignments()->exists() && ! $u->can('View result sheets'), 'My Courses & Scores', 'results.sheets.index', 'ph-list-checks', ['results.sheets.*', 'results.open'], ['score sheet', 'results']);
         $add($u->scoringAssignments()->exists() && ! $u->can('Enter results for any course'), 'Enter Scores', 'results.entry', 'ph-pencil-simple-line', ['results.entry'], ['post scores', 'by student', 'by subject', 'ca', 'exam']);
+        $add($settled, 'My Profile', 'my.profile', 'ph-user-circle', ['my.profile*'], ['biodata', 'nin', 'referee', 'next of kin', 'signature']);
         $add($settled, 'My Results', 'my.results', 'ph-medal', ['my.results*'], ['grades', 'gpa', 'cgpa', 'transcript']);
         $add($settled && $this->mobile->feature('gpa_planner'), 'GPA Planner', 'my.gpa-planner', 'ph-target', ['my.gpa-planner'], ['target', 'gpa', 'cgpa', 'grades needed']);
         $add((bool) $student, 'My Fees', 'my.fees', 'ph-wallet', ['my.fees*', 'my.receipt'], ['pay', 'invoice', 'receipt', 'school fees']);
@@ -147,11 +148,15 @@ class Menu
             'Academics' => [
                 ['sidebarAcademic', 'Academic Setup', 'ph-graduation-cap', [
                     ['Institution Profile', 'institution.edit', 'View institution profile', 'institution.*'],
+                    ['Appearance', 'appearance.edit', 'Edit appearance settings', 'appearance.*'],
                     ['Academic Sessions', 'academics.sessions.index', 'View academic sessions', 'academics.sessions.*'],
                     ['Semesters', 'academics.semesters.index', 'View semesters', 'academics.semesters.*'],
                     ['Faculties', 'academics.faculties.index', 'View faculties', 'academics.faculties.*'],
                     ['Departments', 'academics.departments.index', 'View departments', 'academics.departments.*'],
+                    ['Sub-departments', 'academics.sub-departments.index', 'View sub departments', 'academics.sub-departments.*'],
+                    ['Department Categories', 'academics.department-categories.index', 'View department categories', 'academics.department-categories.*'],
                     ['Programmes', 'academics.programmes.index', 'View programmes', 'academics.programmes.*'],
+                    ['Course Options', 'academics.course-options.index', 'View course options', 'academics.course-options.*'],
                     ['Courses', 'academics.courses.index', 'View courses', 'academics.courses.*'],
                     ['Curriculum', 'academics.curriculum.index', 'View programme curriculum', 'academics.curriculum.*'],
                     ['Study Categories', 'academics.study-categories.index', 'View study categories', 'academics.study-categories.*'],
@@ -175,13 +180,19 @@ class Menu
                     ['New Student Verification', 'verification.index', 'View students', 'verification.*'],
                     ['Clearance', 'clearance.index', 'View clearance', 'clearance.*'],
                     ['Application Settings', 'applicants.settings', 'View application settings', 'applicants.settings*'],
+                    ['Application Types', 'applicants.types.index', 'View application types', 'applicants.types.*'],
                     ['Students', 'students.index', 'View students', 'students.index', 'students.show'],
+                    ['Move to Next Semester', 'tracks.index', ['View student tracks', 'Change student semester and level'], 'tracks.*'],
+                    ['Deferred Admissions', 'students.deferrals', 'View students', 'students.deferrals*'],
+                    ['Import Students', 'imports.students', 'Import students', 'imports.students'],
+                    ['Student Settings', 'students.profile-settings', 'Edit student profile settings', 'students.profile-settings*'],
                     ['Course Registrations', 'registrations.index', 'View course registrations', 'registrations.index', 'registrations.show'],
                     ['Registration Settings', 'registrations.settings', 'View registration settings', 'registrations.settings*'],
                     ['O Level Verification', 'olevel.index', ['View O Level results', 'Verify O Level results'], 'olevel.index', 'olevel.show'],
                     ['O Level Requirements', 'olevel.requirements', ['Set O Level requirements', 'View O Level results', 'Edit department academic rules'], 'olevel.requirements*'],
                     ['Matric Numbers', 'matric.index', 'View matric numbers', 'matric.*'],
                     ['Matric Number Format', 'students.settings', 'View matric number format', 'students.settings*'],
+                    ['Matric Formats by Department', 'students.matric-formats.index', 'View matric formats', 'students.matric-formats.*'],
                 ]],
                 ['sidebarResults', 'Results', 'ph-chart-bar', [
                     ['Score Sheets', 'results.sheets.index', ['View result sheets', 'Approve results', 'Approve results for any stage'], 'results.sheets.*', 'results.open'],
@@ -197,6 +208,7 @@ class Menu
                     ['Result Settings', 'results.settings', 'View result settings', 'results.settings*'],
                     ['Key to Grade', 'academics.grade-bands.index', 'View grade bands', 'academics.grade-bands.*'],
                     ['Key to Result', 'academics.result-keys.index', 'View result keys', 'academics.result-keys.*'],
+                    ['Result Signatories', 'academics.result-signatories.index', 'View result signatories', 'academics.result-signatories.*'],
                 ]],
                 ['sidebarPlanning', 'Venues & Timetables', 'ph-calendar-check', [
                     ['Venues', 'venues.index', 'View venues', 'venues.index', 'venues.show', 'venues.create', 'venues.edit'],
@@ -216,12 +228,14 @@ class Menu
                     ['Invoices & Payments', 'invoices.index', 'View invoices', 'invoices.*'],
                     ['Payment Settings', 'payments.settings', 'Edit payment settings', 'payments.settings*'],
                     ['Fee Access & Eligibility', 'fee-access.index', ['View fee access', 'Set fee access rules', 'Manage fee access exceptions'], 'fee-access.*'],
+                    ['Department Fee Rules', 'fees.department-rules.index', 'View department fee rules', 'fees.department-rules.*'],
                     ['School Loans', 'loans.index', ['View school loans', 'Approve school loans', 'Record loan repayments', 'Set loan policy', 'Manage school loans'], 'loans.*'],
                 ]],
             ],
             'Staff' => [
                 ['sidebarStaff', 'Staff & Payroll', 'ph-users-three', [
                     ['Staff Records', 'staff.index', ['View staff records', 'Edit staff profiles'], 'staff.index', 'staff.show'],
+                    ['Import Staff', 'imports.staff', 'Import staff', 'imports.staff'],
                     ['Retirements Due', 'staff.retirements', ['View staff records', 'Edit staff profiles'], 'staff.retirements'],
                     ['Units', 'units.index', 'View units', 'units.*'],
                     ['Payroll', 'payroll.runs.index', ['View payroll', 'Prepare payroll', 'Approve payroll'], 'payroll.runs.*', 'payroll.payslips.*'],

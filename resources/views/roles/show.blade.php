@@ -48,12 +48,12 @@ body{font-family:var(--rol-font);}
     width:260px; height:260px; background:rgba(99,102,241,.14);
     border-radius:50%; animation:pulse 4s ease-in-out infinite;
 }
-.rol-hero h1 { font-size:22px; font-weight:800; color:#fff; margin:0 0 5px; position:relative; z-index:1; }
-.rol-hero p  { font-size:13px; color:rgba(255,255,255,.65); margin:0; position:relative; z-index:1; }
+.rol-hero h1 { font-size:1.375rem; font-weight:800; color:#fff; margin:0 0 5px; position:relative; z-index:1; }
+.rol-hero p  { font-size:0.8125rem; color:rgba(255,255,255,.65); margin:0; position:relative; z-index:1; }
 .rol-hero-actions { position:relative; z-index:1; margin-top:18px; display:flex; gap:8px; flex-wrap:wrap; }
 
 /* ── Buttons ─────────────────────────────────────── */
-.rol-btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:9px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--rol-font); transition:transform .15s,box-shadow .15s; text-decoration:none; }
+.rol-btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:9px; padding:9px 18px; font-size:0.8125rem; font-weight:600; cursor:pointer; font-family:var(--rol-font); transition:transform .15s,box-shadow .15s; text-decoration:none; }
 .rol-btn-primary { background:linear-gradient(135deg,var(--rol-accent),var(--rol-accent2)); color:#fff; box-shadow:0 3px 12px rgba(99,102,241,.3); }
 .rol-btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(99,102,241,.4); color:#fff; }
 .rol-btn-success { background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 3px 12px rgba(16,185,129,.3); }
@@ -76,32 +76,32 @@ body{font-family:var(--rol-font);}
     padding:14px 20px; border-bottom:1px solid var(--rol-border);
     background:var(--rol-surface); display:flex; align-items:center; justify-content:space-between;
 }
-.rol-card-header h5 { font-size:14px; font-weight:700; color:var(--rol-primary); margin:0; }
+.rol-card-header h5 { font-size:0.875rem; font-weight:700; color:var(--rol-primary); margin:0; }
 .rol-card-body { padding:18px 20px; }
 
 /* ── Permission list (sidebar) ───────────────────── */
 .perm-list-item {
     display:flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:8px; font-size:12.5px; font-weight:500;
+    padding:8px 12px; border-radius:8px; font-size:0.7812rem; font-weight:500;
     color:var(--rol-primary); transition:background .12s; margin-bottom:2px;
 }
 .perm-list-item:hover { background:#f0f4ff; }
-.perm-list-item i { color:var(--rol-accent); font-size:13px; flex-shrink:0; }
+.perm-list-item i { color:var(--rol-accent); font-size:0.8125rem; flex-shrink:0; }
 
 .edit-role-btn {
     width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
     background:#f0f4ff; color:var(--rol-accent); border:1.5px solid #c7d2fe;
-    border-radius:9px; padding:9px; font-size:13px; font-weight:600;
+    border-radius:9px; padding:9px; font-size:0.8125rem; font-weight:600;
     cursor:pointer; transition:all .15s; margin-bottom:16px;
     font-family:var(--rol-font);
 }
 .edit-role-btn:hover { background:var(--rol-accent); color:#fff; }
 
 /* ── Users table ─────────────────────────────────── */
-#usersDataTable { font-size:13px; }
+#usersDataTable { font-size:0.8125rem; }
 #usersDataTable thead th {
     background:var(--rol-primary); color:#fff; padding:11px 16px;
-    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+    font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
     white-space:nowrap; border:none;
 }
 #usersDataTable tbody td {
@@ -115,7 +115,7 @@ body{font-family:var(--rol-font);}
     width:34px; height:34px; border-radius:50%;
     background:linear-gradient(135deg,var(--rol-accent) 0%,var(--rol-accent2) 100%);
     display:inline-flex; align-items:center; justify-content:center;
-    font-size:12px; font-weight:700; color:#fff;
+    font-size:0.75rem; font-weight:700; color:#fff;
     border:2px solid var(--rol-border); flex-shrink:0;
 }
 
@@ -126,7 +126,7 @@ body{font-family:var(--rol-font);}
     display:inline-flex; align-items:center; justify-content:center;
     width:30px; height:30px; border-radius:7px;
     background:#fef2f2; color:#dc2626; border:none; cursor:pointer;
-    font-size:13px; transition:all .18s;
+    font-size:0.8125rem; transition:all .18s;
 }
 .remove-user-btn:hover { background:#dc2626; color:#fff; transform:scale(1.1); }
 
@@ -140,8 +140,8 @@ body{font-family:var(--rol-font);}
 .user-card-sel:hover { border-color:var(--rol-accent); background:#f5f3ff; transform:translateY(-2px); box-shadow:0 4px 12px rgba(99,102,241,.1); }
 .user-card-sel.selected { border-color:var(--rol-accent); background:#f0f4ff; }
 .user-card-sel .ucs-info { flex:1; min-width:0; }
-.user-card-sel .ucs-name { font-size:13px; font-weight:700; color:var(--rol-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.user-card-sel .ucs-meta { font-size:11px; color:var(--rol-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-card-sel .ucs-name { font-size:0.8125rem; font-weight:700; color:var(--rol-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-card-sel .ucs-meta { font-size:0.6875rem; color:var(--rol-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .user-card-sel .ucs-check { flex-shrink:0; }
 .user-card-sel .ucs-check input { width:16px; height:16px; accent-color:var(--rol-accent); cursor:pointer; }
 
@@ -177,20 +177,20 @@ body{font-family:var(--rol-font);}
     background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 60%,#312e81 100%);
     padding:20px 24px; border:none;
 }
-.rol-modal .modal-title { color:#fff; font-weight:700; font-size:16px; }
+.rol-modal .modal-title { color:#fff; font-weight:700; font-size:1rem; }
 .rol-modal .modal-header .btn-close { filter:invert(1); opacity:.8; }
 .rol-modal .modal-body  { padding:22px 24px; }
 .rol-modal .modal-footer { padding:14px 24px; border-top:1px solid var(--rol-border); background:var(--rol-surface2); }
 
-.rol-form-label { font-size:11.5px; font-weight:700; color:var(--rol-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block; }
-.rol-form-control { border:1.5px solid var(--rol-border); border-radius:9px; padding:9px 13px; font-size:13px; font-family:var(--rol-font); width:100%; transition:border-color .2s,box-shadow .2s; }
+.rol-form-label { font-size:0.7188rem; font-weight:700; color:var(--rol-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block; }
+.rol-form-control { border:1.5px solid var(--rol-border); border-radius:9px; padding:9px 13px; font-size:0.8125rem; font-family:var(--rol-font); width:100%; transition:border-color .2s,box-shadow .2s; }
 .rol-form-control:focus { border-color:var(--rol-accent); box-shadow:0 0 0 3px rgba(99,102,241,.12); outline:none; }
 
 /* ── Permission table (edit modal) ──────────────── */
 .perm-table { width:100%; border-collapse:separate; border-spacing:0; }
 .perm-table thead th {
     background:var(--rol-primary); color:#fff; padding:10px 14px;
-    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+    font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -198,8 +198,8 @@ body{font-family:var(--rol-font);}
 .perm-table thead th:first-child { border-radius:8px 0 0 0; }
 .perm-table thead th:last-child  { border-radius:0 8px 0 0; }
 .perm-table tbody tr:hover td { background:#f5f3ff; }
-.perm-table tbody td { padding:8px 14px; border-bottom:1px solid #f1f5f9; font-size:13px; vertical-align:middle; }
-.perm-table .perm-group { font-weight:700; color:var(--rol-primary); font-size:12.5px; }
+.perm-table tbody td { padding:8px 14px; border-bottom:1px solid #f1f5f9; font-size:0.8125rem; vertical-align:middle; }
+.perm-table .perm-group { font-weight:700; color:var(--rol-primary); font-size:0.7812rem; }
 .perm-check { accent-color:var(--rol-accent); width:15px; height:15px; cursor:pointer; }
 
 /* Responsive table handling */
@@ -222,7 +222,7 @@ body{font-family:var(--rol-font);}
 .rol-nav-tabs { border-bottom:2px solid var(--rol-border); margin-bottom:16px; display:flex; gap:4px; }
 .rol-nav-tabs .nav-link {
     border:none; background:none; color:var(--rol-muted);
-    font-size:13px; font-weight:600; padding:10px 16px; border-radius:8px 8px 0 0;
+    font-size:0.8125rem; font-weight:600; padding:10px 16px; border-radius:8px 8px 0 0;
     cursor:pointer; transition:all .15s; font-family:var(--rol-font);
     position:relative; display:flex; align-items:center; gap:6px;
 }
@@ -238,22 +238,22 @@ body{font-family:var(--rol-font);}
     width:70px; height:70px; border-radius:50%;
     background:#fef2f2; border:3px solid #fecaca;
     display:flex; align-items:center; justify-content:center;
-    font-size:30px; color:var(--rol-danger); margin:0 auto 16px;
+    font-size:1.875rem; color:var(--rol-danger); margin:0 auto 16px;
     animation:pulse 1.5s ease infinite;
 }
 
 /* ── DataTable overrides ─────────────────────────── */
 .dataTables_wrapper .dataTables_filter input {
     border:1.5px solid var(--rol-border); border-radius:9px; padding:7px 14px;
-    font-size:13px; margin-left:8px; font-family:var(--rol-font);
+    font-size:0.8125rem; margin-left:8px; font-family:var(--rol-font);
 }
 .dataTables_wrapper .dataTables_filter input:focus {
     border-color:var(--rol-accent); outline:none;
     box-shadow:0 0 0 3px rgba(99,102,241,.1);
 }
-.dataTables_wrapper .dataTables_info { font-size:12px; color:var(--rol-muted); }
+.dataTables_wrapper .dataTables_info { font-size:0.75rem; color:var(--rol-muted); }
 .dataTables_wrapper .dataTables_paginate .paginate_button {
-    border-radius:7px !important; font-size:13px !important; padding:4px 10px !important;
+    border-radius:7px !important; font-size:0.8125rem !important; padding:4px 10px !important;
 }
 .dataTables_wrapper .dataTables_paginate .paginate_button.current,
 .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
@@ -261,7 +261,7 @@ body{font-family:var(--rol-font);}
 }
 
 /* ── Info banner ─────────────────────────────────── */
-.rol-info-banner { background:#eff6ff; border:1px solid #bfdbfe; border-radius:9px; padding:10px 14px; font-size:12.5px; color:#1d4ed8; margin-bottom:14px; }
+.rol-info-banner { background:#eff6ff; border:1px solid #bfdbfe; border-radius:9px; padding:10px 14px; font-size:0.7812rem; color:#1d4ed8; margin-bottom:14px; }
 
 /* Sticky permission header */
 .permission-section-header {
@@ -296,13 +296,13 @@ body{font-family:var(--rol-font);}
 
     {{-- Alerts --}}
     @if ($errors->any())
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#b91c1c;">
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:0.8125rem;color:#b91c1c;">
         <strong>Whoops!</strong>
         <ul class="mb-0 mt-1">@foreach($errors->all() as $e)<li>{{$e}}</li>@endforeach</ul>
     </div>
     @endif
     @if (session('success') || session('status'))
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#16a34a;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:0.8125rem;color:#16a34a;">
         <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') ?? session('status') }}
     </div>
     @endif
@@ -314,7 +314,7 @@ body{font-family:var(--rol-font);}
             <div class="rol-card">
                 <div class="rol-card-header">
                     <h5><i class="bi bi-key-fill me-2" style="color:var(--rol-accent)"></i>Permissions</h5>
-                    <span style="background:#f0f4ff;color:var(--rol-accent);border:1px solid #c7d2fe;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
+                    <span style="background:#f0f4ff;color:var(--rol-accent);border:1px solid #c7d2fe;border-radius:20px;padding:2px 10px;font-size:0.6875rem;font-weight:700;">
                         {{ $rolePermissions->count() }}
                     </span>
                 </div>
@@ -325,10 +325,10 @@ body{font-family:var(--rol-font);}
                     @forelse($rolePermissions as $rm)
                     <div class="perm-list-item">
                         <i class="bi bi-check-circle-fill"></i>
-                        <span>{{ $rm->name }}<small class="d-block text-muted" style="font-size:11px;font-weight:400;line-height:1.35">{{ \App\Support\PermissionMeta::for($rm->name)['desc'] }}</small></span>
+                        <span>{{ $rm->name }}<small class="d-block text-muted" style="font-size:0.6875rem;font-weight:400;line-height:1.35">{{ \App\Support\PermissionMeta::for($rm->name)['desc'] }}</small></span>
                     </div>
                     @empty
-                    <p style="font-size:13px;color:var(--rol-muted);text-align:center;padding:20px 0;">No permissions assigned</p>
+                    <p style="font-size:0.8125rem;color:var(--rol-muted);text-align:center;padding:20px 0;">No permissions assigned</p>
                     @endforelse
                 </div>
             </div>
@@ -342,13 +342,13 @@ body{font-family:var(--rol-font);}
                         <i class="bi bi-people-fill me-2" style="color:var(--rol-accent)"></i>
                         Assigned Users
                         <span id="totalUsersCount"
-                              style="background:var(--rol-accent);color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-left:6px;">
+                              style="background:var(--rol-accent);color:#fff;border-radius:20px;padding:2px 10px;font-size:0.6875rem;font-weight:700;margin-left:6px;">
                             {{ $userRoleCount }}
                         </span>
                     </h5>
                     @can('Remove users from roles')
                     <button type="button" class="rol-btn rol-btn-danger" id="bulkRemoveBtn"
-                            style="display:none;padding:7px 14px;font-size:12.5px;">
+                            style="display:none;padding:7px 14px;font-size:0.7812rem;">
                         <i class="bi bi-person-x-fill"></i> Remove Selected
                     </button>
                     @endcan
@@ -383,12 +383,12 @@ body{font-family:var(--rol-font);}
                                     </td>
                                     <td><div class="usr-avatar-sm">{{ $initials }}</div></td>
                                     <td>
-                                        <span style="font-weight:600;font-size:13.5px;color:var(--rol-primary);">
+                                        <span style="font-weight:600;font-size:0.8438rem;color:var(--rol-primary);">
                                             {{ $u->username }}
                                         </span>
                                     </td>
-                                    <td style="font-size:12px;color:var(--rol-muted);">{{ $u->email }}</td>
-                                    <td style="font-size:12px;color:var(--rol-muted);">
+                                    <td style="font-size:0.75rem;color:var(--rol-muted);">{{ $u->email }}</td>
+                                    <td style="font-size:0.75rem;color:var(--rol-muted);">
                                         {{ \Carbon\Carbon::parse($u->created_at)->format('d M Y') }}
                                     </td>
                                     @can('Remove users from roles')
@@ -421,7 +421,7 @@ body{font-family:var(--rol-font);}
                 <div class="modal-body" style="padding:36px 28px;text-align:center;">
                     <div class="del-icon-wrap"><i class="bi bi-person-x-fill"></i></div>
                     <h4 style="font-weight:800;color:var(--rol-primary);margin-bottom:8px;">Remove User?</h4>
-                    <p id="singleDeleteMessage" style="color:var(--rol-muted);font-size:14px;">
+                    <p id="singleDeleteMessage" style="color:var(--rol-muted);font-size:0.875rem;">
                         Remove this user from the role?
                     </p>
                     <div class="d-flex gap-2 justify-content-center mt-4">
@@ -444,8 +444,8 @@ body{font-family:var(--rol-font);}
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="del-icon-wrap" style="width:56px;height:56px;font-size:24px;"><i class="bi bi-people-fill"></i></div>
-                    <p style="text-align:center;color:var(--rol-muted);font-size:13.5px;margin-bottom:12px;">
+                    <div class="del-icon-wrap" style="width:56px;height:56px;font-size:1.5rem;"><i class="bi bi-people-fill"></i></div>
+                    <p style="text-align:center;color:var(--rol-muted);font-size:0.8438rem;margin-bottom:12px;">
                         Remove <strong id="selectedCount">0</strong> user(s) from <strong>{{ $role->name }}</strong>?
                     </p>
                     <div id="selectedUsersList" style="max-height:160px;overflow-y:auto;background:#f8fafc;border-radius:9px;padding:10px;"></div>
@@ -483,8 +483,8 @@ body{font-family:var(--rol-font);}
                             {{-- STAFF --}}
                             <div class="tab-pane fade show active" id="staff-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span style="font-size:12px;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;">Users</span>
-                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--rol-accent);">
+                                    <span style="font-size:0.75rem;font-weight:700;color:var(--rol-muted);text-transform:uppercase;letter-spacing:.5px;">Users</span>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.7812rem;font-weight:600;color:var(--rol-accent);">
                                         <input type="checkbox" class="rol-checkbox" id="select-all-staff">
                                         Select All
                                     </label>
@@ -563,7 +563,7 @@ body{font-family:var(--rol-font);}
                         </div>
 
                         <label class="rol-form-label mb-2">Permissions Assignment</label>
-                        <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:9px;padding:8px 12px;font-size:12px;color:#3730a3;margin-bottom:12px;">
+                        <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:9px;padding:8px 12px;font-size:0.75rem;color:#3730a3;margin-bottom:12px;">
                             <i class="bi bi-info-circle-fill me-1"></i> Tick the permissions for this role. A group's checkbox selects everything under it at once; hover a permission to read what it does.
                         </div>
 
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function () {
         listEl.innerHTML = '';
         checked.forEach(cb => {
             const d = document.createElement('div');
-            d.style = 'padding:5px 8px;background:#fff;border-radius:7px;margin-bottom:4px;font-size:12.5px;display:flex;align-items:center;gap:6px;';
+            d.style = 'padding:5px 8px;background:#fff;border-radius:7px;margin-bottom:4px;font-size:0.7812rem;display:flex;align-items:center;gap:6px;';
             d.innerHTML = `<i class="bi bi-person-fill" style="color:var(--rol-accent)"></i>${cb.dataset.userName}`;
             listEl.appendChild(d);
         });

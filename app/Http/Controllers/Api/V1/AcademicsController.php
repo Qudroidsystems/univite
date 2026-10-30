@@ -26,7 +26,17 @@ class AcademicsController extends ApiController
             return response()->json(['message' => $reason, 'code' => 'fees_access', 'data' => $this->fees->standing($this->student($request))->toArray()], 403);
         }
 
-        return $this->ok(ApiTranscript::from($this->results->transcript($this->student($request)))->toArray());
+        $student = $this->student($request);
+
+        return $this->ok(ApiTranscript::from($this->results->transcript($student))->toArray(), array_filter(['owing' => $this->owing($student)]));
+    }
+
+    /** What the student owes, when the school or their department wants them reminded; null otherwise. */
+    private function owing(\App\Models\Student $student): ?array
+    {
+        $standing = $this->fees->standing($student);
+
+        return $standing->remindOwing() ? ['amount' => $standing->owing(), 'arrears' => $standing->arrears, 'note' => $standing->owingNote] : null;
     }
 
     /** GET /api/v1/courses: this semester's course form (if any), whether registration is open, and earlier forms. */
@@ -39,6 +49,7 @@ class AcademicsController extends ApiController
 
         return $this->ok([
             'term' => $ctx?->label(),
+            'owing' => $this->owing($student),
             'can_register' => $ctx !== null && $this->registration->blockers($student, $ctx) === [],
             'blockers' => $ctx ? $this->registration->blockers($student, $ctx) : ['No semester is running right now.'],
             'current' => $current ? ApiRegistrationForm::from($current)->toArray() : null,

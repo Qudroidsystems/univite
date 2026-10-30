@@ -14,7 +14,7 @@
     .uv-rule { display: grid; grid-template-columns: minmax(220px, 1.4fr) auto minmax(220px, 1fr); gap: 14px; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--tb-border-color, #e9ebec); transition: background .2s; }
     .uv-rule:last-child { border-bottom: 0; }
     .uv-rule.is-own { background: rgba(37, 99, 235, .05); }
-    .uv-rule .uv-from { font-size: 12px; color: var(--tb-secondary-color, #878a99); }
+    .uv-rule .uv-from { font-size: 0.75rem; color: var(--tb-secondary-color, #878a99); }
     .uv-rule.is-own .uv-from { color: var(--tb-primary, #2563eb); }
     .uv-rule .uv-ctl { transition: opacity .2s; }
     .uv-rule:not(.is-own) .uv-ctl { opacity: .45; pointer-events: none; }

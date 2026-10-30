@@ -30,11 +30,11 @@
     .uv-scores .uv-grade { transition: transform .25s ease; display: inline-block; }
     .uv-scores .uv-grade.uv-pop { transform: scale(1.25); }
     .uv-scores input.is-over { border-color: var(--tb-danger, #f06548); box-shadow: 0 0 0 .15rem rgba(240,101,72,.2); }
-    .uv-scores .uv-part-head { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+    .uv-scores .uv-part-head { font-size: 0.6875rem; letter-spacing: .04em; text-transform: uppercase; }
     .uv-scores[data-locked] td { position: relative; }
     .uv-scores[data-locked] td input { padding-right: 24px; }
     .uv-scores input[readonly][data-lockable] { background: var(--tb-light, #f3f6f9); color: var(--tb-body-color, #212529); cursor: default; }
-    .uv-scores .uv-lock { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); border: 0; background: none; padding: 0 2px; line-height: 1; font-size: 13px; color: var(--tb-secondary-color, #878a99); cursor: pointer; transition: color .2s, transform .2s; }
+    .uv-scores .uv-lock { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); border: 0; background: none; padding: 0 2px; line-height: 1; font-size: 0.8125rem; color: var(--tb-secondary-color, #878a99); cursor: pointer; transition: color .2s, transform .2s; }
     .uv-scores .uv-lock:hover { color: var(--tb-primary, #405189); transform: translateY(-50%) scale(1.15); }
     .uv-scores td.is-unlocked .uv-lock { color: var(--tb-warning, #f7b84b); }
     .uv-scores td.is-unlocked input { border-color: var(--tb-warning, #f7b84b); box-shadow: 0 0 0 .15rem rgba(247,184,75,.2); }

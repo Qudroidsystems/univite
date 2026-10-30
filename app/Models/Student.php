@@ -13,10 +13,56 @@ class Student extends Model
         'needs_onboarding', 'offer_accepted_at', 'verified_at', 'verified_by', 'verification_note', 'cleared_at',
         'programme_id', 'academic_session_id', 'entry_mode', 'entry_level', 'current_level', 'status', 'photo',
         'graduated_at', 'degree_class', 'final_cgpa', 'olevel_override_at', 'olevel_override_by', 'olevel_override_note',
+        'jamb_reg_no', 'application_ref', 'signature', 'course_option_id', 'sub_department_id', 'entry_semester_type_id', 'current_semester_type_id',
         ...Applicant::PROFILE_FIELDS,
     ];
 
     protected $casts = ['date_of_birth' => 'date', 'needs_onboarding' => 'boolean', 'offer_accepted_at' => 'datetime', 'verified_at' => 'datetime', 'cleared_at' => 'datetime', 'graduated_at' => 'datetime', 'final_cgpa' => 'float', 'olevel_override_at' => 'datetime'];
+
+    public function courseOption(): BelongsTo
+    {
+        return $this->belongsTo(CourseOption::class);
+    }
+
+    public function subDepartment(): BelongsTo
+    {
+        return $this->belongsTo(SubDepartment::class);
+    }
+
+    public function entrySemesterType(): BelongsTo
+    {
+        return $this->belongsTo(SemesterType::class, 'entry_semester_type_id');
+    }
+
+    public function currentSemesterType(): BelongsTo
+    {
+        return $this->belongsTo(SemesterType::class, 'current_semester_type_id');
+    }
+
+    public function referees(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StudentReferee::class)->orderBy('position');
+    }
+
+    public function transfers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StudentTransfer::class)->latest('id');
+    }
+
+    public function tracks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StudentTrack::class)->latest('id');
+    }
+
+    public function deferrals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AdmissionDeferral::class)->latest('id');
+    }
+
+    public function getSignatureUrlAttribute(): ?string
+    {
+        return $this->signature ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->signature) : null;
+    }
 
     public function user(): BelongsTo
     {

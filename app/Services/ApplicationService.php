@@ -31,11 +31,12 @@ class ApplicationService
             ]);
             $applicant->update(['application_no' => sprintf('APP/%s/%04d', substr($session->name, 0, 4), $applicant->id)]);
 
-            $fee = ApplicationSettings::fee();
+            $type = $applicant->application_type_id ? \App\Models\ApplicationType::find($applicant->application_type_id) : null;
+            $fee = $type ? $type->screeningFee() : ApplicationSettings::fee();
             if ($fee > 0) {
                 $invoice = Invoice::create([
                     'kind' => 'screening', 'payable_type' => Applicant::class, 'payable_id' => $applicant->id,
-                    'academic_session_id' => $session->id, 'title' => "{$session->name} screening fee",
+                    'academic_session_id' => $session->id, 'title' => "{$session->name} " . ($type ? "{$type->name} " : '') . 'screening fee',
                     'total' => $fee, 'amount_paid' => 0, 'status' => 'unpaid',
                 ]);
                 $invoice->update(['reference' => sprintf('INV-%s-%06d', substr($session->name, 0, 4), $invoice->id)]);

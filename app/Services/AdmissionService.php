@@ -48,7 +48,7 @@ class AdmissionService
         return DB::transaction(function () use ($applicant, $batch) {
             // By default the matric number comes later, after clearance. Until then the application number is the login name.
             $atAdmission = MatricNumberGenerator::issueAt() === 'admission';
-            $matric = $atAdmission && ! MatricNumberGenerator::requiresApproval() ? $this->matric->next($applicant->programme, $applicant->session) : null;
+            $matric = $atAdmission && ! MatricNumberGenerator::requiresApproval() ? $this->matric->next($applicant->programme, $applicant->session, $applicant->entry_mode) : null;
             $chosen = $applicant->getAttributes()['password'] ?? null;   // already hashed
             $plain  = $chosen ? null : Str::password(10, symbols: false);
 
@@ -75,6 +75,9 @@ class AdmissionService
                     'entry_mode'          => $applicant->entry_mode,
                     'entry_level'         => $applicant->entry_level,
                     'current_level'       => $applicant->entry_level,
+                    'jamb_reg_no'         => $applicant->jamb_reg_no,
+                    'entry_semester_type_id' => \App\Models\SemesterType::where('is_active', true)->orderBy('sort_order')->value('id'),
+                    'current_semester_type_id' => \App\Models\SemesterType::where('is_active', true)->orderBy('sort_order')->value('id'),
                     'status'              => \App\Models\StudentStatus::defaultCode(),
                     'admission_batch'     => $batch,
                     'needs_onboarding'    => true,

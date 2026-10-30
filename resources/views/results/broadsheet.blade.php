@@ -8,7 +8,7 @@
     $badges = ['published' => 'bg-success-subtle text-success', 'approved' => 'bg-info-subtle text-info', 'submitted' => 'bg-warning-subtle text-warning', 'draft' => 'bg-secondary-subtle text-secondary'];
 @endphp
 <style>
-    @media print { @page { size: A4 landscape; margin: 8mm; } .uv-master { font-size: 9px; } .uv-master th, .uv-master td { padding: 2px 3px !important; } }
+    @media print { @page { size: A4 landscape; margin: 8mm; } .uv-master { font-size: 0.5625rem; } .uv-master th, .uv-master td { padding: 2px 3px !important; } }
     .uv-master th, .uv-master td { white-space: nowrap; }
     .uv-master .uv-group { border-left: 2px solid var(--tb-border-color-translucent, #ccc) !important; }
 </style>
@@ -123,9 +123,13 @@
                     <div class="text-muted fs-11 mt-1">NR: not registered. AR: awaiting result (registered, no score yet). C: compulsory, CE: compulsory elective, E: elective. TCP: total credit points (grade point × units). TNU: total number of units. GPA = TCP ÷ TNU. Previous: before this semester. Cumulative: including this semester.</div>
 
                     <div class="row mt-5 text-center fs-12">
-                        @foreach ($signatories as $who)
-                            <div class="col"><div class="border-top mx-4 pt-1">{{ $who }}<div class="text-muted">Name, signature and date</div></div></div>
-                        @endforeach
+                        @forelse ($signers as $who)
+                            <div class="col"><div class="border-top mx-4 pt-1"><span class="fw-semibold">{{ $who->fullName() ?: '' }}</span><div>{{ $who->position }}</div>@if ($who->address)<div class="text-muted">{{ $who->address }}</div>@endif<div class="text-muted">Signature and date</div></div></div>
+                        @empty
+                            @foreach ($signatories as $who)
+                                <div class="col"><div class="border-top mx-4 pt-1">{{ $who }}<div class="text-muted">Name, signature and date</div></div></div>
+                            @endforeach
+                        @endforelse
                     </div>
                 </div></div>
             @elseif ($q->programme || $q->level)

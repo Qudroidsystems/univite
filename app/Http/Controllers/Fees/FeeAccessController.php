@@ -114,7 +114,7 @@ class FeeAccessController extends Controller
     public function update(Request $request): RedirectResponse
     {
         abort_unless($request->user()->can('Set fee access rules'), 403);
-        $rules = ['count_loans' => ['nullable', 'boolean'], 'loan_overdue_blocks' => ['nullable', 'boolean'], 'include_arrears' => ['nullable', 'boolean']];
+        $rules = ['count_loans' => ['nullable', 'boolean'], 'loan_overdue_blocks' => ['nullable', 'boolean'], 'include_arrears' => ['nullable', 'boolean'], 'show_owing' => ['nullable', 'boolean']];
         foreach (array_keys(FeeAccess::AREAS) as $a) {
             $rules["{$a}_on"] = ['nullable', 'boolean'];
             $rules["{$a}_percent"] = ['required', 'integer', 'between:0,100'];

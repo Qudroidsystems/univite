@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AcademicSession;
+use App\Models\MatricFormat;
 use App\Models\Programme;
 use App\Models\Setting;
 use App\Models\Student;
@@ -26,6 +27,8 @@ class MatricNumberGenerator
         'FACULTY_CODE'    => 'Code of the faculty, e.g. SCI',
         'DEPARTMENT_CODE' => 'Code of the department, e.g. CSC',
         'PROGRAMME_CODE'  => 'Code of the programme, e.g. BSC-CSC',
+        'PREFIX'          => 'The prefix set on a department or category format, e.g. REL',
+        'SUFFIX'          => 'The suffix set on a format, e.g. U for UTME or D for direct entry',
         'SEQ:n'           => 'Running number padded to n digits (1 to 8), e.g. {SEQ:4} gives 0001. Required.',
     ];
 
@@ -66,7 +69,7 @@ class MatricNumberGenerator
         }
 
         preg_match_all('/\{([^}]*)\}/', $pattern, $m);
-        $known = ['YEAR', 'SHORT_YEAR', 'SESSION', 'FACULTY_CODE', 'DEPARTMENT_CODE', 'PROGRAMME_CODE'];
+        $known = ['YEAR', 'SHORT_YEAR', 'SESSION', 'FACULTY_CODE', 'DEPARTMENT_CODE', 'PROGRAMME_CODE', 'PREFIX', 'SUFFIX'];
         $seq = 0;
 
         foreach ($m[1] as $token) {
@@ -92,27 +95,43 @@ class MatricNumberGenerator
         return null;
     }
 
-    /** What the next matric number would look like (not reserved). */
-    public function preview(Programme $programme, AcademicSession $session, ?string $pattern = null): string
+    /**
+     * The format for a student of this programme and entry mode: the most specific active format under
+     * Matric Number Formats that matches, or null for the school-wide pattern.
+     */
+    public function formatFor(Programme $programme, ?string $entryMode = null): ?MatricFormat
     {
-        [$prefixKey, $width] = $this->resolve($pattern ?? self::pattern(), $programme, $session);
+        return MatricFormat::where('is_active', true)->get()
+            ->filter(fn (MatricFormat $f) => $f->matches($programme, $entryMode))
+            ->sortByDesc(fn (MatricFormat $f) => $f->weight())->first();
+    }
 
-        return $this->format($prefixKey, $this->lastNumberFor($prefixKey) + 1, $width);
+    /** What the next matric number would look like (not reserved). */
+    public function preview(Programme $programme, AcademicSession $session, ?string $pattern = null, ?string $entryMode = null): string
+    {
+        $format = $pattern === null ? $this->formatFor($programme, $entryMode) : null;
+        [$prefixKey, $width] = $this->resolve($pattern ?? $format?->pattern ?? self::pattern(), $programme, $session, $format);
+
+        return $this->format($prefixKey, max($this->lastNumberFor($prefixKey), ($format?->serial_from ?? 1) - 1) + 1, $width);
     }
 
     /** Reserve and return the next matric number. Safe against two admissions at once. */
-    public function next(Programme $programme, AcademicSession $session): string
+    public function next(Programme $programme, AcademicSession $session, ?string $entryMode = null): string
     {
-        [$prefixKey, $width] = $this->resolve(self::pattern(), $programme, $session);
+        $format = $this->formatFor($programme, $entryMode);
+        [$prefixKey, $width] = $this->resolve($format?->pattern ?? self::pattern(), $programme, $session, $format);
 
-        return DB::transaction(function () use ($prefixKey, $width) {
+        return DB::transaction(function () use ($prefixKey, $width, $format) {
             $row = DB::table('matric_sequences')->where('key', $prefixKey)->lockForUpdate()->first();
-            $number = $row ? $row->last_number : $this->highestExisting($prefixKey, $width);
+            $number = max($row ? $row->last_number : $this->highestExisting($prefixKey, $width), ($format?->serial_from ?? 1) - 1);
 
             do {
                 $number++;
                 $matric = $this->format($prefixKey, $number, $width);
             } while ($this->taken($matric));
+            if ($format?->serial_to && $number > $format->serial_to) {
+                throw new \RuntimeException("The matric number range for \"{$format->name}\" ends at {$format->serial_to}. Raise it under Matric Number Formats.");
+            }
 
             DB::table('matric_sequences')->updateOrInsert(
                 ['key' => $prefixKey],
@@ -145,8 +164,9 @@ class MatricNumberGenerator
         $planned = [];
         foreach ($students as $student) {
             $student->loadMissing('programme.department.faculty', 'entrySession');
-            [$prefixKey, $width] = $this->resolve(self::pattern(), $student->programme, $student->entrySession);
-            $number = $counters[$prefixKey] ??= (DB::table('matric_sequences')->where('key', $prefixKey)->value('last_number') ?? $this->highestExisting($prefixKey, $width));
+            $format = $this->formatFor($student->programme, $student->entry_mode);
+            [$prefixKey, $width] = $this->resolve($format?->pattern ?? self::pattern(), $student->programme, $student->entrySession, $format);
+            $number = $counters[$prefixKey] ??= max(DB::table('matric_sequences')->where('key', $prefixKey)->value('last_number') ?? $this->highestExisting($prefixKey, $width), ($format?->serial_from ?? 1) - 1);
             do {
                 $number++;
                 $matric = $this->format($prefixKey, $number, $width);
@@ -165,7 +185,8 @@ class MatricNumberGenerator
     public function rewind(Student $student): void
     {
         $student->loadMissing('programme.department.faculty', 'entrySession');
-        [$prefixKey, $width] = $this->resolve(self::pattern(), $student->programme, $student->entrySession);
+        $format = $this->formatFor($student->programme, $student->entry_mode);
+        [$prefixKey, $width] = $this->resolve($format?->pattern ?? self::pattern(), $student->programme, $student->entrySession, $format);
 
         $highest = $this->highestExisting($prefixKey, $width);
         $regex = '/^' . str_replace('\\{SEQ\\}', '(\\d+)', preg_quote($prefixKey, '/')) . '$/';
@@ -188,7 +209,8 @@ class MatricNumberGenerator
     {
         $out = [];
         foreach (Programme::with('department.faculty')->where('is_active', true)->orderBy('name')->get() as $programme) {
-            [$prefixKey, $width] = $this->resolve(self::pattern(), $programme, $session);
+            $format = $this->formatFor($programme);
+            [$prefixKey, $width] = $this->resolve($format?->pattern ?? self::pattern(), $programme, $session, $format);
             if (isset($out[$prefixKey])) {
                 $out[$prefixKey]['programmes'][] = $programme->name;
                 continue;
@@ -229,7 +251,7 @@ class MatricNumberGenerator
     }
 
     /** @return array{0: string, 1: int} the pattern with every token filled except {SEQ}, and the SEQ width */
-    private function resolve(string $pattern, Programme $programme, AcademicSession $session): array
+    private function resolve(string $pattern, Programme $programme, AcademicSession $session, ?MatricFormat $format = null): array
     {
         $programme->loadMissing('department.faculty');
         $year = substr($session->name, 0, 4);
@@ -241,6 +263,8 @@ class MatricNumberGenerator
             '{FACULTY_CODE}'    => $programme->department->faculty->code,
             '{DEPARTMENT_CODE}' => $programme->department->code,
             '{PROGRAMME_CODE}'  => $programme->code,
+            '{PREFIX}'          => (string) $format?->prefix,
+            '{SUFFIX}'          => (string) $format?->suffix,
         ];
 
         preg_match('/\{SEQ:(\d)\}/', $pattern, $m);

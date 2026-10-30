@@ -70,13 +70,24 @@
                 <div class="col-lg-4">
                     @if ($applicant->status !== 'admitted' && ($canAdmit || $canReject))
                         <div class="card"><div class="card-body d-grid gap-2">
+                            @if (($canAdmit && in_array($applicant->status, ['pending', 'rejected'])) || ($canReject && $applicant->status === 'pending'))
+                                <label class="form-label mb-0" for="decision-message">Message to the applicant <span class="text-muted fs-12">(optional, shown on their application page)</span></label>
+                                <textarea id="decision-message" class="form-control" rows="2" maxlength="1000" placeholder="e.g. Report for screening of documents on 4 November.">{{ $applicant->decision_message }}</textarea>
+                            @endif
                             @if ($canAdmit && in_array($applicant->status, ['pending', 'rejected']))
-                                <form method="POST" action="{{ route('applicants.admit', $applicant->id) }}">@csrf<button class="btn btn-success w-100"><i class="ri-user-follow-line me-1"></i>Admit applicant</button></form>
+                                <form method="POST" action="{{ route('applicants.admit', $applicant->id) }}" class="uv-decision">@csrf<input type="hidden" name="message"><button class="btn btn-success w-100"><i class="ri-user-follow-line me-1"></i>Admit applicant</button></form>
                             @endif
                             @if ($canReject && $applicant->status === 'pending')
-                                <form method="POST" action="{{ route('applicants.reject', $applicant->id) }}" onsubmit="return confirm('Reject this application?')">@csrf<button class="btn btn-soft-danger w-100">Reject application</button></form>
+                                <form method="POST" action="{{ route('applicants.reject', $applicant->id) }}" class="uv-decision" onsubmit="return confirm('Reject this application?')">@csrf<input type="hidden" name="message"><button class="btn btn-soft-danger w-100">Reject application</button></form>
                             @endif
+                            <script>document.querySelectorAll('.uv-decision').forEach(f => f.addEventListener('submit', () => { f.querySelector('[name=message]').value = document.getElementById('decision-message')?.value || ''; }));</script>
                             @if ($applicant->status === 'draft')<div class="text-muted fs-12">Not submitted yet, so it cannot be admitted.</div>@endif
+                        </div></div>
+                    @endif
+                    @if ($applicant->decided_at && in_array($applicant->status, ['admitted', 'rejected']))
+                        <div class="card"><div class="card-body fs-13">
+                            <div class="fw-semibold">{{ $applicant->status === 'admitted' ? 'Admitted' : 'Rejected' }} {{ $applicant->decided_at->format('j M Y, g:i A') }}@if ($applicant->decider) by {{ $applicant->decider->name }}@endif</div>
+                            @if ($applicant->decision_message)<div class="text-muted mt-1" style="white-space:pre-line">{{ $applicant->decision_message }}</div>@endif
                         </div></div>
                     @endif
                     @if ($applicant->student)

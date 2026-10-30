@@ -52,6 +52,15 @@
                                     @error('photo') <div class="text-danger fs-12 mt-1">{{ $message }}</div> @enderror
                                 </form>
                             @endif
+                            <div class="mt-3 text-start">
+                                <div class="fs-12 text-muted mb-1">Signature</div>
+                                @if ($student->signature_url)<img src="{{ $student->signature_url }}" alt="Signature" class="border rounded bg-white p-1" style="max-height:60px;max-width:100%;">@else<span class="text-muted fs-13">None yet</span>@endif
+                                @if ($canEdit)
+                                    <form method="POST" action="{{ route('students.signature', $student->id) }}" enctype="multipart/form-data" class="mt-2">@csrf
+                                        <div class="input-group input-group-sm"><input type="file" name="signature" class="form-control" accept="image/png,image/jpeg" required><button class="btn btn-soft-primary">Upload</button></div>
+                                    </form>
+                                @endif
+                            </div>
                         </div>
                     </div>
 
@@ -72,6 +81,8 @@
                             </div>
                         </div>
                     @endif
+
+                    @include('students.partials.record-actions')
 
                     @can('View student results')
                         <a href="{{ route('students.transcript', $student->id) }}" class="btn btn-soft-primary w-100 mb-3"><i class="ri-award-line me-1"></i>Results &amp; transcript</a>
@@ -100,7 +111,10 @@
                             {!! $row('Entry mode', \App\Models\EntryMode::label($student->entry_mode)) !!}
                             {!! $row('Entry level', $student->entry_level . ' Level') !!}
                             {!! $row('Current level', $student->current_level . ' Level') !!}
-                            {!! $row('Application no.', $student->applicant?->application_no) !!}
+                            {!! $row('Course option', $student->courseOption?->name) !!}
+                            {!! $row('Sub-department', $student->subDepartment?->name) !!}
+                            @if ($settings->on('show_jamb')){!! $row('JAMB registration no.', $student->jamb_reg_no) !!}@endif
+                            {!! $row('Application no.', $student->applicant?->application_no ?? $student->application_ref) !!}
                         </ul>
                     </div>
 
@@ -114,6 +128,10 @@
                             {!! $row('Nationality', $student->nationality) !!}
                             {!! $row('State of origin', $student->state_of_origin) !!}
                             {!! $row('Local government area', $student->lga) !!}
+                            @if ($settings->on('show_nin')){!! $row('NIN', $student->nin) !!}@endif
+                            {!! $row('Religion', $student->religion ? \App\Support\Lookups::label('religion', $student->religion) : null) !!}
+                            {!! $row('Marital status', $student->marital_status ? \App\Support\Lookups::label('marital_status', $student->marital_status) : null) !!}
+                            {!! $row('Blood group / genotype', trim(($student->blood_group ?? '') . ' ' . ($student->genotype ? '· ' . $student->genotype : ''), ' ·') ?: null) !!}
                             {!! $row('Home address', $student->address) !!}
                             {!! $row('Last sign-in', $student->user->last_login_at?->format('d M Y, H:i') ?? 'Never') !!}
                         </ul>
@@ -126,8 +144,35 @@
                             {!! $row('Relationship', $student->guardian_relationship) !!}
                             {!! $row('Phone', $student->guardian_phone) !!}
                             {!! $row('Address', $student->guardian_address) !!}
+                            {!! $row('Email', $student->next_of_kin_email) !!}
                         </ul>
                     </div>
+
+                    @include('students.partials.referees', ['canEdit' => $canEdit])
+
+                    @if ($student->tracks->isNotEmpty())
+                        <div class="card">
+                            <div class="card-header"><h6 class="card-title mb-0">Semester by semester</h6></div>
+                            <div class="table-responsive"><table class="table table-sm mb-0">
+                                <thead class="table-light"><tr><th>Session</th><th>Semester</th><th>Level</th><th>Semester / cumulative</th><th></th></tr></thead>
+                                <tbody>@foreach ($student->tracks as $t)<tr><td>{{ $t->session?->name }}</td><td>{{ $t->semesterType?->name }}</td><td>{{ $t->level }}</td><td>{{ $t->semester_remark ?? '—' }}@if ($t->cumulative_remark) / {{ $t->cumulative_remark }}@endif</td><td>@if ($t->status === 'active')<span class="badge bg-primary-subtle text-primary">Now</span>@endif</td></tr>@endforeach</tbody>
+                            </table></div>
+                        </div>
+                    @endif
+
+                    @if ($student->transfers->isNotEmpty() || $student->deferrals->isNotEmpty())
+                        <div class="card">
+                            <div class="card-header"><h6 class="card-title mb-0">Transfers and deferrals</h6></div>
+                            <ul class="list-group list-group-flush">
+                                @foreach ($student->transfers as $t)
+                                    <li class="list-group-item fs-13"><i class="ri-arrow-left-right-line text-primary me-1"></i>{{ $t->created_at->format('d M Y') }}: moved from <strong>{{ $t->fromProgramme?->name }}</strong> ({{ $t->from_level }}) to <strong>{{ $t->toProgramme?->name }}</strong> ({{ $t->to_level }}) by {{ $t->by?->name }}. <span class="text-muted">{{ $t->reason }}</span></li>
+                                @endforeach
+                                @foreach ($student->deferrals as $d)
+                                    <li class="list-group-item fs-13"><i class="ri-time-line text-info me-1"></i>{{ $d->created_at->format('d M Y') }}: deferred to {{ $d->toSession?->name }} ({{ $d->status }}). <span class="text-muted">{{ $d->reason }}</span></li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     @include('partials.custom-field-display', ['cfTarget' => 'student', 'cfSubject' => $student])
 

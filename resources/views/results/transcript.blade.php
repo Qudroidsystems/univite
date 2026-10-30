@@ -4,6 +4,7 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid" style="max-width:880px">
+            @if ($mine)<div class="d-print-none"><x-owing-notice :student="$student" /></div>@endif
             <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
                 <h4 class="mb-0">{{ $mine ? 'My results' : 'Transcript' }}</h4>
                 <div class="d-flex gap-2"><a href="{{ $mine ? route('dashboard') : route('students.show', $student->id) }}" class="btn btn-light">Back</a><button class="btn btn-primary" onclick="window.print()"><i class="ri-printer-line me-1"></i>Print</button></div>

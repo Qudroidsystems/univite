@@ -40,6 +40,7 @@ class FeeAccess
         'fee_access.count_loans' => '1',          // a school loan paid onto the invoice counts as fees paid
         'fee_access.loan_overdue_blocks' => '1',  // an overdue loan repayment bars every area that is switched on
         'fee_access.include_arrears' => '0',      // money still owed from earlier sessions bars every area that is switched on
+        'fee_access.show_owing' => '0',           // remind every student who owes of the amount (results, registration, dashboard, app)
     ];
 
     /** @var array<string, FeeStanding> */
@@ -127,11 +128,13 @@ class FeeAccess
         $overdue = round((float) StudentLoan::where('student_id', $student->id)->where('status', 'disbursed')->get()->sum(fn ($l) => $l->overdue()), 2);
         $overrides = $session ? FeeAccessOverride::where('student_id', $student->id)->where('academic_session_id', $session->id)->get()->filter->inForce()->keyBy('area') : collect();
         $billed = $total > 0;
+        $student->loadMissing('programme');
+        $rule = \App\Models\DepartmentFeeRule::forStudent($student);
 
         $areas = [];
         foreach (self::AREAS as $area => [$label, $verb]) {
             $needed = self::areaOn($area) ? self::percentFor($area) : null;
-            $reason = null;
+            $reason = $override = null;
             if ($needed !== null && $billed) {
                 if ($percent + 0.001 < $needed) {
                     $reason = "You have paid {$this->pct($percent)}% of your {$session->name} fees; {$needed}% is needed to {$verb}.";
@@ -141,8 +144,12 @@ class FeeAccess
                     $reason = 'A school loan repayment of ' . number_format($overdue, 2) . " is overdue. Pay it to {$verb}.";
                 }
             }
+            if ($area === 'registration' && $rule?->register_without_paying && $reason !== null) {
+                $reason = null;
+                $override = 'Your department lets you register before paying.';
+            }
             $o = $overrides->get($area);
-            $override = null;
+            $override ??= null;
             if ($o) {
                 $override = ($o->allow ? 'Allowed by the school: ' : 'Barred by the school: ') . $o->reason;
                 $reason = $o->allow ? null : 'The school has stopped you from doing this for now: ' . $o->reason;
@@ -150,7 +157,10 @@ class FeeAccess
             $areas[$area] = ['allowed' => $reason === null, 'reason' => $reason, 'needed' => $needed, 'override' => $override];
         }
 
-        return new FeeStanding($session?->name, $total, $paid, $loan, $percent, $arrears, $overdue, $billed, $areas);
+        $showOwing = self::on('show_owing') || ($rule?->show_owing ?? false);
+        $note = $rule?->register_without_paying ? ($rule->note ?: 'Your department lets you register courses before paying. Please clear what you owe.') : null;
+
+        return new FeeStanding($session?->name, $total, $paid, $loan, $percent, $arrears, $overdue, $billed, $areas, $showOwing, $note);
     }
 
     private function pct(float $p): string

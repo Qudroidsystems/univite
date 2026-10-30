@@ -32,7 +32,7 @@ class CurriculumController extends Controller
         $courseOptions = [];
 
         if ($programme) {
-            $entries = ProgrammeCourse::with('course.department')
+            $entries = ProgrammeCourse::with('course.department', 'courseOption')
                 ->where('programme_id', $programme->id)
                 ->get()
                 ->sortBy(fn ($e) => $e->course->code);
@@ -71,6 +71,8 @@ class CurriculumController extends Controller
             'grid'          => $grid,
             'courseOptions' => $courseOptions,
             'statuses'      => \App\Support\CourseType::options(),
+            'kinds'         => ProgrammeCourse::KINDS,
+            'options'       => $programme ? \App\Models\CourseOption::where('programme_id', $programme->id)->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all() : [],
         ]);
     }
 
@@ -98,6 +100,8 @@ class CurriculumController extends Controller
             'level'          => ['required', 'integer'],
             'semester_order' => ['required', Rule::in(array_keys(\App\Models\SemesterType::options()))],
             'status'         => ['nullable', Rule::in(array_keys(\App\Support\CourseType::options()))],
+            'kind'           => ['nullable', Rule::in(array_keys(ProgrammeCourse::KINDS))],
+            'course_option_id' => ['nullable', Rule::exists('course_options', 'id')->where('programme_id', $request->input('programme_id'))],
         ]);
 
         $programme = Programme::findOrFail($data['programme_id']);
@@ -116,7 +120,8 @@ class CurriculumController extends Controller
             // no type chosen: the course's own type in its department, or the type it is shared as
             $entry = ProgrammeCourse::firstOrCreate(
                 ['programme_id' => $programme->id, 'course_id' => $course->id],
-                ['level' => $data['level'], 'semester_order' => $data['semester_order'], 'status' => ($data['status'] ?? null) ?: \App\Support\CourseSharing::defaultType($course, $programme)]
+                ['level' => $data['level'], 'semester_order' => $data['semester_order'], 'status' => ($data['status'] ?? null) ?: \App\Support\CourseSharing::defaultType($course, $programme),
+                    'kind' => ($data['kind'] ?? null) ?: 'normal', 'course_option_id' => $data['course_option_id'] ?? null]
             );
             $added += $entry->wasRecentlyCreated ? 1 : 0;
         }
@@ -137,7 +142,11 @@ class CurriculumController extends Controller
                     $fail($why);
                 }
             }],
+            'kind'           => ['nullable', Rule::in(array_keys(ProgrammeCourse::KINDS))],
+            'course_option_id' => ['nullable', Rule::exists('course_options', 'id')->where('programme_id', $entry->programme_id)],
         ]);
+        $data['kind'] = ($data['kind'] ?? null) ?: 'normal';
+        $data['course_option_id'] = ($data['course_option_id'] ?? null) ?: null;
 
         $entry->update($data);
 

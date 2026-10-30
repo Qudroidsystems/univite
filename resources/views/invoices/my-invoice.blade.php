@@ -37,6 +37,16 @@
                             <div class="mt-2 text-muted">Pay at least ₦{{ number_format($invoice->minimumPayment(), 2) }} now to stay on schedule.</div>
                         </div>
                     @endif
+                    @php $left = $invoice->paymentsLeft(); @endphp
+                    @if ($left !== null)
+                        <div class="card-footer">
+                            @if ($left <= 1)
+                                <i class="ri-information-line me-1"></i>This must be paid in full in your next payment.
+                            @else
+                                <i class="ri-information-line me-1"></i>You can pay this in up to {{ $left }} more payments. Pay at least ₦{{ number_format($invoice->minimumPayment(), 2) }} now.
+                            @endif
+                        </div>
+                    @endif
                     @if ($state === 'open' && $invoice->closes_at)
                         <div class="card-footer text-muted">Payment closes on {{ $invoice->closes_at->format('j M Y, g:i A') }}.</div>
                     @endif

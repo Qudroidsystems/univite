@@ -145,7 +145,7 @@ class MatricBatchReversal extends BaseReversal
                 if ($correct) {
                     $student->loadMissing('programme.department.faculty', 'entrySession');
                     MatricEvent::create(['student_id' => $student->id, 'action' => 'superseded', 'matric_number' => $old, 'batch' => $event->batch, 'performed_by' => $by->id, 'note' => $reason]);
-                    $number = $generator->next($student->programme, $student->entrySession);
+                    $number = $generator->next($student->programme, $student->entrySession, $student->entry_mode);
                     $clearance->assignMatric($student, $number);
                     MatricEvent::create(['student_id' => $student->id, 'action' => 'corrected', 'matric_number' => $number, 'batch' => $code, 'performed_by' => $by->id, 'note' => "Replaces {$old}. {$reason}"]);
                     $this->audit->record($new, 'matric_corrected', $student->fresh(), ['matric_number' => $old], ['matric_number' => $number], $reason);

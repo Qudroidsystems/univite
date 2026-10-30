@@ -33,7 +33,7 @@ class CourseController extends CrudController
 
     protected function query(Request $request): Builder
     {
-        return parent::query($request)->with('department.faculty', 'studyCategory', 'semesterType', 'session', 'prerequisites')->withCount('programmeCourses')->reorder()->orderBy('code');
+        return parent::query($request)->with('department.faculty', 'studyCategory', 'semesterType', 'session', 'prerequisites', 'replaces')->withCount('programmeCourses')->reorder()->orderBy('code');
     }
 
     protected function departmentOptions(): array
@@ -155,6 +155,12 @@ class CourseController extends CrudController
                     $fail('Other departments already use this course in a way this would not allow: ' . implode(', ', $broken) . '. Change those curriculum entries first, or share the course so they stay allowed.');
                 }
             })],
+            'replaces' => ['nullable', 'array'],
+            'replaces.*' => ['integer', 'exists:courses,id', function ($attr, $value, $fail) use ($record) {
+                if ($record && (int) $value === $record->id) {
+                    $fail('A course cannot replace itself.');
+                }
+            }],
             'prerequisites' => ['nullable', function ($attr, $value, $fail) use ($record) {
                 if (is_array($value)) {
                     $ids = $this->prerequisiteIds($value);
@@ -190,6 +196,7 @@ class CourseController extends CrudController
     protected function saved(Model $record, Request $request, bool $created): void
     {
         $record->prerequisites()->sync(array_values(array_diff($this->prerequisiteIds($request->input('prerequisites')), [$record->id])));
+        $record->replaces()->sync(array_values(array_diff(array_map('intval', array_filter((array) $request->input('replaces', []))), [$record->id])));
     }
 
     protected function recordData(Model $row, array $fields): array
@@ -197,6 +204,7 @@ class CourseController extends CrudController
         return array_merge(parent::recordData($row, $fields), [
             'faculty_id' => (string) ($row->department?->faculty_id ?? ''),
             'prerequisites' => $row->prerequisites->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
+            'replaces' => $row->replaces->pluck('id')->map(fn ($id) => (string) $id)->values()->all(),
             'shared_as' => (string) ($row->shared_as ?? ''),
         ]);
     }
@@ -205,7 +213,7 @@ class CourseController extends CrudController
     {
         // "csc  101" -> "CSC 101"
         $data['code'] = strtoupper(preg_replace('/\s+/', ' ', trim($data['code'])));
-        unset($data['prerequisites'], $data['faculty_id']);
+        unset($data['prerequisites'], $data['replaces'], $data['faculty_id']);
         if (empty($data['course_type'])) {
             $data['course_type'] = $record?->course_type ?: CourseType::COMPULSORY;
         }
@@ -233,6 +241,8 @@ class CourseController extends CrudController
                 'help' => 'Whether other departments can see this course when they build their curriculum, and the type they may give it. Only a general course (GST and the like) may be compulsory in another department.'],
             ['name' => 'prerequisites', 'label' => 'Prerequisites', 'type' => 'multiselect', 'options' => $this->courseOptions(), 'col' => 12, 'exclude_self' => true,
                 'placeholder' => 'Search and tick the courses a student must pass first', 'help' => 'A student must have passed every course ticked here before registering for this course.'],
+            ['name' => 'replaces', 'label' => 'Replaces (older courses)', 'type' => 'multiselect', 'options' => $this->courseOptions(), 'col' => 12, 'exclude_self' => true,
+                'placeholder' => 'Search and tick the older courses this one takes the place of', 'help' => 'A student who failed one of these and passes this course no longer has it outstanding.'],
             ['name' => 'description', 'label' => 'Description', 'type' => 'textarea', 'col' => 12],
             ['name' => 'is_active', 'label' => 'Active', 'type' => 'switch', 'col' => 12, 'default' => true],
         ];
@@ -249,8 +259,9 @@ class CourseController extends CrudController
             ['Level', fn ($r) => $r->level ? $r->level . 'L' : '—'],
             ['Semester', fn ($r) => trim(($r->semesterType?->name ?? '—') . ($r->session ? ' · from ' . $r->session->name : ''))],
             ['Units', fn ($r) => $r->credit_units],
-            ['Prerequisites', fn ($r) => new HtmlString($r->prerequisites->isEmpty() ? '<span class="text-muted">—</span>'
-                : $r->prerequisites->map(fn ($p) => '<span class="badge bg-light text-body border me-1" title="' . e($p->title) . '">' . e($p->code) . '</span>')->implode(''))],
+            ['Prerequisites', fn ($r) => new HtmlString(($r->prerequisites->isEmpty() ? '<span class="text-muted">—</span>'
+                : $r->prerequisites->map(fn ($p) => '<span class="badge bg-light text-body border me-1" title="' . e($p->title) . '">' . e($p->code) . '</span>')->implode(''))
+                . ($r->replaces->isEmpty() ? '' : '<div class="text-muted fs-12 mt-1">Replaces ' . e($r->replaces->pluck('code')->implode(', ')) . '</div>'))],
             ['Other departments', fn ($r) => new HtmlString(($r->shared_as
                 ? '<span class="badge bg-success-subtle text-success" title="' . e(CourseSharing::options()[$r->shared_as] ?? '') . '">Shared · ' . e(CourseSharing::short($r->shared_as)) . '</span>'
                 : '<span class="badge bg-light text-muted border">Own department only</span>')

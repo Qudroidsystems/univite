@@ -14,9 +14,7 @@
     <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
     @include('partials.brand-head')
 
-    <link rel="preconnect" href="https://fonts.googleapis.com/">
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" id="fontsLink">
+    @include('partials.appearance-head')
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/bold/style.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 
@@ -33,6 +31,7 @@
     <link href="{{ asset('css/cb-ui.css') }}?v={{ @filemtime(public_path('css/cb-ui.css')) }}" rel="stylesheet">
     <link href="{{ asset('css/univite-shell.css') }}?v={{ @filemtime(public_path('css/univite-shell.css')) }}" rel="stylesheet">
     <link href="{{ asset('css/univite-forms.css') }}?v={{ @filemtime(public_path('css/univite-forms.css')) }}" rel="stylesheet">
+    <link href="{{ asset('css/univite-appearance.css') }}?v={{ @filemtime(public_path('css/univite-appearance.css')) }}" rel="stylesheet">
     {{-- Apply the saved light/dark choice before the page paints. --}}
     <script>(function(){try{var m=localStorage.getItem('uv-theme')||'light';var d=m==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m;document.documentElement.setAttribute('data-bs-theme',d);document.documentElement.setAttribute('data-topbar',d==='dark'?'dark':'light');}catch(e){}})();</script>
     {{-- The menu down the side (default) or across the top, as the person chose, on wide screens; phones keep the slide-in menu. The theme script reads data-layout from sessionStorage. --}}
@@ -95,9 +94,11 @@
                             <a href="#" class="theme-mode-item uv-pop-item" data-mode="dark"><i class="ri-moon-line"></i> Dark</a>
                             <a href="#" class="theme-mode-item uv-pop-item" data-mode="auto"><i class="ri-contrast-2-line"></i> Same as device</a>
                             <div class="border-top my-1 d-none d-lg-block"></div>
-                            <div class="px-3 pt-1 text-muted text-uppercase d-none d-lg-block" style="font-size:10px;">Menu</div>
+                            <div class="px-3 pt-1 text-muted text-uppercase d-none d-lg-block" style="font-size:0.625rem;">Menu</div>
                             <a href="#" class="uv-menu-item uv-pop-item d-none d-lg-flex" data-menu="side"><i class="ri-layout-left-line"></i> Down the side</a>
                             <a href="#" class="uv-menu-item uv-pop-item d-none d-lg-flex" data-menu="top"><i class="ri-layout-top-line"></i> Across the top</a>
+                            <div class="border-top my-1"></div>
+                            <a href="{{ route('my.appearance') }}" class="uv-pop-item"><i class="ri-font-size-2"></i> Text size & font…</a>
                         </div>
                     </div>
 
@@ -138,12 +139,13 @@
                             <div class="px-3 pt-3 pb-2"><h6 class="mb-0">Welcome back!</h6><small class="text-muted">{{ $authUser->email }}</small></div>
                             @if ($authUser->roles->isNotEmpty())
                                 <div class="px-3 pb-2 border-bottom">
-                                    <div class="text-muted text-uppercase mb-1" style="font-size:10px;">Your roles</div>
+                                    <div class="text-muted text-uppercase mb-1" style="font-size:0.625rem;">Your roles</div>
                                     <div class="d-flex flex-wrap gap-1">@foreach ($authUser->roles->pluck('name') as $roleName)<span class="uv-role-chip">{{ $roleName }}</span>@endforeach</div>
                                 </div>
                             @endif
                             <a class="uv-pop-item" href="{{ route('notifications.index') }}"><i class="ri-notification-3-line"></i>Notifications</a>
                             <a class="uv-pop-item" href="{{ route('notifications.preferences') }}"><i class="ri-notification-badge-line"></i>Notification settings</a>
+                            <a class="uv-pop-item" href="{{ route('my.appearance') }}"><i class="ri-font-size-2"></i>Display & reading</a>
                             <div class="border-top"></div>
                             <form method="POST" action="{{ route('logout') }}" data-no-ajax>@csrf
                                 <button type="submit" class="uv-pop-item text-danger w-100 border-0 bg-transparent text-start"><i class="ri-logout-box-r-line"></i>Sign out</button>

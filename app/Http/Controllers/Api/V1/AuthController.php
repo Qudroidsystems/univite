@@ -6,12 +6,13 @@ use App\Data\Api\ApiUser;
 use App\Data\Api\LoginRequestData;
 use App\Services\Api\DeviceRegistry;
 use App\Services\Api\MobileAuth;
+use App\Support\Appearance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuthController extends ApiController
 {
-    public function __construct(private MobileAuth $auth, private DeviceRegistry $devices)
+    public function __construct(private MobileAuth $auth, private DeviceRegistry $devices, private Appearance $appearance)
     {
     }
 
@@ -25,7 +26,7 @@ class AuthController extends ApiController
         ]));
         $token = $this->auth->login($data);
 
-        return $this->ok(['token' => $token->plainTextToken, 'token_type' => 'Bearer', 'user' => ApiUser::from($token->accessToken->tokenable)->toArray()], [], 201);
+        return $this->ok(['token' => $token->plainTextToken, 'token_type' => 'Bearer', 'user' => ApiUser::from($token->accessToken->tokenable)->toArray() + ['appearance' => $this->appearance->forApp($token->accessToken->tokenable)]], [], 201);
     }
 
     /** POST /api/v1/auth/logout: ends this sign-in only; the phone stops getting pushes for it. */
@@ -42,6 +43,6 @@ class AuthController extends ApiController
 
     public function me(Request $request): JsonResponse
     {
-        return $this->ok(ApiUser::from($request->user())->toArray());
+        return $this->ok(ApiUser::from($request->user())->toArray() + ['appearance' => $this->appearance->forApp($request->user())]);
     }
 }

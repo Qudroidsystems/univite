@@ -83,7 +83,9 @@ class GraduationService
 
         // A carry-over the department has waived no longer blocks graduation (its units still do not count as earned).
         $waived = \App\Models\CarryoverWaiver::courseIdsFor($student->id)->flip();
-        $failed = $latest->filter(fn ($r) => ! $r->is_pass && ! $waived->has($r->course_id) && $mustRetake($r->course_id));
+        // ... and so does one replaced by a newer course the student has passed.
+        $replaced = \Illuminate\Support\Facades\DB::table('course_replacements')->whereIn('course_id', $latest->where('is_pass', true)->keys())->pluck('replaces_course_id')->flip();
+        $failed = $latest->filter(fn ($r) => ! $r->is_pass && ! $waived->has($r->course_id) && ! $replaced->has($r->course_id) && $mustRetake($r->course_id));
         if ($failed->isNotEmpty()) {
             $add('outstanding', 'Failed and not yet passed: ' . $failed->map(fn ($r) => $r->course->code)->sort()->implode(', ') . '.');
         }
@@ -91,7 +93,7 @@ class GraduationService
         if ($rules['require_core']) {
             $passed = $latest->where('is_pass', true)->keys()->flip();
             $attempted = $latest->keys()->flip();
-            $missing = $curriculum->filter(fn ($pc) => $pc->status === CourseType::COMPULSORY && $pc->level >= (int) ($student->entry_level ?: 100)
+            $missing = $curriculum->filter(fn ($pc) => $pc->status === CourseType::COMPULSORY && $pc->appliesTo($student) && $pc->level >= (int) ($student->entry_level ?: 100)
                 && ! $passed->has($pc->course_id) && ! $attempted->has($pc->course_id) && ! $pending->contains('course_id', $pc->course_id));
             if ($missing->isNotEmpty()) {
                 $add('compulsory', 'Compulsory courses never taken: ' . $missing->map(fn ($pc) => $pc->course->code)->sort()->implode(', ') . '.');

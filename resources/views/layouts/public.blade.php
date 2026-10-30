@@ -11,13 +11,14 @@
     <link href="{{ asset('theme/layouts/assets/libs/sweetalert2/sweetalert2.min.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ asset('css/univite-app.css') }}?v={{ @filemtime(public_path('css/univite-app.css')) }}" rel="stylesheet">
     @include('partials.brand-head')
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    @include('partials.appearance-head')
     <script src="{{ asset('theme/layouts/assets/js/layout.js') }}"></script>
     <link href="{{ asset('theme/layouts/assets/css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('theme/layouts/assets/css/icons.min.css') }}" rel="stylesheet">
     <link href="{{ asset('theme/layouts/assets/css/app.min.css') }}" rel="stylesheet">
     <link href="{{ asset('theme/layouts/assets/css/custom.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/univite-forms.css') }}?v={{ @filemtime(public_path('css/univite-forms.css')) }}" rel="stylesheet">
+    <link href="{{ asset('css/univite-appearance.css') }}?v={{ @filemtime(public_path('css/univite-appearance.css')) }}" rel="stylesheet">
     <style>
         body { background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%, #e0f2fe 100%); min-height: 100vh; }
         .pub-card { border: 0; border-radius: 14px; box-shadow: 0 8px 30px rgba(64, 81, 137, .10); }

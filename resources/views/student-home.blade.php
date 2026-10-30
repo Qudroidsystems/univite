@@ -5,6 +5,7 @@
 <div class="main-content">
     <div class="page-content">
         <div class="container-fluid">
+            <x-owing-notice />
             <div class="card border-0 bg-primary-subtle">
                 <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>

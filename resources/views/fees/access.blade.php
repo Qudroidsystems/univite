@@ -46,8 +46,9 @@
                     <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="count_loans" value="1" id="cl" @checked($settings['count_loans'] === '1')><label class="form-check-label" for="cl">School loans paid against fees count as paid</label></div>
                     <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="loan_overdue_blocks" value="1" id="lo" @checked($settings['loan_overdue_blocks'] === '1')><label class="form-check-label" for="lo">An overdue loan repayment locks what is switched on</label></div>
                     <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="include_arrears" value="1" id="ar" @checked($settings['include_arrears'] === '1')><label class="form-check-label" for="ar">Money owed from earlier sessions locks what is switched on</label></div>
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="show_owing" value="1" id="so" @checked($settings['show_owing'] === '1')><label class="form-check-label" for="so">Show every student what they owe on results, registration, the dashboard and the app</label></div>
                 </div>
-                <div class="form-text">Course registration can also check fees per semester under Registration Settings; both apply.</div>
+                <div class="form-text">Course registration can also check fees per semester under Registration Settings; both apply. Departments whose students may register before paying are set under <a href="{{ route('fees.department-rules.index') }}">Department Fee Rules</a>.</div>
             </div>
             <div class="card-footer text-end"><button class="btn btn-primary btn-sm"><i class="ri-save-line me-1"></i>Save rules</button></div>
         </form>

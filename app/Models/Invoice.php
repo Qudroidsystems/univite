@@ -15,9 +15,9 @@ class Invoice extends Model
         'paid' => 'bg-success-subtle text-success', 'cancelled' => 'bg-secondary-subtle text-secondary',
     ];
 
-    protected $fillable = ['reference', 'kind', 'payable_type', 'payable_id', 'academic_session_id', 'title', 'total', 'amount_paid', 'status', 'due_date', 'created_by', 'semester_type_id', 'installment_plan', 'opens_at', 'closes_at'];
+    protected $fillable = ['reference', 'kind', 'payable_type', 'payable_id', 'academic_session_id', 'title', 'total', 'amount_paid', 'status', 'due_date', 'created_by', 'semester_type_id', 'installment_plan', 'opens_at', 'closes_at', 'bill_item_id', 'max_payments'];
 
-    protected $casts = ['total' => 'decimal:2', 'amount_paid' => 'decimal:2', 'due_date' => 'date', 'installment_plan' => 'array', 'opens_at' => 'datetime', 'closes_at' => 'datetime'];
+    protected $casts = ['total' => 'decimal:2', 'amount_paid' => 'decimal:2', 'due_date' => 'date', 'installment_plan' => 'array', 'opens_at' => 'datetime', 'closes_at' => 'datetime', 'max_payments' => 'integer'];
 
     public function payable(): MorphTo
     {
@@ -32,6 +32,22 @@ class Invoice extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(InvoiceLine::class);
+    }
+
+    /** The fee this invoice is for, when the fee is paid on its own. */
+    public function billItem(): BelongsTo
+    {
+        return $this->belongsTo(BillItem::class);
+    }
+
+    /** How many more payments may be made, or null when there is no limit. */
+    public function paymentsLeft(): ?int
+    {
+        if (! $this->max_payments) {
+            return null;
+        }
+
+        return max(0, $this->max_payments - $this->payments()->where('status', 'successful')->where('amount', '>', 0)->count());
     }
 
     public function payments(): HasMany
@@ -51,13 +67,21 @@ class Invoice extends Model
 
     /**
      * The least a payer must pay now. With instalments that is what is left of the instalment they are on
-     * (they may always pay more, up to the whole balance); otherwise the whole balance.
+     * (they may always pay more, up to the whole balance). A fee allowing up to N payments splits what is left
+     * over the payments left; otherwise the whole balance.
      */
     public function minimumPayment(): float
     {
+        // The last payment allowed must clear the balance.
+        $left = $this->paymentsLeft();
+        if ($left !== null && $left <= 1) {
+            return $this->outstanding;
+        }
+
         $plan = $this->installment_plan ?: [];
         if (count($plan) < 2) {
-            return $this->outstanding;
+            // Up to N payments with no fixed instalments: any amount that still lets the balance be cleared in time.
+            return $left !== null ? round(min($this->outstanding, ceil($this->outstanding / $left * 100) / 100), 2) : $this->outstanding;
         }
 
         $due = 0.0;

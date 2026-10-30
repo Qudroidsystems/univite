@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $rows = old('items', $scheme->items->map(fn ($i) => ['name' => $i->name, 'code' => $i->code, 'component' => $i->component, 'max_score' => $i->maxValue()])->all());
+    $rows = old('items', $scheme->items->map(fn ($i) => ['id' => $i->id, 'name' => $i->name, 'code' => $i->code, 'component' => $i->component, 'max_score' => $i->maxValue()])->all());
     $action = $scheme->exists ? route('academics.assessments.update', $scheme->id) : route('academics.assessments.store');
 @endphp
 <div class="main-content">
@@ -14,7 +14,7 @@
             </div>
             @include('academics.partials.alerts')
             @if ($locked)
-                <div class="alert alert-info"><i class="ri-lock-line me-1"></i>Marks have already been entered with this scheme, so its assessments are locked. You can still rename it or switch it off. To change the assessments, make a copy.</div>
+                <div class="alert alert-info"><i class="ri-information-line me-1"></i>Marks have already been entered with this scheme. You can still change it: the marks stay with their assessments. An assessment with marks cannot be removed, and its "out of" cannot go below the highest mark given. Assessments cannot be added, removed or moved between CA and exam while a score sheet on this scheme is submitted, approved or published.</div>
             @endif
 
             <form method="POST" action="{{ $action }}" id="scheme-form" data-no-ajax>
@@ -23,8 +23,8 @@
                 <div class="card"><div class="card-body row g-3">
                     <div class="col-md-6"><label class="form-label">Name</label><input name="name" class="form-control" required maxlength="120" value="{{ old('name', $scheme->name) }}" placeholder="Science courses (with practicals)"></div>
                     <div class="col-md-6"><label class="form-label">Description</label><input name="description" class="form-control" maxlength="500" value="{{ old('description', $scheme->description) }}" placeholder="Optional"></div>
-                    <div class="col-md-3"><label class="form-label">CA total</label><input name="ca_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('ca_total', $scheme->ca_total !== null ? rtrim(rtrim(number_format($scheme->ca_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 40" data-target="ca" @readonly($locked)></div>
-                    <div class="col-md-3"><label class="form-label">Exam total</label><input name="exam_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('exam_total', $scheme->exam_total !== null ? rtrim(rtrim(number_format($scheme->exam_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 60" data-target="exam" @readonly($locked)></div>
+                    <div class="col-md-3"><label class="form-label">CA total</label><input name="ca_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('ca_total', $scheme->ca_total !== null ? rtrim(rtrim(number_format($scheme->ca_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 40" data-target="ca"></div>
+                    <div class="col-md-3"><label class="form-label">Exam total</label><input name="exam_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('exam_total', $scheme->exam_total !== null ? rtrim(rtrim(number_format($scheme->exam_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 60" data-target="exam"></div>
                     <div class="col-md-6 d-flex align-items-end"><p class="text-muted fs-13 mb-2">The CA total and exam total add up to 100. Give each assessment its own mark (CA1 out of 10, …) so they add up to the part's total, or leave “Out of” blank: lecturers may then enter any marks, as long as the CA marks stay within the CA total and the exam marks within the exam total. Leave both totals blank to take them from the assessments.</p></div>
                     <div class="col-12"><div class="form-check form-switch"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $scheme->is_active))><label class="form-check-label" for="is_active">On (can be assigned and given to new score sheets)</label></div></div>
                 </div></div>
@@ -41,7 +41,7 @@
                         </table>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        @unless ($locked)<button type="button" class="btn btn-soft-primary" data-add><i class="ri-add-line me-1"></i>Add assessment</button>@else<span></span>@endunless
+                        <button type="button" class="btn btn-soft-primary" data-add><i class="ri-add-line me-1"></i>Add assessment</button>
                         <button class="btn btn-primary" type="submit"><i class="ri-save-line me-1"></i>Save scheme</button>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
                     <td><input class="form-control text-uppercase" data-f="code" maxlength="20" placeholder="T1"></td>
                     <td><select class="form-select" data-f="component"><option value="ca">Continuous assessment</option><option value="exam">Examination</option></select></td>
                     <td><input class="form-control" type="number" step="0.01" min="0.01" max="100" data-f="max_score" placeholder="any"></td>
-                    <td>@unless ($locked)<button type="button" class="btn btn-sm btn-soft-danger" data-remove title="Remove"><i class="ri-delete-bin-line"></i></button>@endunless</td>
+                    <td><input type="hidden" data-f="id"><button type="button" class="btn btn-sm btn-soft-danger" data-remove title="Remove"><i class="ri-delete-bin-line"></i></button></td>
                 </tr>
             </template>
         </div>
@@ -66,7 +66,6 @@
 <script>
 (function () {
     var rows = @json(array_values($rows));
-    var locked = @json($locked);
     var body = document.querySelector('[data-items]');
     var tpl = document.getElementById('item-row');
 
@@ -82,7 +81,6 @@
         tr.querySelectorAll('[data-f]').forEach(function (el) {
             var f = el.getAttribute('data-f');
             if (r[f] !== undefined && r[f] !== null) el.value = r[f];
-            if (locked) { el.readOnly = true; if (el.tagName === 'SELECT') { el.style.pointerEvents = 'none'; el.tabIndex = -1; } }
         });
         body.appendChild(tr);
         renumber();

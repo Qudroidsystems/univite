@@ -91,6 +91,7 @@ class AssessmentSchemeController extends Controller
             'items.*.code' => ['nullable', 'string', 'max:20'],
             'items.*.component' => ['nullable', Rule::in(['ca', 'exam'])],
             'items.*.max_score' => ['nullable', 'numeric'],
+            'items.*.id' => ['nullable', 'integer'],
         ]);
     }
 

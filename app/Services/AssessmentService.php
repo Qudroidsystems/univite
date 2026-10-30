@@ -67,7 +67,8 @@ class AssessmentService
             }
             $component = ($i['component'] ?? 'ca') === 'exam' ? 'exam' : 'ca';
             $codes[] = $code;
-            $out[] = ['name' => mb_substr($name, 0, 80), 'code' => mb_substr($code, 0, 20), 'component' => $component, 'max_score' => blank($max) ? null : round((float) $max, 2)];
+            $out[] = ['name' => mb_substr($name, 0, 80), 'code' => mb_substr($code, 0, 20), 'component' => $component, 'max_score' => blank($max) ? null : round((float) $max, 2),
+                'id' => is_numeric($i['id'] ?? null) ? (int) $i['id'] : null];
         }
 
         if (! $out) {
@@ -158,27 +159,116 @@ class AssessmentService
             $fields = ['name' => $data['name'], 'description' => $data['description'] ?? null, 'is_active' => (bool) ($data['is_active'] ?? true),
                 'ca_total' => $caTotal, 'exam_total' => $examTotal];
             if ($scheme && $scheme->isLocked()) {
-                $scheme->load('items');
-                $now = $scheme->items->map(fn ($i) => [$i->name, $i->code, $i->component, $i->max_score === null ? null : (float) $i->max_score])->all();
-                $new = array_map(fn ($i) => [$i['name'], $i['code'], $i['component'], $i['max_score']], $clean);
-                if ($now !== $new) {
-                    throw new RuntimeException('Marks have already been entered with this scheme, so its assessments can no longer change. Duplicate it, change the copy and assign the copy: score sheets still being filled in then move to it, keeping their marks.');
-                }
-                $scheme->update($fields);
-
-                return $scheme;
+                return $this->saveMarked($scheme, $fields, $clean, $caTotal, $examTotal, $user);
             }
 
             $scheme = $scheme ? tap($scheme)->update($fields) : AssessmentScheme::create($fields + ['created_by' => $user->id]);
+            $scheme->load('items');
             $keep = [];
             foreach ($clean as $n => $i) {
-                $item = $scheme->items()->updateOrCreate(['code' => $i['code']], $i + ['sort_order' => $n + 1]);
+                $item = $scheme->items->firstWhere('id', $i['id']) ?? $scheme->items->first(fn ($x) => $x->code === $i['code'] && ! in_array($x->id, $keep, true));
+                $attrs = array_diff_key($i, ['id' => 1]) + ['sort_order' => $n + 1];
+                $item = $item ? tap($item)->update($attrs) : $scheme->items()->create($attrs);
                 $keep[] = $item->id;
             }
             $scheme->items()->whereNotIn('id', $keep)->delete();
 
             return $scheme->load('items');
         });
+    }
+
+    /**
+     * Change a scheme that already has marks. Assessments keep their marks (matched by id, else by short code). An
+     * assessment with marks cannot be removed, its "out of" cannot go below the highest mark given, and no student's CA
+     * or exam marks may add up to more than the new totals. Adding, removing or moving an assessment between CA and
+     * exam changes results, so it is refused while a sheet on this scheme is submitted, approved or published; sheets
+     * still being filled in are worked out again.
+     */
+    private function saveMarked(AssessmentScheme $scheme, array $fields, array $clean, ?float $caTotal, ?float $examTotal, User $user): AssessmentScheme
+    {
+        $scheme->load('items');
+        $stats = AssessmentScore::whereIn('assessment_item_id', $scheme->items->pluck('id'))
+            ->selectRaw('assessment_item_id, count(*) as n, max(score) as top')->groupBy('assessment_item_id')->get()->keyBy('assessment_item_id');
+        $used = [];
+        $plan = [];
+        foreach ($clean as $n => $i) {
+            $item = $scheme->items->first(fn ($x) => $x->id === $i['id'] && ! in_array($x->id, $used, true))
+                ?? $scheme->items->first(fn ($x) => $x->code === $i['code'] && ! in_array($x->id, $used, true));
+            if ($item) {
+                $used[] = $item->id;
+            }
+            $plan[] = [$item, array_diff_key($i, ['id' => 1]) + ['sort_order' => $n + 1]];
+        }
+        $removed = $scheme->items->whereNotIn('id', $used);
+        foreach ($removed as $item) {
+            if ($c = $stats->get($item->id)?->n) {
+                throw new RuntimeException("{$item->name} has marks for {$c} student(s), so it cannot be removed. Clear those marks first, or keep it.");
+            }
+        }
+        $structural = $removed->isNotEmpty();
+        $draft = new AssessmentScheme(['ca_total' => $caTotal, 'exam_total' => $examTotal]);
+        $draft->setRelation('items', collect(array_map(fn ($p) => new AssessmentItem($p[1]), $plan)));
+        foreach ($plan as [$item, $attrs]) {
+            if (! $item || $item->component !== $attrs['component']) {
+                $structural = true;
+            }
+            $top = $item ? $stats->get($item->id)?->top : null;
+            $limit = $attrs['max_score'] ?? $draft->partTotal($attrs['component']);
+            if ($top !== null && (float) $top > $limit + 0.001) {
+                throw new RuntimeException("{$attrs['name']}: a student already has " . self::num((float) $top) . ', so it cannot be out of less than that.');
+            }
+        }
+        $blocked = $structural ? $scheme->sheets()->where('status', '!=', 'draft')->count() : 0;
+        if ($blocked) {
+            throw new RuntimeException("{$blocked} score sheet(s) on this scheme are already submitted, approved or published, so assessments cannot be added, removed or moved between CA and exam. You can still rename them and change their marks. To change more, return those sheets to the lecturer first, or duplicate the scheme.");
+        }
+
+        $scheme->update($fields);
+        foreach ($plan as [$item, $attrs]) {
+            $item ? $item->update($attrs) : $scheme->items()->create($attrs);
+        }
+        $scheme->load('items');
+
+        // Every student's CA and exam marks must still fit the totals.
+        $rows = CourseResult::whereHas('assessmentScores', fn ($q) => $q->whereIn('assessment_item_id', $scheme->items->pluck('id')))
+            ->with('assessmentScores', 'student', 'sheet')->get();
+        foreach ($rows as $row) {
+            foreach (['ca' => 'CA', 'exam' => 'exam'] as $component => $label) {
+                $ids = $scheme->items->where('component', $component)->pluck('id')->all();
+                $sum = round((float) $row->assessmentScores->whereIn('assessment_item_id', $ids)->sum('score'), 2);
+                if ($sum > $scheme->partTotal($component) + 0.001) {
+                    throw new RuntimeException("{$row->student?->matric_number}'s {$label} marks add up to " . self::num($sum) . ', more than the new ' . $label . ' total of ' . self::num($scheme->partTotal($component)) . '.');
+                }
+            }
+        }
+        if ($structural) {
+            foreach ($rows->filter(fn ($r) => $r->sheet?->status === 'draft') as $row) {
+                $this->rework($row, $scheme);
+            }
+        }
+
+        return $scheme;
+    }
+
+    /** Work a row's CA, exam, total and grade out again from its assessment marks; a part with no marks keeps its typed total. */
+    private function rework(CourseResult $row, AssessmentScheme $scheme): void
+    {
+        $row->unsetRelation('assessmentScores');
+        [$ca, $exam] = $this->components($row, $scheme);
+        $marks = $this->marks($row, $scheme);
+        foreach (['ca', 'exam'] as $component) {
+            $ids = $scheme->items->where('component', $component)->pluck('id');
+            if ($ids->every(fn ($id) => $marks[$id] === null)) {
+                ${$component} = $row->{$component} === null ? null : (float) $row->{$component};
+            }
+        }
+        $total = ($ca !== null && $exam !== null) ? round($ca + $exam, 2) : null;
+        $g = \App\Support\GradeScale::gradeResult($row, $total);
+        $attrs = ['ca' => $ca, 'exam' => $exam, 'total' => $total, 'grade' => $g['grade'] ?? null, 'points' => $g['points'] ?? null, 'is_pass' => $g['is_pass'] ?? null];
+        if ($row->absent && \App\Services\ResultService::absentPolicy() === 'incomplete') {
+            $attrs = ['ca' => $ca, 'exam' => $exam, 'total' => null, 'grade' => CourseResult::ABSENT_GRADE, 'points' => null, 'is_pass' => false];
+        }
+        $row->update($attrs);
     }
 
     public function duplicate(AssessmentScheme $scheme, User $user): AssessmentScheme

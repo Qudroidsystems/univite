@@ -431,3 +431,38 @@ it('lets assessments have no mark of their own, keeping each part within its CA 
     app(AssessmentService::class)->save($scheme->fresh('items'), ['name' => 'Open again', 'ca_total' => 40, 'exam_total' => 60], $items, $this->admin);
     expect($scheme->fresh()->name)->toBe('Open again');
 });
+
+it('lets the admin change a scheme that already has marks, keeping the marks', function () {
+    $scheme = standardScheme();
+    $this->schemes->assign($scheme, 'university', null, null, $this->admin);
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    $s1 = $this->students[0]->id;
+    app(ResultService::class)->saveScores($sheet, [$s1 => new \App\Data\Results\Score(items: ['T1' => 8, 'T2' => 6, 'ASG' => 7, 'EXAM' => 50])]);
+    $row = fn () => CourseResult::where('student_id', $s1)->first();
+    expect($row()->total)->toBe(71.0);
+    $rows = fn (array $over = []) => $scheme->fresh('items')->items->map(fn ($i) => array_merge(['id' => $i->id, 'name' => $i->name, 'code' => $i->code, 'component' => $i->component, 'max_score' => $i->max_score], $over[$i->code] ?? []))->values()->all();
+
+    $this->actingAs($this->admin)->get(route('academics.assessments.edit', $scheme->id))->assertOk()->assertDontSee('readonly', false);
+
+    // rename and re-code: the marks stay
+    $this->put(route('academics.assessments.update', $scheme->id), ['name' => 'Changed', 'items' => $rows(['T1' => ['name' => 'First test', 'code' => 'FT']])])->assertSessionHasNoErrors();
+    expect($this->schemes->snapshot($row(), $scheme->fresh('items')))->toBe(['FT' => 8.0, 'T2' => 6.0, 'ASG' => 7.0, 'EXAM' => 50.0]);
+
+    // "out of" below a mark given, and removing an assessment with marks, are refused
+    $this->put(route('academics.assessments.update', $scheme->id), ['name' => 'Changed', 'items' => $rows(['FT' => ['max_score' => 5], 'T2' => ['max_score' => 15]])])
+        ->assertSessionHasErrors(['items' => 'First test: a student already has 8, so it cannot be out of less than that.']);
+    $this->put(route('academics.assessments.update', $scheme->id), ['name' => 'Changed', 'items' => array_slice($rows(['T2' => ['max_score' => 20]]), 1)])
+        ->assertSessionHasErrors(['items' => 'First test has marks for 1 student(s), so it cannot be removed. Clear those marks first, or keep it.']);
+
+    // moving the assignment from CA to exam works the result out again
+    $this->put(route('academics.assessments.update', $scheme->id), ['name' => 'Changed', 'items' => $rows(['ASG' => ['component' => 'exam'], 'EXAM' => ['max_score' => 60], 'T2' => ['max_score' => 20]])])
+        ->assertSessionHasNoErrors();
+    expect($row()->ca)->toBe(14.0)->and($row()->exam)->toBe(57.0)->and($row()->total)->toBe(71.0);
+
+    // once the sheet is submitted, adding an assessment is refused but renaming still works
+    $sheet->update(['status' => 'submitted']);
+    $this->put(route('academics.assessments.update', $scheme->id), ['name' => 'Changed', 'items' => array_merge($rows(['T2' => ['max_score' => 10]]), [['name' => 'Quiz', 'component' => 'ca', 'max_score' => 10]])])
+        ->assertSessionHasErrors('items');
+    $this->put(route('academics.assessments.update', $scheme->id), ['name' => 'Changed', 'items' => $rows(['T2' => ['name' => 'Second test']])])->assertSessionHasNoErrors();
+    expect($scheme->fresh('items')->items->pluck('name')->all())->toContain('Second test');
+});

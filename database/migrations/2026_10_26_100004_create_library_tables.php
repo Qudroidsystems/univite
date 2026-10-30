@@ -44,8 +44,8 @@ return new class extends Migration
             $t->id();
             $t->foreignId('library_copy_id')->constrained()->cascadeOnDelete();
             $t->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $t->timestamp('issued_at');
-            $t->timestamp('due_at');
+            $t->timestamp('issued_at')->useCurrent();
+            $t->timestamp('due_at')->useCurrent();
             $t->timestamp('returned_at')->nullable();
             $t->unsignedTinyInteger('renewals')->default(0);
             $t->foreignId('issued_by')->nullable()->constrained('users')->nullOnDelete();

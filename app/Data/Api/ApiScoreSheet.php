@@ -21,7 +21,7 @@ final readonly class ApiScoreSheet
         [$caMax, $examMax] = ResultService::limits($sheet);
         $scheme = $sheet->scheme;
         $columns = $scheme
-            ? $scheme->items->map(fn ($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name, 'component' => $i->component, 'max' => (float) $i->max_score])->values()->all()
+            ? $scheme->items->map(fn ($i) => ['id' => $i->id, 'code' => $i->code, 'name' => $i->name, 'component' => $i->component, 'max' => $i->limit($scheme), 'open' => $i->isOpen()])->values()->all()
             : [['id' => null, 'code' => 'CA', 'name' => 'Continuous assessment', 'component' => 'ca', 'max' => $caMax],
                 ['id' => null, 'code' => 'EXAM', 'name' => 'Examination', 'component' => 'exam', 'max' => $examMax]];
 

@@ -107,7 +107,7 @@
                                 @if ($scheme)
                                     @php $m = $marksOf($r); @endphp
                                     <div class="col-md-4 d-flex flex-wrap gap-1">
-                                        @foreach ($items as $it)<input type="number" step="0.01" min="0" max="{{ $it->max_score }}" name="items[{{ $it->id }}]" value="{{ $m[$it->id] ?? '' }}" class="form-control form-control-sm" style="width:72px" title="{{ $it->name }} /{{ $it->maxLabel() }}" placeholder="{{ $it->code }}" required>@endforeach
+                                        @foreach ($items as $it)<input type="number" step="0.01" min="0" max="{{ $it->limit($scheme) }}" name="items[{{ $it->id }}]" value="{{ $m[$it->id] ?? '' }}" class="form-control form-control-sm" style="width:72px" title="{{ $it->name }}{{ $it->isOpen() ? '' : ' /' . $it->maxLabel() }}" placeholder="{{ $it->code }}" required>@endforeach
                                     </div>
                                     <div class="col-md-3"><input name="reason" class="form-control form-control-sm" placeholder="Reason for the correction" required></div>
                                 @else

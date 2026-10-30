@@ -100,7 +100,10 @@
             } else if (totalText) {
                 value = num(totalText.textContent);
             }
-            if (totalIn) { checkRange(totalIn); }
+            if (totalIn) {
+                checkRange(totalIn);
+                if (totalIn.classList.contains('is-over')) { totalIn.title = (part === 'ca' ? 'CA' : 'Exam') + ' marks add up to more than ' + totalIn.getAttribute('max'); }
+            }
             if (totalIn && totalIn.value !== '') { any = true; }
             parts[part] = value;
             if (value === null) { complete = false; }

@@ -19,7 +19,7 @@ final readonly class ApiCourseResult
     {
         $assessments = $r->relationLoaded('assessmentScores')
             ? $r->assessmentScores->filter(fn ($m) => $m->item)->sortBy(fn ($m) => [$m->item->sort_order, $m->item->id])->map(fn ($m) => [
-                'code' => $m->item->code, 'name' => $m->item->name, 'component' => $m->item->component, 'max' => (float) $m->item->max_score, 'score' => (float) $m->score,
+                'code' => $m->item->code, 'name' => $m->item->name, 'component' => $m->item->component, 'max' => $m->item->limit(), 'open' => $m->item->isOpen(), 'score' => (float) $m->score,
             ])->values()->all()
             : [];
 

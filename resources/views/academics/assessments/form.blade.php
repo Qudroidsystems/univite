@@ -2,7 +2,7 @@
 
 @section('content')
 @php
-    $rows = old('items', $scheme->items->map(fn ($i) => ['name' => $i->name, 'code' => $i->code, 'component' => $i->component, 'max_score' => $i->maxLabel()])->all());
+    $rows = old('items', $scheme->items->map(fn ($i) => ['name' => $i->name, 'code' => $i->code, 'component' => $i->component, 'max_score' => $i->maxValue()])->all());
     $action = $scheme->exists ? route('academics.assessments.update', $scheme->id) : route('academics.assessments.store');
 @endphp
 <div class="main-content">
@@ -25,7 +25,7 @@
                     <div class="col-md-6"><label class="form-label">Description</label><input name="description" class="form-control" maxlength="500" value="{{ old('description', $scheme->description) }}" placeholder="Optional"></div>
                     <div class="col-md-3"><label class="form-label">CA total</label><input name="ca_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('ca_total', $scheme->ca_total !== null ? rtrim(rtrim(number_format($scheme->ca_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 40" data-target="ca" @readonly($locked)></div>
                     <div class="col-md-3"><label class="form-label">Exam total</label><input name="exam_total" type="number" step="0.01" min="0" max="100" class="form-control" value="{{ old('exam_total', $scheme->exam_total !== null ? rtrim(rtrim(number_format($scheme->exam_total, 2, '.', ''), '0'), '.') : '') }}" placeholder="e.g. 60" data-target="exam" @readonly($locked)></div>
-                    <div class="col-md-6 d-flex align-items-end"><p class="text-muted fs-13 mb-2">The CA total and exam total add up to 100. The CA assessments (CA1, CA2, …) must add up to the CA total and the exam questions (Q1, Q2, …) to the exam total. Leave both blank to take them from the assessments.</p></div>
+                    <div class="col-md-6 d-flex align-items-end"><p class="text-muted fs-13 mb-2">The CA total and exam total add up to 100. Give each assessment its own mark (CA1 out of 10, …) so they add up to the part's total, or leave “Out of” blank: lecturers may then enter any marks, as long as the CA marks stay within the CA total and the exam marks within the exam total. Leave both totals blank to take them from the assessments.</p></div>
                     <div class="col-12"><div class="form-check form-switch"><input type="hidden" name="is_active" value="0"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $scheme->is_active))><label class="form-check-label" for="is_active">On (can be assigned and given to new score sheets)</label></div></div>
                 </div></div>
 
@@ -53,7 +53,7 @@
                     <td><input class="form-control" data-f="name" maxlength="80" placeholder="Test 1"></td>
                     <td><input class="form-control text-uppercase" data-f="code" maxlength="20" placeholder="T1"></td>
                     <td><select class="form-select" data-f="component"><option value="ca">Continuous assessment</option><option value="exam">Examination</option></select></td>
-                    <td><input class="form-control" type="number" step="0.01" min="0.01" max="100" data-f="max_score"></td>
+                    <td><input class="form-control" type="number" step="0.01" min="0.01" max="100" data-f="max_score" placeholder="any"></td>
                     <td>@unless ($locked)<button type="button" class="btn btn-sm btn-soft-danger" data-remove title="Remove"><i class="ri-delete-bin-line"></i></button>@endunless</td>
                 </tr>
             </template>
@@ -88,11 +88,12 @@
         renumber();
     }
     function sum() {
-        var t = {ca: 0, exam: 0};
+        var t = {ca: 0, exam: 0}, open = {ca: 0, exam: 0};
         body.querySelectorAll('tr').forEach(function (tr) {
-            var c = tr.querySelector('[data-f=component]').value, v = parseFloat(tr.querySelector('[data-f=max_score]').value) || 0;
-            t[c] += v;
+            var c = tr.querySelector('[data-f=component]').value, raw = tr.querySelector('[data-f=max_score]').value;
+            if (raw === '') { open[c]++; } else { t[c] += parseFloat(raw) || 0; }
         });
+        var anyOpen = open.ca + open.exam > 0;
         var all = Math.round((t.ca + t.exam) * 100) / 100;
         document.querySelector('[data-sum=ca]').textContent = Math.round(t.ca * 100) / 100;
         document.querySelector('[data-sum=exam]').textContent = Math.round(t.exam * 100) / 100;
@@ -109,11 +110,17 @@
         }
         ['ca', 'exam'].forEach(function (c) {
             var el = document.querySelector('[data-want=' + c + ']'), have = Math.round(t[c] * 100) / 100;
-            el.textContent = want[c] === null ? '' : ' of ' + want[c];
-            el.className = want[c] === null ? 'text-muted' : (have === want[c] ? 'text-success' : 'text-danger');
-            if (want[c] !== null && have !== want[c]) { ok = false; msg = (c === 'ca' ? 'CA' : 'Exam') + ' assessments must add up to ' + want[c]; }
+            var good = want[c] === null || (open[c] ? have <= want[c] : have === want[c]);
+            el.textContent = want[c] === null ? '' : ' of ' + want[c] + (open[c] ? ' (' + open[c] + ' open)' : '');
+            el.className = want[c] === null ? 'text-muted' : (good ? 'text-success' : 'text-danger');
+            if (!good) { ok = false; msg = (c === 'ca' ? 'CA' : 'Exam') + (open[c] ? ' marks go over ' : ' assessments must add up to ') + want[c]; }
         });
-        if (all !== 100) { ok = false; if (msg === 'Adds up to 100') { msg = 'Must add up to 100'; } }
+        if (anyOpen) {
+            if (want.ca === null) { ok = false; msg = 'Set the CA and exam totals'; }
+            else if (Math.round((want.ca + want.exam) * 100) / 100 !== 100) { ok = false; msg = 'Totals must add up to 100'; }
+            else if (ok) { msg = 'CA ' + want.ca + ' + Exam ' + want.exam + ' = 100'; }
+            document.querySelector('[data-sum=all]').textContent = Math.round((want.ca || 0) * 100 + (want.exam || 0) * 100) / 100;
+        } else if (all !== 100) { ok = false; if (msg === 'Adds up to 100') { msg = 'Must add up to 100'; } }
         note.className = 'ms-1 badge ' + (ok ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger');
         note.textContent = msg;
     }

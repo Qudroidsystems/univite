@@ -35,7 +35,8 @@ class AssessmentService
     /**
      * Check a list of items before saving: names, unique codes, marks above 0, and a total of exactly 100. When the
      * admin set a CA total and an exam total (for example 40 and 60), they must add up to 100 and each part's
-     * assessments must add up to its total.
+     * assessments must add up to its total. An assessment's mark may be left blank (CA1, CA2, CA3 with no "out of"):
+     * that needs the CA and exam totals, and the part's marks then only have to stay within its total.
      *
      * @param  array<int, array{name?: mixed, code?: mixed, component?: mixed, max_score?: mixed}>  $items
      * @return array<int, array{name: string, code: string, component: string, max_score: float}>
@@ -61,24 +62,36 @@ class AssessmentService
             if (in_array($code, $codes, true)) {
                 throw new RuntimeException("Two items use the short code {$code}. Give each item its own code.");
             }
-            if (! is_numeric($max) || $max <= 0 || $max > 100) {
-                throw new RuntimeException("{$name}: the mark must be a number above 0 and at most 100.");
+            if (! blank($max) && (! is_numeric($max) || $max <= 0 || $max > 100)) {
+                throw new RuntimeException("{$name}: the mark must be a number above 0 and at most 100, or left blank.");
             }
             $component = ($i['component'] ?? 'ca') === 'exam' ? 'exam' : 'ca';
             $codes[] = $code;
-            $out[] = ['name' => mb_substr($name, 0, 80), 'code' => mb_substr($code, 0, 20), 'component' => $component, 'max_score' => round((float) $max, 2)];
+            $out[] = ['name' => mb_substr($name, 0, 80), 'code' => mb_substr($code, 0, 20), 'component' => $component, 'max_score' => blank($max) ? null : round((float) $max, 2)];
         }
 
         if (! $out) {
             throw new RuntimeException('Add at least one assessment.');
         }
         [$caTotal, $examTotal] = $this->totals($caTotal, $examTotal);
+        $open = array_filter($out, fn ($i) => $i['max_score'] === null);
+        if ($open && $caTotal === null) {
+            throw new RuntimeException('Set the CA total and the exam total (for example 40 and 60) when an assessment has no mark of its own.');
+        }
         if ($caTotal !== null) {
             foreach (['ca' => [$caTotal, 'CA'], 'exam' => [$examTotal, 'exam']] as $component => [$want, $label]) {
-                $have = round(array_sum(array_column(array_filter($out, fn ($i) => $i['component'] === $component), 'max_score')), 2);
-                if (abs($have - $want) > 0.001) {
-                    throw new RuntimeException("The {$label} assessments must add up to the {$label} total of " . self::num($want) . '. They add up to ' . self::num($have) . ' now.');
+                $part = array_filter($out, fn ($i) => $i['component'] === $component);
+                $have = round(array_sum(array_map(fn ($i) => (float) $i['max_score'], $part)), 2);
+                $partOpen = count(array_filter($part, fn ($i) => $i['max_score'] === null));
+                if ($partOpen && $have > $want + 0.001) {
+                    throw new RuntimeException("The {$label} assessments with their own marks add up to " . self::num($have) . ', more than the ' . $label . ' total of ' . self::num($want) . '.');
                 }
+                if (! $partOpen && abs($have - $want) > 0.001) {
+                    throw new RuntimeException("The {$label} assessments must add up to the {$label} total of " . self::num($want) . '. They add up to ' . self::num($have) . ' now. Or leave their marks blank, so any marks adding up to the total are allowed.');
+                }
+            }
+            if ($open) {
+                return $out;   // the totals add up to 100, and each part stays within its total
             }
         }
         $total = round(array_sum(array_column($out, 'max_score')), 2);
@@ -146,7 +159,7 @@ class AssessmentService
                 'ca_total' => $caTotal, 'exam_total' => $examTotal];
             if ($scheme && $scheme->isLocked()) {
                 $scheme->load('items');
-                $now = $scheme->items->map(fn ($i) => [$i->name, $i->code, $i->component, (float) $i->max_score])->all();
+                $now = $scheme->items->map(fn ($i) => [$i->name, $i->code, $i->component, $i->max_score === null ? null : (float) $i->max_score])->all();
                 $new = array_map(fn ($i) => [$i['name'], $i['code'], $i['component'], $i['max_score']], $clean);
                 if ($now !== $new) {
                     throw new RuntimeException('Marks have already been entered with this scheme, so its assessments can no longer change. Duplicate it, change the copy and assign the copy: score sheets still being filled in then move to it, keeping their marks.');
@@ -429,7 +442,7 @@ class AssessmentService
                         $map = [];
                         foreach ($newItems as $it) {
                             $v = $mine[$component][strtoupper($it->code)] ?? null;
-                            if ($v !== null && $v <= (float) $it->max_score + 0.001) {
+                            if ($v !== null && $v <= $it->limit($scheme) + 0.001) {
                                 $map[$it->id] = $v;
                             }
                         }
@@ -494,10 +507,27 @@ class AssessmentService
                 throw new RuntimeException("{$key} is not an assessment on this sheet.");
             }
             $v = ($v === null || $v === '') ? null : $v;
-            if ($v !== null && (! is_numeric($v) || $v < 0 || $v > $item->max_score)) {
-                throw new RuntimeException("{$item->name} must be a number from 0 to {$item->maxLabel()}.");
+            $limit = $item->limit($scheme);
+            if ($v !== null && (! is_numeric($v) || $v < 0 || $v > $limit + 0.001)) {
+                throw new RuntimeException("{$item->name} must be a number from 0 to " . self::num($limit) . '.');
             }
             $set[$item->id] = $v === null ? null : round((float) $v, 2);
+        }
+        // A part's marks (those kept and those just typed) may not add up to more than its total.
+        $now = $this->marks($row, $scheme)->all();
+        foreach ($set as $id => $v) {
+            $now[$id] = $v;
+        }
+        foreach (['ca' => 'CA', 'exam' => 'Exam'] as $component => $label) {
+            $ids = $scheme->items->where('component', $component)->pluck('id')->all();
+            if (! $ids || ! array_intersect($ids, array_keys($set))) {
+                continue;
+            }
+            $sum = round(array_sum(array_map(fn ($id) => (float) ($now[$id] ?? 0), $ids)), 2);
+            $cap = $scheme->partTotal($component);
+            if ($sum > $cap + 0.001) {
+                throw new RuntimeException("The {$label} marks add up to " . self::num($sum) . ', more than the ' . $label . ' total of ' . self::num($cap) . '.');
+            }
         }
 
         foreach ($set as $itemId => $v) {
@@ -546,7 +576,7 @@ class AssessmentService
             $mine = array_intersect_key($given, $part->keyBy('id')->all());
             $filled = array_filter($mine, fn ($v) => ! blank($v));
             $total = blank($total) ? null : $total;
-            $max = round((float) $part->sum('max_score'), 2);
+            $max = $scheme->partTotal($component);
             if ($filled) {
                 $plan[$component] = ['items', $mine];
             } elseif ($total !== null) {
@@ -600,7 +630,11 @@ class AssessmentService
         $marks = [];
         foreach (['ca' => [$ca, 'CA'], 'exam' => [$exam, 'Exam']] as $component => [$value, $label]) {
             $items = $scheme->items->where('component', $component)->values();
-            $max = round((float) $items->sum('max_score'), 2);
+            $max = $scheme->partTotal($component);
+            // An assessment with no mark of its own takes an equal share of what the others leave.
+            $fixed = round((float) $items->sum('max_score'), 2);
+            $openCount = $items->filter->isOpen()->count();
+            $weight = fn ($item) => $item->max_score ?? ($openCount ? max(0, $max - $fixed) / $openCount : 0);
             $value = ($value === null || $value === '') ? null : $value;
             if ($value !== null && (! is_numeric($value) || $value < 0 || $value > $max)) {
                 throw new RuntimeException("{$label} score must be a number from 0 to " . rtrim(rtrim(number_format($max, 2, '.', ''), '0'), '.') . '.');
@@ -611,8 +645,9 @@ class AssessmentService
                     $marks[$item->id] = null;
                     continue;
                 }
-                $share = $n === $items->count() - 1 ? $left : min($item->max_score, round((float) $value * $item->max_score / $max, 2));
-                $share = max(0, min($item->max_score, round($share, 2)));
+                $cap = $item->limit($scheme);
+                $share = $n === $items->count() - 1 ? $left : ($max > 0 ? min($cap, round((float) $value * $weight($item) / $max, 2)) : 0);
+                $share = max(0, min($cap, round($share, 2)));
                 $marks[$item->id] = $share;
                 $left = round($left - $share, 2);
             }

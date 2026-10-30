@@ -27,14 +27,22 @@ class AssessmentScheme extends Model
         return $this->hasMany(ResultSheet::class);
     }
 
+    /** The most a part (ca | exam) can add up to: the total the admin set, or the assessments' own marks added up. */
+    public function partTotal(string $component): float
+    {
+        $set = $component === 'exam' ? $this->exam_total : $this->ca_total;
+
+        return $set !== null ? round((float) $set, 2) : round((float) $this->items->where('component', $component)->sum('max_score'), 2);
+    }
+
     public function caMax(): float
     {
-        return round((float) $this->items->where('component', 'ca')->sum('max_score'), 2);
+        return $this->partTotal('ca');
     }
 
     public function examMax(): float
     {
-        return round((float) $this->items->where('component', 'exam')->sum('max_score'), 2);
+        return $this->partTotal('exam');
     }
 
     /** "Test 1 (10) + Assignment (20) + Exam (70)" */

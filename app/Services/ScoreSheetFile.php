@@ -34,8 +34,8 @@ class ScoreSheetFile
         $head = ['Matric Number', 'Name'];
         $limits = [];
         foreach ($items as $k => $i) {
-            $head[] = "{$i->code} ({$i->maxLabel()})";
-            $limits[$k + 2] = [0, (float) $i->max_score];
+            $head[] = $i->isOpen() ? $i->code : "{$i->code} ({$i->maxLabel()})";
+            $limits[$k + 2] = [0, $i->limit($sheet->scheme)];
         }
         $at = count($head);
         $head[] = ($sheet->scheme ? 'CA total' : 'CA') . ' (' . ($caMax + 0) . ')';

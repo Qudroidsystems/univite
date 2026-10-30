@@ -390,3 +390,44 @@ it('reads ABS in an upload and from the app', function () {
     expect($rows->firstWhere('student_id', $this->students[1]->id)['absent'])->toBeTrue()
         ->and($rows->firstWhere('student_id', $this->students[1]->id)['grade'])->toBe('ABS');
 });
+
+it('lets assessments have no mark of their own, keeping each part within its CA or exam total', function () {
+    $open = fn (string $code, string $part) => ['name' => $code, 'code' => $code, 'component' => $part, 'max_score' => ''];
+    $items = [$open('CA1', 'ca'), $open('CA2', 'ca'), $open('CA3', 'ca'), $open('Q1', 'exam'), $open('Q2', 'exam'), $open('Q3', 'exam')];
+
+    // open assessments need the totals
+    expect(fn () => makeScheme($items))->toThrow(RuntimeException::class, 'Set the CA total and the exam total');
+    // fixed marks in a part with an open one may not go over the part's total
+    expect(fn () => app(AssessmentService::class)->save(null, ['name' => 'Over', 'ca_total' => 40, 'exam_total' => 60],
+        [['name' => 'CA1', 'component' => 'ca', 'max_score' => 45], $open('CA2', 'ca'), $open('Q1', 'exam')], $this->admin))
+        ->toThrow(RuntimeException::class, 'more than the CA total of 40');
+
+    $scheme = app(AssessmentService::class)->save(null, ['name' => 'Open', 'ca_total' => 40, 'exam_total' => 60], $items, $this->admin);
+    expect($scheme->caMax())->toBe(40.0)->and($scheme->examMax())->toBe(60.0)
+        ->and($scheme->items->first()->isOpen())->toBeTrue()->and($scheme->items->first()->limit())->toBe(40.0);
+    $this->schemes->assign($scheme, 'university', null, null, $this->admin);
+    $sheet = app(ResultService::class)->sheet($this->course->id, $this->session->id, $this->type->id);
+    $id = itemIds($scheme);
+    [$s1, $s2] = [$this->students[0]->id, $this->students[1]->id];
+
+    $this->actingAs($this->lecturer)->get(route('results.sheets.show', $sheet->id))->assertOk()->assertSee('max="40"', false)->assertDontSee('/any');
+
+    // any split is fine while the part stays within its total; going over is refused for that student only
+    $this->post(route('results.sheets.save', $sheet->id), ['scores' => [
+        $s1 => ['items' => [$id['CA1'] => 25, $id['CA2'] => 5, $id['CA3'] => 8, $id['Q1'] => 30, $id['Q2'] => 10, $id['Q3'] => 12]],
+        $s2 => ['items' => [$id['CA1'] => 30, $id['CA2'] => 15, $id['CA3'] => 0, $id['Q1'] => 20, $id['Q2'] => 20, $id['Q3'] => 10]],
+    ]])->assertSessionHas('warning', fn ($m) => str_contains($m, 'The CA marks add up to 45, more than the CA total of 40'));
+    $r1 = CourseResult::where('student_id', $s1)->first();
+    expect($r1->ca)->toBe(38.0)->and($r1->exam)->toBe(52.0)->and($r1->total)->toBe(90.0)
+        ->and(CourseResult::where('student_id', $s2)->first()?->ca)->toBeNull();
+
+    // a CA and exam given as totals is shared out evenly over open assessments
+    app(ResultService::class)->saveScores($sheet, [$s2 => new \App\Data\Results\Score(30, 45)]);
+    $r2 = CourseResult::where('student_id', $s2)->first();
+    expect($this->schemes->snapshot($r2, $scheme->fresh('items')))->toBe(['CA1' => 10.0, 'CA2' => 10.0, 'CA3' => 10.0, 'Q1' => 15.0, 'Q2' => 15.0, 'Q3' => 15.0]);
+
+    // the scheme can be saved again unchanged after marks are in, and its form shows blank marks
+    $this->actingAs($this->admin)->get(route('academics.assessments.edit', $scheme->id))->assertOk();
+    app(AssessmentService::class)->save($scheme->fresh('items'), ['name' => 'Open again', 'ca_total' => 40, 'exam_total' => 60], $items, $this->admin);
+    expect($scheme->fresh()->name)->toBe('Open again');
+});

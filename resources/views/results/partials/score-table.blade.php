@@ -68,7 +68,7 @@
                 @endif
                 <tr><th>#</th><th>Matric number</th><th>Name</th>@if ($showClass)<th>Programme</th>@endif
                     @foreach (['ca' => 'CA', 'exam' => 'Exam'] as $part => $label)
-                        @foreach ($parts[$part] as $k => $it)<th style="width:84px" class="text-nowrap {{ $k === 0 ? 'border-start' : '' }}" title="{{ $it->name }}">{{ $it->code }} <span class="text-muted fw-normal">/{{ $it->maxLabel() }}</span></th>@endforeach
+                        @foreach ($parts[$part] as $k => $it)<th style="width:84px" class="text-nowrap {{ $k === 0 ? 'border-start' : '' }}" title="{{ $it->name }}">{{ $it->code }} @unless ($it->isOpen())<span class="text-muted fw-normal">/{{ $it->maxLabel() }}</span>@endunless</th>@endforeach
                         <th style="width:96px" class="text-nowrap {{ $parts[$part]->isEmpty() ? 'border-start' : '' }}">{{ $scheme ? $label . ' total' : $label }} <span class="text-muted fw-normal">/{{ $fmt($part === 'ca' ? $caMax : $examMax) }}</span></th>
                     @endforeach
                     <th class="border-start text-center" style="width:70px" title="Tick for a student who did not sit. 0 means they sat and scored nothing.">Absent</th><th>Total</th><th>Grade</th></tr>
@@ -84,7 +84,7 @@
                     @foreach (['ca' => $caMax, 'exam' => $examMax] as $part => $max)
                         @foreach ($parts[$part] as $k => $it)
                             @php $v = $have->has($it->id) ? $fmt($have[$it->id]->score) : ''; @endphp
-                            <td class="{{ $k === 0 ? 'border-start' : '' }}">@if ($edit)<input type="number" step="0.01" min="0" max="{{ $it->max_score }}" name="scores[{{ $r->student_id }}][items][{{ $it->id }}]" value="{{ $v }}" class="form-control form-control-sm" data-item="{{ $part }}" aria-label="{{ $it->name }}" @if ($locked) readonly data-lockable @endif>{!! $lock !!}@else{{ $v }}@endif</td>
+                            <td class="{{ $k === 0 ? 'border-start' : '' }}">@if ($edit)<input type="number" step="0.01" min="0" max="{{ $it->limit($scheme) }}" name="scores[{{ $r->student_id }}][items][{{ $it->id }}]" value="{{ $v }}" class="form-control form-control-sm" data-item="{{ $part }}" aria-label="{{ $it->name }}" @if ($locked) readonly data-lockable @endif>{!! $lock !!}@else{{ $v }}@endif</td>
                         @endforeach
                         @php $tv = $fmt($part === 'ca' ? $r->ca : $r->exam); @endphp
                         <td class="{{ $parts[$part]->isEmpty() ? 'border-start' : '' }}">@if ($edit)<input type="number" step="0.01" min="0" max="{{ $max }}" name="scores[{{ $r->student_id }}][{{ $part }}]" value="{{ $tv }}" class="form-control form-control-sm {{ $scheme ? 'uv-total-in' : '' }}" data-total="{{ $part }}" data-has-items="{{ $parts[$part]->isNotEmpty() ? 1 : 0 }}" aria-label="{{ $part === 'ca' ? 'CA' : 'Exam' }} total" title="{{ $scheme && $parts[$part]->isNotEmpty() ? 'Adds up from the assessments, or type the total directly' : '' }}" @if ($locked) readonly data-lockable @endif>{!! $lock !!}@else<span data-total-text="{{ $part }}">{{ $tv }}</span>@endif</td>
